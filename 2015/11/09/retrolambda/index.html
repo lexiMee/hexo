@@ -1,0 +1,28 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="alternative" href="/atom.xml" title="Thinking" type="application/atom+xml"><link rel="icon" href="/favicon.png"><title> - Thinking</title><link rel="stylesheet" href="/css/main.css" type="text/css"><!--[if lt IE 9]><script>(function(a,b){a="abbr article aside audio bdi canvas data datalist details dialog figcaption figure footer header hgroup main mark meter nav output progress section summary template time video".split(" ");for(b=a.length-1;b>=0;b--)document.createElement(a[b])})()</script><![endif]--></head><body><header class="head"><h1 class="head-title u-fl"><a href="/">Thinking</a></h1><nav class="head-nav u-fr"><ul class="head-nav__list"><li class="head-nav__item"><a href="/archives" class="head-nav__link">文章</a></li></ul></nav></header><main class="main"><article class="post"><header class="post__head"><time datetime="2015-11-09T01:19:42.844Z" class="post__time">十一月 9, 2015</time><h1 class="post__title"><a href="/2015/11/09/retrolambda/"></a></h1><hr/></header><div class="post__main echo"><h1 id="让Android支持lambda">让Android支持lambda</h1><ol>
+<li><p>项目的gradle配置文件中buildscript节点下面dependencies增加：</p>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">classpath <span class="string">'me.tatarka:gradle-retrolambda:3.2.3'</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>Module对应的gradle配置文件开始的地方增加：</p>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">apply plugin: <span class="string">'me.tatarka.retrolambda'</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>Module对应的gradle配置文件android节点下面增加：</p>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">compileOptions &#123;</span><br><span class="line">    <span class="built_in">source</span>Compatibility JavaVersion.VERSION_1_8</span><br><span class="line">    targetCompatibility JavaVersion.VERSION_1_8</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>（可选）从2.4.0开始retrolambda已经支持proguard，在Module的proguard-rules.pro中增加：</p>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">-dontwarn java.lang.invoke.*</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<blockquote>
+<p>感觉支持的还是很有限，可能主要还是用在listener的实现吧。后面对于RxJava学习，再补充了</p>
+</blockquote>
+<ol>
+<li><p>测试代码：</p>
+ <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">btnThree.setOnClickListener(v1 -&gt; Toast.makeText(MainActivity.<span class="keyword">this</span>, <span class="string">"clicked"</span>, Toast.LENGTH_LONG).show());</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<blockquote>
+<p>装完重启一下android studio 要不可能会无法识别lambda。</p>
+</blockquote>
+<p>参考资料：</p>
+<p><a href="https://github.com/evant/gradle-retrolambda" target="_blank" rel="external">https://github.com/evant/gradle-retrolambda</a></p>
+</div><footer class="post__foot u-cf"><a class="post__foot-link u-fr"></a></footer></article></main><footer class="foot"><div class="foot-copy u-fl">&copy; 2015 LexiMee<bdi> Theme by <a href="https://github.com/andforce/hexo-theme-andforce" >andforce</a></bdi></div><menu class="page-menu u-fr"><li class="page-menu__item"><a title="Previous" href="/2015/11/09/butterknife/" class="page-menu__link icon-arrow-left"></a></li><li class="page-menu__item"><span title="Next" class="page-menu__link icon-arrow-right page-menu__link--disabled"></span></li></menu></footer></body></html>
