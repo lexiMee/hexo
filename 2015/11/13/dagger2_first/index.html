@@ -7,9 +7,11 @@
 </li>
 </ul>
 <h3 id="Component">Component</h3><p>Component顾名思义是组件、单元的意思，感觉这边用单元来理解会贴切多，因为单元是有个范围的。Dagger2中的Component是支持通过注解声明生命周期。</p>
+<p>Component的主要作用是实现Module和Host的关联，apt会为它生成实现类，实现类的成员组成包括Module提供各种依赖的工厂，还包括了将要注入的host。为了实现注入，host中所需依赖必须声明为public类型。如何注入的具体执行代码是非常简单的：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//这行代码是在Component内部的，这就是Component如何关联Module和host的关键所在</span></span><br><span class="line"><span class="comment">//从Module获取到对应依赖的工厂，在Inject函数调用的时候，进行赋值操作，即完成了DI。</span></span><br><span class="line">host.member = providerMember.get();</span><br></pre></td></tr></table></figure>
 <ul>
 <li><p>语法规则</p>
-<p>  dependencies括弧内是依赖的Compnent的class类型，modules括弧内是依赖module的class类型。括弧内都可以包含多个，用逗号分割。括弧内的这些，都会称为该Component的成员。</p>
+<p>  dependencies括弧内是依赖的Compnent的class类型，modules括弧内是依赖module的class类型。括弧内都可以包含多个，用逗号分割。括弧内的这些，都会成为该Component的成员。</p>
   <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@Singleton</span></span><br><span class="line"><span class="annotation">@Component</span>(dependencies = &#123; superComponent.class &#125;, modules = &#123; dataModule.class &#125;)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">AppComponent</span> </span>&#123;&#125;</span><br></pre></td></tr></table></figure>
 </li>
 <li><p>使用@Singleton</p>
@@ -46,4 +48,5 @@
 <p>  由于用法相对简单，所以不多说。。。</p>
 </li>
 </ul>
+<h3 id="参考文章">参考文章</h3><p><a href="http://www.jcodecraeer.com/a/anzhuokaifa/androidkaifa/2015/0519/2892.html" target="_blank" rel="external">http://www.jcodecraeer.com/a/anzhuokaifa/androidkaifa/2015/0519/2892.html</a> 学习生命周期<br><a href="https://github.com/phajduk/dagger2-example" target="_blank" rel="external">https://github.com/phajduk/dagger2-example</a> dagger2 example代码</p>
 </div><footer class="post__foot u-cf"><ul class="post__tag u-fl"><li class="post__tag__item"><a href="/tags/Dagger2/" class="post__tag__link">Dagger2</a></li><li class="post__tag__item"><a href="/tags/学习笔记/" class="post__tag__link">学习笔记</a></li></ul><a class="post__foot-link u-fr"></a></footer></article></main><footer class="foot"><div class="foot-copy u-fl">&copy; 2015 LexiMee<bdi> Theme by <a href="https://github.com/andforce/hexo-theme-andforce" >andforce</a></bdi></div><menu class="page-menu u-fr"><li class="page-menu__item"><span title="Previous" class="page-menu__link icon-arrow-left page-menu__link--disabled"></span></li><li class="page-menu__item"><a title="Next" href="/2015/11/08/java_8_lambda_learning/" class="page-menu__link icon-arrow-right"></a></li></menu></footer></body></html>
