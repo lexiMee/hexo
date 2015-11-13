@@ -1,4 +1,56 @@
-<!DOCTYPE html><html><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="alternative" href="/atom.xml" title="Thinking" type="application/atom+xml"><link rel="icon" href="/favicon.png"><title>学习笔记 - Thinking</title><link rel="stylesheet" href="/css/main.css" type="text/css"><!--[if lt IE 9]><script>(function(a,b){a="abbr article aside audio bdi canvas data datalist details dialog figcaption figure footer header hgroup main mark meter nav output progress section summary template time video".split(" ");for(b=a.length-1;b>=0;b--)document.createElement(a[b])})()</script><![endif]--></head><body><header class="head"><h1 class="head-title u-fl"><a href="/">Thinking</a></h1><nav class="head-nav u-fr"><ul class="head-nav__list"><li class="head-nav__item"><a href="/archives" class="head-nav__link">文章</a></li></ul></nav></header><main class="main"><article class="post"><header class="post__head"><time datetime="2015-11-08T10:44:12.000Z" class="post__time">十一月 8, 2015</time><h1 class="post__title"><a href="/2015/11/08/java_8_lambda_learning/">让Android支持lambda</a></h1><hr/></header><div class="post__main echo"><h1 id="让Android支持lambda">让Android支持lambda</h1><ol>
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="alternative" href="/atom.xml" title="Thinking" type="application/atom+xml"><link rel="icon" href="/favicon.png"><title>学习笔记 - Thinking</title><link rel="stylesheet" href="/css/main.css" type="text/css"><!--[if lt IE 9]><script>(function(a,b){a="abbr article aside audio bdi canvas data datalist details dialog figcaption figure footer header hgroup main mark meter nav output progress section summary template time video".split(" ");for(b=a.length-1;b>=0;b--)document.createElement(a[b])})()</script><![endif]--></head><body><header class="head"><h1 class="head-title u-fl"><a href="/">Thinking</a></h1><nav class="head-nav u-fr"><ul class="head-nav__list"><li class="head-nav__item"><a href="/archives" class="head-nav__link">文章</a></li></ul></nav></header><main class="main"><article class="post"><header class="post__head"><time datetime="2015-11-08T10:44:12.000Z" class="post__time">十一月 8, 2015</time><h1 class="post__title"><a href="/2015/11/08/ButterKnife_learning/">ButterKnife 学习</a></h1><hr/></header><div class="post__main echo"><h1 id="ButterKnife">ButterKnife</h1><h2 id="android_studio_ButterKnife_Zelezny插件的安装及使用">android studio ButterKnife Zelezny插件的安装及使用</h2><h3 id="安装">安装</h3><ol>
+<li>打开File-&gt;Settings，选中plugin，输入butterknife</li>
+<li>选择Android ButterKnife Zelezny点击安装，重启as</li>
+<li><p>修改Module对应的Gradle配置文件的dependencies节点中添加：</p>
+ <figure class="highlight gradle"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">compile</span> <span class="string">'com.jakewharton:butterknife:7.0.0'</span></span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h3 id="使用">使用</h3><blockquote>
+<p>注意：鼠标的光标要停留在<code>代码中的布局文件的资源id上面</code></p>
+</blockquote>
+<ul>
+<li>右键资源ID，选择Generate…，选择Generate xxx Injections，选中需要导入的view对象。</li>
+</ul>
+<h2 id="ButterKnife_学习">ButterKnife 学习</h2><h3 id="ButterKnife有什么好处">ButterKnife有什么好处</h3><ul>
+<li>省略findViewById，快速实现listener、批量设置控件属性</li>
+<li>代码清晰简洁</li>
+<li>学习成本低，android studio下的插件很好用，可以快速coding</li>
+</ul>
+<h3 id="学习内容">学习内容</h3><p>使用下面方法之前，需要配置好环境，并且已经将activity或者当前view跟butterknife进行绑定<code>ButterKnife.bind(this);</code>或者<code>ButterKnife.bind(this, v);</code></p>
+<ol>
+<li>如何省略<code>findViewById</code>：直接<code>@Bind(R.id.title) TextView title</code>;</li>
+<li>如何快速实现listener：直接<code>@OnClick(R.id.submit)</code>、<code>@OnLongClick(R.id.btn_three)</code>、<code>@OnItemClick(R.id.lv_listview)</code>、<code>@OnCheckedChanged</code>等，直接在下面写实现函数处理即可，对于传入参数，可以直接省略，或者传入几个需要的参数即可。</li>
+<li>对于有多个回调函数的listener，eg.默认的回调函数用<code>@OnItemSelected(R.id.my_spinner)</code>， 指定的函数用<code>@OnItemSelected(value = R.id.my_spinner, callback = OnItemSelected.Callback.NOTHING_SELECTED)</code></li>
+<li><p>批量设置控件属性</p>
+<ul>
+<li><p>提供的几种方法：其中的action，setter以及Property需要我们自己来实现，Property系统有自带的则可以不需要。</p>
+   <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> &lt;T extends View&gt; <span class="function"><span class="keyword">void</span> <span class="title">apply</span><span class="params">(List&lt;T&gt; list, Action&lt;? <span class="keyword">super</span> T&gt; action)</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> &lt;T extends View, V&gt; <span class="keyword">void</span> <span class="title">apply</span><span class="params">(List&lt;T&gt; list, Setter&lt;? <span class="keyword">super</span> T, V&gt; setter, V value)</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> &lt;T extends View, V&gt; <span class="keyword">void</span> <span class="title">apply</span><span class="params">(List&lt;T&gt; list, Property&lt;? <span class="keyword">super</span> T, V&gt; setter, V value)</span></span></span><br></pre></td></tr></table></figure>
+<ul>
+<li><p>范例：</p>
+ <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//需要批量设置的控件</span></span><br><span class="line"><span class="annotation">@Bind</span>(&#123;R.id.tv_one, R.id.tv_two, R.id.tv_three&#125;)</span><br><span class="line">List&lt;TextView&gt; tvs;</span><br><span class="line">    </span><br><span class="line"><span class="comment">//自定义action</span></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">final</span> ButterKnife.Action&lt;View&gt; DISABLE = <span class="keyword">new</span> ButterKnife.Action&lt;View&gt;() &#123;</span><br><span class="line">    <span class="annotation">@Override</span> <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">apply</span><span class="params">(View view, <span class="keyword">int</span> index)</span> </span>&#123;</span><br><span class="line">        view.setEnabled(<span class="keyword">false</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br><span class="line"><span class="comment">//自定义setter</span></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">final</span> ButterKnife.Setter&lt;View, Boolean&gt; ENABLED = <span class="keyword">new</span> ButterKnife.Setter&lt;View, Boolean&gt;() &#123;</span><br><span class="line">    <span class="annotation">@Override</span> <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">set</span><span class="params">(View view, Boolean value, <span class="keyword">int</span> index)</span> </span>&#123;</span><br><span class="line">        view.setEnabled(value);</span><br><span class="line">        TextView v = (TextView)view;</span><br><span class="line">        v.setText(<span class="string">"heihei~"</span> + index);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br><span class="line"><span class="comment">//调用：根据个人需求选择使用一个或多个即可。</span></span><br><span class="line">ButterKnife.apply(tvs, DISABLE);</span><br><span class="line">ButterKnife.apply(tvs, ENABLED, <span class="keyword">true</span>);</span><br><span class="line">ButterKnife.apply(tvs, View.ALPHA, <span class="number">0.0f</span>);</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>提供findById的方法</p>
+<ul>
+<li>ButterKnife.findById()可以用来获取Activity,Dialog或View中的任何View.</li>
+<li>ButterKnife自动完成了类型转换,所以获取出来以后不用进行显式强转,直接赋值给具体的View类型引用即可.</li>
+</ul>
+</li>
+<li><p>在生命周期跟activity不一样的view中进行绑定，则需要在<code>onDestroyView()</code>中执行<code>ButterKnife.unbind(this);</code>操作。</p>
+</li>
+<li><p>在写ListView的时候，ViewHolder也可以进行绑定，但是必须声明该adapter为public，并且ViewHolder需要为static的内部类，使用android studio则会自动帮我们创建该类，给力~~~：).</p>
+</li>
+</ol>
+<p>附上我自己实验的代码：<a href="https://github.com/lexiMee/Demos" target="_blank" rel="external">https://github.com/lexiMee/Demos</a></p>
+<p>参考文档：</p>
+<ul>
+<li>ButterKnife基本使用 <a href="http://www.cnblogs.com/mengdd/archive/2015/06/23/4595973.html" target="_blank" rel="external">http://www.cnblogs.com/mengdd/archive/2015/06/23/4595973.html</a></li>
+<li>开源中国源码学习（六）——ButterKnife的使用 <a href="http://www.mamicode.com/info-detail-978143.html" target="_blank" rel="external">http://www.mamicode.com/info-detail-978143.html</a></li>
+</ul>
+</div><footer class="post__foot u-cf"><ul class="post__tag u-fl"><li class="post__tag__item"><a href="/tags/ButterKnife/" class="post__tag__link">ButterKnife</a></li><li class="post__tag__item"><a href="/tags/学习笔记/" class="post__tag__link">学习笔记</a></li></ul><a class="post__foot-link u-fr"></a></footer></article><article class="post"><header class="post__head"><time datetime="2015-11-08T10:44:12.000Z" class="post__time">十一月 8, 2015</time><h1 class="post__title"><a href="/2015/11/08/java_8_lambda_learning/">让Android支持lambda</a></h1><hr/></header><div class="post__main echo"><h1 id="让Android支持lambda">让Android支持lambda</h1><ol>
 <li><p>项目的gradle配置文件中buildscript节点下面dependencies增加：</p>
  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">classpath <span class="string">'me.tatarka:gradle-retrolambda:3.2.3'</span></span><br></pre></td></tr></table></figure>
 </li>
@@ -110,56 +162,4 @@
 </ul>
 <p>参考文章：</p>
 <p><a href="http://blog.csdn.net/dm_vincent/article/category/2268127" target="_blank" rel="external">http://blog.csdn.net/dm_vincent/article/category/2268127</a> （一个系列，未看完。。。）<br><a href="http://blog.csdn.net/renfufei/article/details/24600507" target="_blank" rel="external">http://blog.csdn.net/renfufei/article/details/24600507</a><br><a href="http://developer.51cto.com/art/201206/344308.htm" target="_blank" rel="external">http://developer.51cto.com/art/201206/344308.htm</a> 有java 8默认接口的介绍</p>
-</div><footer class="post__foot u-cf"><ul class="post__tag u-fl"><li class="post__tag__item"><a href="/tags/lambda/" class="post__tag__link">lambda</a></li><li class="post__tag__item"><a href="/tags/学习笔记/" class="post__tag__link">学习笔记</a></li></ul><a class="post__foot-link u-fr"></a></footer></article><article class="post"><header class="post__head"><time datetime="2015-11-08T10:44:12.000Z" class="post__time">十一月 8, 2015</time><h1 class="post__title"><a href="/2015/11/08/ButterKnife_learning/">ButterKnife 学习</a></h1><hr/></header><div class="post__main echo"><h1 id="ButterKnife">ButterKnife</h1><h2 id="android_studio_ButterKnife_Zelezny插件的安装及使用">android studio ButterKnife Zelezny插件的安装及使用</h2><h3 id="安装">安装</h3><ol>
-<li>打开File-&gt;Settings，选中plugin，输入butterknife</li>
-<li>选择Android ButterKnife Zelezny点击安装，重启as</li>
-<li><p>修改Module对应的Gradle配置文件的dependencies节点中添加：</p>
- <figure class="highlight gradle"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">compile</span> <span class="string">'com.jakewharton:butterknife:7.0.0'</span></span><br></pre></td></tr></table></figure>
-</li>
-</ol>
-<h3 id="使用">使用</h3><blockquote>
-<p>注意：鼠标的光标要停留在<code>代码中的布局文件的资源id上面</code></p>
-</blockquote>
-<ul>
-<li>右键资源ID，选择Generate…，选择Generate xxx Injections，选中需要导入的view对象。</li>
-</ul>
-<h2 id="ButterKnife_学习">ButterKnife 学习</h2><h3 id="ButterKnife有什么好处">ButterKnife有什么好处</h3><ul>
-<li>省略findViewById，快速实现listener、批量设置控件属性</li>
-<li>代码清晰简洁</li>
-<li>学习成本低，android studio下的插件很好用，可以快速coding</li>
-</ul>
-<h3 id="学习内容">学习内容</h3><p>使用下面方法之前，需要配置好环境，并且已经将activity或者当前view跟butterknife进行绑定<code>ButterKnife.bind(this);</code>或者<code>ButterKnife.bind(this, v);</code></p>
-<ol>
-<li>如何省略<code>findViewById</code>：直接<code>@Bind(R.id.title) TextView title</code>;</li>
-<li>如何快速实现listener：直接<code>@OnClick(R.id.submit)</code>、<code>@OnLongClick(R.id.btn_three)</code>、<code>@OnItemClick(R.id.lv_listview)</code>、<code>@OnCheckedChanged</code>等，直接在下面写实现函数处理即可，对于传入参数，可以直接省略，或者传入几个需要的参数即可。</li>
-<li>对于有多个回调函数的listener，eg.默认的回调函数用<code>@OnItemSelected(R.id.my_spinner)</code>， 指定的函数用<code>@OnItemSelected(value = R.id.my_spinner, callback = OnItemSelected.Callback.NOTHING_SELECTED)</code></li>
-<li><p>批量设置控件属性</p>
-<ul>
-<li><p>提供的几种方法：其中的action，setter以及Property需要我们自己来实现，Property系统有自带的则可以不需要。</p>
-   <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> &lt;T extends View&gt; <span class="function"><span class="keyword">void</span> <span class="title">apply</span><span class="params">(List&lt;T&gt; list, Action&lt;? <span class="keyword">super</span> T&gt; action)</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> &lt;T extends View, V&gt; <span class="keyword">void</span> <span class="title">apply</span><span class="params">(List&lt;T&gt; list, Setter&lt;? <span class="keyword">super</span> T, V&gt; setter, V value)</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> &lt;T extends View, V&gt; <span class="keyword">void</span> <span class="title">apply</span><span class="params">(List&lt;T&gt; list, Property&lt;? <span class="keyword">super</span> T, V&gt; setter, V value)</span></span></span><br></pre></td></tr></table></figure>
-<ul>
-<li><p>范例：</p>
- <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//需要批量设置的控件</span></span><br><span class="line"><span class="annotation">@Bind</span>(&#123;R.id.tv_one, R.id.tv_two, R.id.tv_three&#125;)</span><br><span class="line">List&lt;TextView&gt; tvs;</span><br><span class="line">    </span><br><span class="line"><span class="comment">//自定义action</span></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">final</span> ButterKnife.Action&lt;View&gt; DISABLE = <span class="keyword">new</span> ButterKnife.Action&lt;View&gt;() &#123;</span><br><span class="line">    <span class="annotation">@Override</span> <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">apply</span><span class="params">(View view, <span class="keyword">int</span> index)</span> </span>&#123;</span><br><span class="line">        view.setEnabled(<span class="keyword">false</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br><span class="line"><span class="comment">//自定义setter</span></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">final</span> ButterKnife.Setter&lt;View, Boolean&gt; ENABLED = <span class="keyword">new</span> ButterKnife.Setter&lt;View, Boolean&gt;() &#123;</span><br><span class="line">    <span class="annotation">@Override</span> <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">set</span><span class="params">(View view, Boolean value, <span class="keyword">int</span> index)</span> </span>&#123;</span><br><span class="line">        view.setEnabled(value);</span><br><span class="line">        TextView v = (TextView)view;</span><br><span class="line">        v.setText(<span class="string">"heihei~"</span> + index);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br><span class="line"><span class="comment">//调用：根据个人需求选择使用一个或多个即可。</span></span><br><span class="line">ButterKnife.apply(tvs, DISABLE);</span><br><span class="line">ButterKnife.apply(tvs, ENABLED, <span class="keyword">true</span>);</span><br><span class="line">ButterKnife.apply(tvs, View.ALPHA, <span class="number">0.0f</span>);</span><br></pre></td></tr></table></figure>
-</li>
-</ul>
-</li>
-</ul>
-</li>
-<li><p>提供findById的方法</p>
-<ul>
-<li>ButterKnife.findById()可以用来获取Activity,Dialog或View中的任何View.</li>
-<li>ButterKnife自动完成了类型转换,所以获取出来以后不用进行显式强转,直接赋值给具体的View类型引用即可.</li>
-</ul>
-</li>
-<li><p>在生命周期跟activity不一样的view中进行绑定，则需要在<code>onDestroyView()</code>中执行<code>ButterKnife.unbind(this);</code>操作。</p>
-</li>
-<li><p>在写ListView的时候，ViewHolder也可以进行绑定，但是必须声明该adapter为public，并且ViewHolder需要为static的内部类，使用android studio则会自动帮我们创建该类，给力~~~：).</p>
-</li>
-</ol>
-<p>附上我自己实验的代码：<a href="https://github.com/lexiMee/Demos" target="_blank" rel="external">https://github.com/lexiMee/Demos</a></p>
-<p>参考文档：</p>
-<ul>
-<li>ButterKnife基本使用 <a href="http://www.cnblogs.com/mengdd/archive/2015/06/23/4595973.html" target="_blank" rel="external">http://www.cnblogs.com/mengdd/archive/2015/06/23/4595973.html</a></li>
-<li>开源中国源码学习（六）——ButterKnife的使用 <a href="http://www.mamicode.com/info-detail-978143.html" target="_blank" rel="external">http://www.mamicode.com/info-detail-978143.html</a></li>
-</ul>
-</div><footer class="post__foot u-cf"><ul class="post__tag u-fl"><li class="post__tag__item"><a href="/tags/ButterKnife/" class="post__tag__link">ButterKnife</a></li><li class="post__tag__item"><a href="/tags/学习笔记/" class="post__tag__link">学习笔记</a></li></ul><a class="post__foot-link u-fr"></a></footer></article></main><footer class="foot"><div class="foot-copy u-fl">&copy; 2015 LexiMee<bdi> Theme by <a href="https://github.com/andforce/hexo-theme-andforce" >andforce</a></bdi></div><menu class="page-menu u-fr"><li class="page-menu__item"><span title="Previous" class="page-menu__link icon-arrow-left page-menu__link--disabled"></span></li><li class="page-menu__item"><span title="Next" class="page-menu__link icon-arrow-right page-menu__link--disabled"></span></li></menu></footer></body></html>
+</div><footer class="post__foot u-cf"><ul class="post__tag u-fl"><li class="post__tag__item"><a href="/tags/lambda/" class="post__tag__link">lambda</a></li><li class="post__tag__item"><a href="/tags/学习笔记/" class="post__tag__link">学习笔记</a></li></ul><a class="post__foot-link u-fr"></a></footer></article></main><footer class="foot"><div class="foot-copy u-fl">&copy; 2015 LexiMee<bdi> Theme by <a href="https://github.com/andforce/hexo-theme-andforce" >andforce</a></bdi></div><menu class="page-menu u-fr"><li class="page-menu__item"><span title="Previous" class="page-menu__link icon-arrow-left page-menu__link--disabled"></span></li><li class="page-menu__item"><span title="Next" class="page-menu__link icon-arrow-right page-menu__link--disabled"></span></li></menu></footer></body></html>
