@@ -1,56 +1,52 @@
-<!DOCTYPE html><html><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="alternative" href="/atom.xml" title="Thinking" type="application/atom+xml"><link rel="icon" href="/favicon.png"><title>android开发 - Thinking</title><link rel="stylesheet" href="/css/main.css" type="text/css"><!--[if lt IE 9]><script>(function(a,b){a="abbr article aside audio bdi canvas data datalist details dialog figcaption figure footer header hgroup main mark meter nav output progress section summary template time video".split(" ");for(b=a.length-1;b>=0;b--)document.createElement(a[b])})()</script><![endif]--></head><body><header class="head"><h1 class="head-title u-fl"><a href="/">Thinking</a></h1><nav class="head-nav u-fr"><ul class="head-nav__list"><li class="head-nav__item"><a href="/archives" class="head-nav__link">文章</a></li></ul></nav></header><main class="main"><article class="post"><header class="post__head"><time datetime="2015-11-08T10:44:12.000Z" class="post__time">十一月 8, 2015</time><h1 class="post__title"><a href="/2015/11/08/ButterKnife_learning/">ButterKnife 学习</a></h1><hr/></header><div class="post__main echo"><h1 id="ButterKnife">ButterKnife</h1><h2 id="android_studio_ButterKnife_Zelezny插件的安装及使用">android studio ButterKnife Zelezny插件的安装及使用</h2><h3 id="安装">安装</h3><ol>
-<li>打开File-&gt;Settings，选中plugin，输入butterknife</li>
-<li>选择Android ButterKnife Zelezny点击安装，重启as</li>
-<li><p>修改Module对应的Gradle配置文件的dependencies节点中添加：</p>
- <figure class="highlight gradle"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">compile</span> <span class="string">'com.jakewharton:butterknife:7.0.0'</span></span><br></pre></td></tr></table></figure>
-</li>
-</ol>
-<h3 id="使用">使用</h3><blockquote>
-<p>注意：鼠标的光标要停留在<code>代码中的布局文件的资源id上面</code></p>
-</blockquote>
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="alternative" href="/atom.xml" title="Thinking" type="application/atom+xml"><link rel="icon" href="/favicon.png"><title>android开发 - Thinking</title><link rel="stylesheet" href="/css/main.css" type="text/css"><!--[if lt IE 9]><script>(function(a,b){a="abbr article aside audio bdi canvas data datalist details dialog figcaption figure footer header hgroup main mark meter nav output progress section summary template time video".split(" ");for(b=a.length-1;b>=0;b--)document.createElement(a[b])})()</script><![endif]--></head><body><header class="head"><h1 class="head-title u-fl"><a href="/">Thinking</a></h1><nav class="head-nav u-fr"><ul class="head-nav__list"><li class="head-nav__item"><a href="/archives" class="head-nav__link">文章</a></li></ul></nav></header><main class="main"><article class="post"><header class="post__head"><time datetime="2015-11-13T13:55:09.000Z" class="post__time">十一月 13, 2015</time><h1 class="post__title"><a href="/2015/11/13/dagger2_first/">说下对Dagger 2 Component/Module/Inject的理解</a></h1><hr/></header><div class="post__main echo"><h3 id="简述">简述</h3><p>  我只想简简单单的描述下我对该框架使用上的理解。。<br>  而这些的理解来自于别人的文档、看别人代码、实践。<br>  不过还是得对这个框架有个初步的认识：这个框架作用，给某些类或方法提供依赖。是DI思想的一种呈现。主要手段是帮你构建工厂类。</p>
 <ul>
-<li>右键资源ID，选择Generate…，选择Generate xxx Injections，选中需要导入的view对象。</li>
+<li>Component：首先，它是一个interface，其次，它的作用是将Module和Host进行关联，关联生效的时机是在host中调用了inject函数（这个函数是你在components中声明的方法）。由于上面的特性，所以Component是有作用域的，利用这个作用域就可以引入singleon和scope provider了。</li>
+<li>Module或Inject:Module和Inject都是class，Module可以给host提供多个依赖的对象，而Inject本身就是host依赖的对象。（这里面提到的Inject是在类的构造函数前面标注@Inject，表示自己可以提供依赖）</li>
+<li><p>被注入依赖的对象：这里我们称之为host（宿主）</p>
+<p>如果你对butterknife熟悉的话，那你可以把这个理解称为butterknife在类上面的扩展，更加的自由，但是前提是你也必须写更多的代码。</p>
+</li>
 </ul>
-<h2 id="ButterKnife_学习">ButterKnife 学习</h2><h3 id="ButterKnife有什么好处">ButterKnife有什么好处</h3><ul>
-<li>省略findViewById，快速实现listener、批量设置控件属性</li>
-<li>代码清晰简洁</li>
-<li>学习成本低，android studio下的插件很好用，可以快速coding</li>
-</ul>
-<h3 id="学习内容">学习内容</h3><p>使用下面方法之前，需要配置好环境，并且已经将activity或者当前view跟butterknife进行绑定<code>ButterKnife.bind(this);</code>或者<code>ButterKnife.bind(this, v);</code></p>
-<ol>
-<li>如何省略<code>findViewById</code>：直接<code>@Bind(R.id.title) TextView title</code>;</li>
-<li>如何快速实现listener：直接<code>@OnClick(R.id.submit)</code>、<code>@OnLongClick(R.id.btn_three)</code>、<code>@OnItemClick(R.id.lv_listview)</code>、<code>@OnCheckedChanged</code>等，直接在下面写实现函数处理即可，对于传入参数，可以直接省略，或者传入几个需要的参数即可。</li>
-<li>对于有多个回调函数的listener，eg.默认的回调函数用<code>@OnItemSelected(R.id.my_spinner)</code>， 指定的函数用<code>@OnItemSelected(value = R.id.my_spinner, callback = OnItemSelected.Callback.NOTHING_SELECTED)</code></li>
-<li><p>批量设置控件属性</p>
+<h3 id="Component">Component</h3><p>Component顾名思义是组件、单元的意思，感觉这边用单元来理解会贴切多，因为单元是有个范围的。Dagger2中的Component是支持通过注解声明生命周期。</p>
 <ul>
-<li><p>提供的几种方法：其中的action，setter以及Property需要我们自己来实现，Property系统有自带的则可以不需要。</p>
-   <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> &lt;T extends View&gt; <span class="function"><span class="keyword">void</span> <span class="title">apply</span><span class="params">(List&lt;T&gt; list, Action&lt;? <span class="keyword">super</span> T&gt; action)</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> &lt;T extends View, V&gt; <span class="keyword">void</span> <span class="title">apply</span><span class="params">(List&lt;T&gt; list, Setter&lt;? <span class="keyword">super</span> T, V&gt; setter, V value)</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> &lt;T extends View, V&gt; <span class="keyword">void</span> <span class="title">apply</span><span class="params">(List&lt;T&gt; list, Property&lt;? <span class="keyword">super</span> T, V&gt; setter, V value)</span></span></span><br></pre></td></tr></table></figure>
+<li><p>语法规则</p>
+<p>  dependencies括弧内是依赖的Compnent的class类型，modules括弧内是依赖module的class类型。括弧内都可以包含多个，用逗号分割。括弧内的这些，都会称为该Component的成员。</p>
+  <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@Singleton</span></span><br><span class="line"><span class="annotation">@Component</span>(dependencies = &#123; superComponent.class &#125;, modules = &#123; dataModule.class &#125;)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">AppComponent</span> </span>&#123;&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>使用@Singleton</p>
+</li>
+<li><p>使用自定义的注解声明范围,自定义注解写法：</p>
+  <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@Scope</span></span><br><span class="line"><span class="annotation">@Retention</span>(RUNTIME)</span><br><span class="line"><span class="keyword">public</span> <span class="annotation">@interface</span> PerActivity &#123;&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>什么场景下使用：</p>
+<p>  希望某个对象它的生命周期是在当前Component唯一，这个时候就可以派上用场了。不管是@Singleton还是自定义注解的形式，最终apt解析出来的，都是使用的单例模式。</p>
+<p>例子：</p>
+<p>  Component标注为@Singleton（在Host内部不需要任何@Singleton依赖的情况下是没用的），DBHelper也标注为@Singleton，这个时候在Host完成注入即可。如果两个host获取到同一个Component，则它们获取到的DBHelper也会是同一个。</p>
+</li>
+</ul>
 <ul>
-<li><p>范例：</p>
- <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//需要批量设置的控件</span></span><br><span class="line"><span class="annotation">@Bind</span>(&#123;R.id.tv_one, R.id.tv_two, R.id.tv_three&#125;)</span><br><span class="line">List&lt;TextView&gt; tvs;</span><br><span class="line">    </span><br><span class="line"><span class="comment">//自定义action</span></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">final</span> ButterKnife.Action&lt;View&gt; DISABLE = <span class="keyword">new</span> ButterKnife.Action&lt;View&gt;() &#123;</span><br><span class="line">    <span class="annotation">@Override</span> <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">apply</span><span class="params">(View view, <span class="keyword">int</span> index)</span> </span>&#123;</span><br><span class="line">        view.setEnabled(<span class="keyword">false</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br><span class="line"><span class="comment">//自定义setter</span></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">final</span> ButterKnife.Setter&lt;View, Boolean&gt; ENABLED = <span class="keyword">new</span> ButterKnife.Setter&lt;View, Boolean&gt;() &#123;</span><br><span class="line">    <span class="annotation">@Override</span> <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">set</span><span class="params">(View view, Boolean value, <span class="keyword">int</span> index)</span> </span>&#123;</span><br><span class="line">        view.setEnabled(value);</span><br><span class="line">        TextView v = (TextView)view;</span><br><span class="line">        v.setText(<span class="string">"heihei~"</span> + index);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br><span class="line"><span class="comment">//调用：根据个人需求选择使用一个或多个即可。</span></span><br><span class="line">ButterKnife.apply(tvs, DISABLE);</span><br><span class="line">ButterKnife.apply(tvs, ENABLED, <span class="keyword">true</span>);</span><br><span class="line">ButterKnife.apply(tvs, View.ALPHA, <span class="number">0.0f</span>);</span><br></pre></td></tr></table></figure>
+<li><p>如何确保两个Host获取到同一个Component</p>
+<p>  为了保证两个Host是同个对象，我们可以在Component中添加如下方法：</p>
+  <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//在自定义的Component中声明该内部类，由于例子Module没有带有参数，所以builder的过程很简单，如果有参数的话，则需要添加到build的过程中，否则程序运行的时候会报错。</span></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">Initializer</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="title">Initializer</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    &#125; <span class="comment">// No instances.</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> DaggerDemoComponent <span class="title">init</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> DaggerDaggerDemoComponent.builder()</span><br><span class="line">                .build();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//继承Application的类中进行获取该Component保证其唯一性，并提供调用接口</span></span><br><span class="line"><span class="comment">//Component构造的调用方法。</span></span><br><span class="line">AppComponent.Initializer.init();</span><br></pre></td></tr></table></figure>
 </li>
 </ul>
-</li>
-</ul>
-</li>
-<li><p>提供findById的方法</p>
+<h3 id="Module">Module</h3><p>Module是一个类，具备类所有的特征，其主要作用是用来提供依赖实例的。</p>
 <ul>
-<li>ButterKnife.findById()可以用来获取Activity,Dialog或View中的任何View.</li>
-<li>ButterKnife自动完成了类型转换,所以获取出来以后不用进行显式强转,直接赋值给具体的View类型引用即可.</li>
+<li><p>语法规则</p>
+<p>  @Module来指明是module，如果名字是以provider打头的函数都会被apt认为是用来提供依赖，会为它生成工厂类。而普通的函数，则就当成普通函数看待。</p>
+  <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@Module</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DataModule</span> </span>&#123;</span><br><span class="line">    <span class="annotation">@Provides</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">providerName</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="string">"test"</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="annotation">@Singleton</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Person <span class="title">providerPerson</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> Person();</span><br><span class="line">    &#125;</span><br><span class="line">｝</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>Module 提供的对象不只是Host中需要的依赖，它也可以提供给Component中的方法返回值类型。</p>
+<p>例子：</p>
+  <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//component中声明</span></span><br><span class="line"><span class="annotation">@PerActivity</span></span><br><span class="line"><span class="annotation">@Component</span>(dependencies = ApplicationComponent.class, modules = ActivityModule.class)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">ActivityComponent</span> </span>&#123;</span><br><span class="line">  <span class="comment">//Exposed to sub-graphs.</span></span><br><span class="line">  <span class="function">Activity <span class="title">activity</span><span class="params">()</span></span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//则Module的实现如下：</span></span><br><span class="line"><span class="annotation">@Module</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ActivityModule</span> </span>&#123;</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">final</span> Activity activity;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="title">ActivityModule</span><span class="params">(Activity activity)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.activity = activity;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">/**</span><br><span class="line">  * Expose the activity to dependents in the graph.</span><br><span class="line">  */</span></span><br><span class="line">  <span class="annotation">@Provides</span> <span class="annotation">@PerActivity</span> <span class="function">Activity <span class="title">activity</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span>.activity;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
 </ul>
+<h3 id="Inject">Inject</h3><ul>
+<li>声明在构造函数前面表示该类是可以被注入到Host的。</li>
+<li><p>声明在Host的成员变量的前面，表示该实例是由Dagger2来提供依赖的。</p>
+<p>  由于用法相对简单，所以不多说。。。</p>
 </li>
-<li><p>在生命周期跟activity不一样的view中进行绑定，则需要在<code>onDestroyView()</code>中执行<code>ButterKnife.unbind(this);</code>操作。</p>
-</li>
-<li><p>在写ListView的时候，ViewHolder也可以进行绑定，但是必须声明该adapter为public，并且ViewHolder需要为static的内部类，使用android studio则会自动帮我们创建该类，给力~~~：).</p>
-</li>
-</ol>
-<p>附上我自己实验的代码：<a href="https://github.com/lexiMee/Demos" target="_blank" rel="external">https://github.com/lexiMee/Demos</a></p>
-<p>参考文档：</p>
-<ul>
-<li>ButterKnife基本使用 <a href="http://www.cnblogs.com/mengdd/archive/2015/06/23/4595973.html" target="_blank" rel="external">http://www.cnblogs.com/mengdd/archive/2015/06/23/4595973.html</a></li>
-<li>开源中国源码学习（六）——ButterKnife的使用 <a href="http://www.mamicode.com/info-detail-978143.html" target="_blank" rel="external">http://www.mamicode.com/info-detail-978143.html</a></li>
 </ul>
-</div><footer class="post__foot u-cf"><ul class="post__tag u-fl"><li class="post__tag__item"><a href="/tags/ButterKnife/" class="post__tag__link">ButterKnife</a></li><li class="post__tag__item"><a href="/tags/学习笔记/" class="post__tag__link">学习笔记</a></li></ul><a class="post__foot-link u-fr"></a></footer></article><article class="post"><header class="post__head"><time datetime="2015-11-08T10:44:12.000Z" class="post__time">十一月 8, 2015</time><h1 class="post__title"><a href="/2015/11/08/java_8_lambda_learning/">让Android支持lambda</a></h1><hr/></header><div class="post__main echo"><h1 id="让Android支持lambda">让Android支持lambda</h1><ol>
+</div><footer class="post__foot u-cf"><ul class="post__tag u-fl"><li class="post__tag__item"><a href="/tags/Dagger2/" class="post__tag__link">Dagger2</a></li><li class="post__tag__item"><a href="/tags/学习笔记/" class="post__tag__link">学习笔记</a></li></ul><a class="post__foot-link u-fr"></a></footer></article><article class="post"><header class="post__head"><time datetime="2015-11-08T10:44:12.000Z" class="post__time">十一月 8, 2015</time><h1 class="post__title"><a href="/2015/11/08/java_8_lambda_learning/">让Android支持lambda</a></h1><hr/></header><div class="post__main echo"><h1 id="让Android支持lambda">让Android支持lambda</h1><ol>
 <li><p>项目的gradle配置文件中buildscript节点下面dependencies增加：</p>
  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">classpath <span class="string">'me.tatarka:gradle-retrolambda:3.2.3'</span></span><br></pre></td></tr></table></figure>
 </li>
@@ -162,4 +158,56 @@
 </ul>
 <p>参考文章：</p>
 <p><a href="http://blog.csdn.net/dm_vincent/article/category/2268127" target="_blank" rel="external">http://blog.csdn.net/dm_vincent/article/category/2268127</a> （一个系列，未看完。。。）<br><a href="http://blog.csdn.net/renfufei/article/details/24600507" target="_blank" rel="external">http://blog.csdn.net/renfufei/article/details/24600507</a><br><a href="http://developer.51cto.com/art/201206/344308.htm" target="_blank" rel="external">http://developer.51cto.com/art/201206/344308.htm</a> 有java 8默认接口的介绍</p>
-</div><footer class="post__foot u-cf"><ul class="post__tag u-fl"><li class="post__tag__item"><a href="/tags/lambda/" class="post__tag__link">lambda</a></li><li class="post__tag__item"><a href="/tags/学习笔记/" class="post__tag__link">学习笔记</a></li></ul><a class="post__foot-link u-fr"></a></footer></article></main><footer class="foot"><div class="foot-copy u-fl">&copy; 2015 LexiMee<bdi> Theme by <a href="https://github.com/andforce/hexo-theme-andforce" >andforce</a></bdi></div><menu class="page-menu u-fr"><li class="page-menu__item"><span title="Previous" class="page-menu__link icon-arrow-left page-menu__link--disabled"></span></li><li class="page-menu__item"><span title="Next" class="page-menu__link icon-arrow-right page-menu__link--disabled"></span></li></menu></footer></body></html>
+</div><footer class="post__foot u-cf"><ul class="post__tag u-fl"><li class="post__tag__item"><a href="/tags/lambda/" class="post__tag__link">lambda</a></li><li class="post__tag__item"><a href="/tags/学习笔记/" class="post__tag__link">学习笔记</a></li></ul><a class="post__foot-link u-fr"></a></footer></article><article class="post"><header class="post__head"><time datetime="2015-11-08T10:44:12.000Z" class="post__time">十一月 8, 2015</time><h1 class="post__title"><a href="/2015/11/08/ButterKnife_learning/">ButterKnife 学习</a></h1><hr/></header><div class="post__main echo"><h1 id="ButterKnife">ButterKnife</h1><h2 id="android_studio_ButterKnife_Zelezny插件的安装及使用">android studio ButterKnife Zelezny插件的安装及使用</h2><h3 id="安装">安装</h3><ol>
+<li>打开File-&gt;Settings，选中plugin，输入butterknife</li>
+<li>选择Android ButterKnife Zelezny点击安装，重启as</li>
+<li><p>修改Module对应的Gradle配置文件的dependencies节点中添加：</p>
+ <figure class="highlight gradle"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">compile</span> <span class="string">'com.jakewharton:butterknife:7.0.0'</span></span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<h3 id="使用">使用</h3><blockquote>
+<p>注意：鼠标的光标要停留在<code>代码中的布局文件的资源id上面</code></p>
+</blockquote>
+<ul>
+<li>右键资源ID，选择Generate…，选择Generate xxx Injections，选中需要导入的view对象。</li>
+</ul>
+<h2 id="ButterKnife_学习">ButterKnife 学习</h2><h3 id="ButterKnife有什么好处">ButterKnife有什么好处</h3><ul>
+<li>省略findViewById，快速实现listener、批量设置控件属性</li>
+<li>代码清晰简洁</li>
+<li>学习成本低，android studio下的插件很好用，可以快速coding</li>
+</ul>
+<h3 id="学习内容">学习内容</h3><p>使用下面方法之前，需要配置好环境，并且已经将activity或者当前view跟butterknife进行绑定<code>ButterKnife.bind(this);</code>或者<code>ButterKnife.bind(this, v);</code></p>
+<ol>
+<li>如何省略<code>findViewById</code>：直接<code>@Bind(R.id.title) TextView title</code>;</li>
+<li>如何快速实现listener：直接<code>@OnClick(R.id.submit)</code>、<code>@OnLongClick(R.id.btn_three)</code>、<code>@OnItemClick(R.id.lv_listview)</code>、<code>@OnCheckedChanged</code>等，直接在下面写实现函数处理即可，对于传入参数，可以直接省略，或者传入几个需要的参数即可。</li>
+<li>对于有多个回调函数的listener，eg.默认的回调函数用<code>@OnItemSelected(R.id.my_spinner)</code>， 指定的函数用<code>@OnItemSelected(value = R.id.my_spinner, callback = OnItemSelected.Callback.NOTHING_SELECTED)</code></li>
+<li><p>批量设置控件属性</p>
+<ul>
+<li><p>提供的几种方法：其中的action，setter以及Property需要我们自己来实现，Property系统有自带的则可以不需要。</p>
+   <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> &lt;T extends View&gt; <span class="function"><span class="keyword">void</span> <span class="title">apply</span><span class="params">(List&lt;T&gt; list, Action&lt;? <span class="keyword">super</span> T&gt; action)</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> &lt;T extends View, V&gt; <span class="keyword">void</span> <span class="title">apply</span><span class="params">(List&lt;T&gt; list, Setter&lt;? <span class="keyword">super</span> T, V&gt; setter, V value)</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> &lt;T extends View, V&gt; <span class="keyword">void</span> <span class="title">apply</span><span class="params">(List&lt;T&gt; list, Property&lt;? <span class="keyword">super</span> T, V&gt; setter, V value)</span></span></span><br></pre></td></tr></table></figure>
+<ul>
+<li><p>范例：</p>
+ <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//需要批量设置的控件</span></span><br><span class="line"><span class="annotation">@Bind</span>(&#123;R.id.tv_one, R.id.tv_two, R.id.tv_three&#125;)</span><br><span class="line">List&lt;TextView&gt; tvs;</span><br><span class="line">    </span><br><span class="line"><span class="comment">//自定义action</span></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">final</span> ButterKnife.Action&lt;View&gt; DISABLE = <span class="keyword">new</span> ButterKnife.Action&lt;View&gt;() &#123;</span><br><span class="line">    <span class="annotation">@Override</span> <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">apply</span><span class="params">(View view, <span class="keyword">int</span> index)</span> </span>&#123;</span><br><span class="line">        view.setEnabled(<span class="keyword">false</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br><span class="line"><span class="comment">//自定义setter</span></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">final</span> ButterKnife.Setter&lt;View, Boolean&gt; ENABLED = <span class="keyword">new</span> ButterKnife.Setter&lt;View, Boolean&gt;() &#123;</span><br><span class="line">    <span class="annotation">@Override</span> <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">set</span><span class="params">(View view, Boolean value, <span class="keyword">int</span> index)</span> </span>&#123;</span><br><span class="line">        view.setEnabled(value);</span><br><span class="line">        TextView v = (TextView)view;</span><br><span class="line">        v.setText(<span class="string">"heihei~"</span> + index);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br><span class="line"><span class="comment">//调用：根据个人需求选择使用一个或多个即可。</span></span><br><span class="line">ButterKnife.apply(tvs, DISABLE);</span><br><span class="line">ButterKnife.apply(tvs, ENABLED, <span class="keyword">true</span>);</span><br><span class="line">ButterKnife.apply(tvs, View.ALPHA, <span class="number">0.0f</span>);</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>提供findById的方法</p>
+<ul>
+<li>ButterKnife.findById()可以用来获取Activity,Dialog或View中的任何View.</li>
+<li>ButterKnife自动完成了类型转换,所以获取出来以后不用进行显式强转,直接赋值给具体的View类型引用即可.</li>
+</ul>
+</li>
+<li><p>在生命周期跟activity不一样的view中进行绑定，则需要在<code>onDestroyView()</code>中执行<code>ButterKnife.unbind(this);</code>操作。</p>
+</li>
+<li><p>在写ListView的时候，ViewHolder也可以进行绑定，但是必须声明该adapter为public，并且ViewHolder需要为static的内部类，使用android studio则会自动帮我们创建该类，给力~~~：).</p>
+</li>
+</ol>
+<p>附上我自己实验的代码：<a href="https://github.com/lexiMee/Demos" target="_blank" rel="external">https://github.com/lexiMee/Demos</a></p>
+<p>参考文档：</p>
+<ul>
+<li>ButterKnife基本使用 <a href="http://www.cnblogs.com/mengdd/archive/2015/06/23/4595973.html" target="_blank" rel="external">http://www.cnblogs.com/mengdd/archive/2015/06/23/4595973.html</a></li>
+<li>开源中国源码学习（六）——ButterKnife的使用 <a href="http://www.mamicode.com/info-detail-978143.html" target="_blank" rel="external">http://www.mamicode.com/info-detail-978143.html</a></li>
+</ul>
+</div><footer class="post__foot u-cf"><ul class="post__tag u-fl"><li class="post__tag__item"><a href="/tags/ButterKnife/" class="post__tag__link">ButterKnife</a></li><li class="post__tag__item"><a href="/tags/学习笔记/" class="post__tag__link">学习笔记</a></li></ul><a class="post__foot-link u-fr"></a></footer></article></main><footer class="foot"><div class="foot-copy u-fl">&copy; 2015 LexiMee<bdi> Theme by <a href="https://github.com/andforce/hexo-theme-andforce" >andforce</a></bdi></div><menu class="page-menu u-fr"><li class="page-menu__item"><span title="Previous" class="page-menu__link icon-arrow-left page-menu__link--disabled"></span></li><li class="page-menu__item"><span title="Next" class="page-menu__link icon-arrow-right page-menu__link--disabled"></span></li></menu></footer></body></html>
