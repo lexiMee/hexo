@@ -20,9 +20,9 @@
   <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@Scope</span></span><br><span class="line"><span class="annotation">@Retention</span>(RUNTIME)</span><br><span class="line"><span class="keyword">public</span> <span class="annotation">@interface</span> PerActivity &#123;&#125;</span><br></pre></td></tr></table></figure>
 </li>
 <li><p>什么场景下使用：</p>
-<p>  希望某个对象它的生命周期是在当前Component唯一，这个时候就可以派上用场了。不管是@Singleton还是自定义注解的形式，最终apt解析出来的，都是使用的单例模式。</p>
+<p>  希望某个对象，它的生命周期是在当前Component唯一，这个时候就可以派上用场了。不管是@Singleton还是自定义注解的形式，最终apt解析出来的，都是使用的单例模式。</p>
 <p>例子：</p>
-<p>  Component标注为@Singleton（在Host内部不需要任何@Singleton依赖的情况下是没用的），DBHelper也标注为@Singleton，这个时候在Host完成注入即可。如果两个host获取到同一个Component，则它们获取到的DBHelper也会是同一个。</p>
+<p>  DBHelper是依赖类，它要注入到Host，并且它对于某个Component具有唯一性，所以标注为@PerActivity。当确定A Component中的Host依赖于DBHelper的时候，我们就需要在Component前面添加该注解，表示在这个作用域内是唯一的。如果依赖类添加了注解，而依赖该DBHelper的Component如果没有添加上注解的话，编译会报错的。具体效果是这样的：如果两个host获取到同一个Component，则它们获取到的DBHelper也会是同一个。</p>
 </li>
 </ul>
 <ul>
