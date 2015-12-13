@@ -1,4 +1,27 @@
-<!DOCTYPE html><html><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="alternative" href="/atom.xml" title="Thinking" type="application/atom+xml"><link rel="icon" href="/favicon.png"><title>Thinking</title><link rel="stylesheet" href="/css/main.css" type="text/css"><!--[if lt IE 9]><script>(function(a,b){a="abbr article aside audio bdi canvas data datalist details dialog figcaption figure footer header hgroup main mark meter nav output progress section summary template time video".split(" ");for(b=a.length-1;b>=0;b--)document.createElement(a[b])})()</script><![endif]--></head><body><header class="head"><h1 class="head-title u-fl"><a href="/">Thinking</a></h1><nav class="head-nav u-fr"><ul class="head-nav__list"><li class="head-nav__item"><a href="/archives" class="head-nav__link">文章</a></li></ul></nav></header><main class="main"><article class="post"><header class="post__head"><time datetime="2015-11-22T06:26:02.000Z" class="post__time">十一月 22, 2015</time><h1 class="post__title"><a href="/2015/11/22/dagger2_second/">Dagger 2 SubComponent</a></h1><hr/></header><div class="post__main echo"><p>学习源码：<a href="https://github.com/mvarnagiris/Financius" target="_blank" rel="external">https://github.com/mvarnagiris/Financius</a></p>
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="alternative" href="/atom.xml" title="Thinking" type="application/atom+xml"><link rel="icon" href="/favicon.png"><title>Thinking</title><link rel="stylesheet" href="/css/main.css" type="text/css"><!--[if lt IE 9]><script>(function(a,b){a="abbr article aside audio bdi canvas data datalist details dialog figcaption figure footer header hgroup main mark meter nav output progress section summary template time video".split(" ");for(b=a.length-1;b>=0;b--)document.createElement(a[b])})()</script><![endif]--></head><body><header class="head"><h1 class="head-title u-fl"><a href="/">Thinking</a></h1><nav class="head-nav u-fr"><ul class="head-nav__list"><li class="head-nav__item"><a href="/archives" class="head-nav__link">文章</a></li></ul></nav></header><main class="main"><article class="post"><header class="post__head"><time datetime="2015-12-13T14:00:05.638Z" class="post__time">十二月 13, 2015</time><h1 class="post__title"><a href="/2015/12/13/android_tts/">Android TTS学习</a></h1><hr/></header><div class="post__main echo"><h2 id="Android_TTS下Talkback使用SynthesisSpeechItem总结">Android TTS下Talkback使用SynthesisSpeechItem总结</h2><h3 id="简述">简述</h3><p>TTS是Text To Speech的简称，就是将字符串转换成语音。Talkback是用来给帮助盲人朋友使用手机的apk，是android辅助功能的插件，安装完之后可以到辅助功能里面使能它，之后只要你触摸到android系统中的任何控件，都会将控件中的信息转变成语音的形式播放出来。</p>
+<h3 id="内容">内容</h3><p>TTS的语音是可以自由选择第三方或者是官方默认语音包，默认是pico，可以在源码external/svox这个文件夹找到对应的源码和语音包。我们去看源码的时候也会发现它必须继承并且实现android Framework中提供的TextToSpeechService，并且实现里面指定的一些抽象方法，这个是至关重要的。</p>
+<p>最近工作遇到了一个跟TTS相关的bug，于是就有了这个总结。只是简单的对主要流程进行梳理，先看图，然后再结合下面的文字来理解吧。</p>
+<p><a href="image/tts2.jpg">!流程图</a></p>
+<p>先假设下场景：我们使能了Talkback，并且点击了settings的某个控件，这个时候控件会给AccessiblityService那边发送事件，然后AccessiblityService会给Talkback转发事件，Talkback接收到事件根据事件类型来决定最后的处理，假设这个时候有个文本信息需要转成语音信息，则会调用TextToSpeech的speak接口，我们从这边开始往下讲。</p>
+<p>TextToSpeech这个类是Framework实现给第三方应用使用的，是图中椭圆形的TTS，它主要是封装了对TextToSpeechService的binder，这样第三方应用就无需再去获取该service，而可以直接使用TextToSpeech里面的方法跟service进行交互。</p>
+<p>接着Talkback调用到TextToSpeech的speak的接口</p>
+<ol>
+<li>在Service这边构件一个<code>SynthesisSpeechItemV1</code>，然后将这个item投入到MainLoop中，而这个MainLoop的处理handler是<code>SynthHandler</code>，会从MainLoop中获取item，然后进行执行，即图中的第二点，每种类型的item几乎都实现了自己的playimpl方法，这样当SynthHandler调用到自己的时候就走到自己的流程了，对于SynthesisSpeechItemV1，它的源码流程是这样的：</li>
+</ol>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//1.创建一个PlaybackSynthesisCallback的回调实现</span></span><br><span class="line">synthesisCallback = <span class="keyword">new</span> PlaybackSynthesisCallback(getAudioParams(),mAudioPlaybackHandler, <span class="keyword">this</span>, getCallerIdentity(), mEventLogger, <span class="keyword">false</span>);</span><br><span class="line"><span class="comment">//2.调用serivce中的onSynthesizeText，将回调和请求传递给该函数的实现者，其实就是第三方语音包，如pico</span></span><br><span class="line">TextToSpeechService.<span class="keyword">this</span>.onSynthesizeText(mSynthesisRequest, synthesisCallback);</span><br></pre></td></tr></table></figure>
+<p>上面源码中想必你也注意到了<code>mSynthesisRequest</code>, 这个就是一开始构件SynthesisSpeechItemV1的时候创建的对象，里面封装了需要播放的文本，速度，语言，国家等一系列的信息。</p>
+<ol>
+<li>pico拿到数据和回调实例之后，就会开始准备自己的环境，当环境准备好之后它就会利用回调实例发送start的指令，该指令的实现主要是下面几个过程：</li>
+</ol>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//1.创建SynthesisPlaybackQueueItem</span></span><br><span class="line">SynthesisPlaybackQueueItem item = <span class="keyword">new</span> SynthesisPlaybackQueueItem(</span><br><span class="line">                    mAudioParams, sampleRateInHz, audioFormat, channelCount,</span><br><span class="line">                    mDispatcher, mCallerIdentity, mLogger);</span><br><span class="line"><span class="comment">//2.将该item投入到PlayAudioHandler的信箱中。</span></span><br><span class="line">mAudioTrackHandler.enqueue(item);</span><br></pre></td></tr></table></figure>
+<p>非常简单，只是创建了另外一个item，然后将这个item丢给另外一个loop，让另外一个loop去处理播放事件。<br>需要注意的是<code>SynthesisPlaybackQueueItem</code>是属于回调实例的成员，而生产者和接收者的大部分实现则是在这里面。</p>
+<ol>
+<li>之后pico如果有产生数据则会调用回调实例的<code>audioAvailable</code>来将数据递给<code>SynthesisPlaybackQueueItem</code>，而<code>mAudioTrackHandler</code>如果正在处理该item的时候，并且发现有数据则会进行读取，并通过audiotrack进行播放（其实也只是单纯的调用了<code>SynthesisPlaybackQueueItem</code>中的<code>run</code>函数罢了）.</li>
+</ol>
+<p>这样基本完成了播放的流程了。</p>
+<p>到这边基本上完成了本文要讲的大部分内容了。不过还有一点需要注意一下的就是TextToSpeechService中函数<code>onSynthesizeText</code>是一个阻塞函数。会一直等待到pico返回的。</p>
+<p>感觉这边的代码对于写音视频类的app应该是有借鉴作用的，这部分代码我只想说可以利用！！这边讲得很粗糙并且不够深入，代码里面有更多的实现细节，只能后面用到的时候再进一步归纳，总结了。。。</p>
+</div><footer class="post__foot u-cf"><ul class="post__tag u-fl"><li class="post__tag__item"><a href="/tags/TTS/" class="post__tag__link">TTS</a></li><li class="post__tag__item"><a href="/tags/学习笔记/" class="post__tag__link">学习笔记</a></li></ul><a class="post__foot-link u-fr"></a></footer></article><article class="post"><header class="post__head"><time datetime="2015-11-22T06:26:02.000Z" class="post__time">十一月 22, 2015</time><h1 class="post__title"><a href="/2015/11/22/dagger2_second/">Dagger 2 SubComponent</a></h1><hr/></header><div class="post__main echo"><p>学习源码：<a href="https://github.com/mvarnagiris/Financius" target="_blank" rel="external">https://github.com/mvarnagiris/Financius</a></p>
 <p>本来该文章打算稍微介绍下Dagger2的SubComponent的，但是发现单单介绍这个标签好像并没有什么卵用，因为它的使用方法跟Component基本上没有太大区别。</p>
 <h3 id="SubComponent的使用">SubComponent的使用</h3><p>SubComponent的语法规则可以参考前一篇博客里面的Component的使用。</p>
 <p>那如何将Component和SubComponent关联起来呢？</p>
@@ -203,56 +226,4 @@
 </ul>
 <p>参考文章：</p>
 <p><a href="http://blog.csdn.net/dm_vincent/article/category/2268127" target="_blank" rel="external">http://blog.csdn.net/dm_vincent/article/category/2268127</a> （一个系列，未看完。。。）<br><a href="http://blog.csdn.net/renfufei/article/details/24600507" target="_blank" rel="external">http://blog.csdn.net/renfufei/article/details/24600507</a><br><a href="http://developer.51cto.com/art/201206/344308.htm" target="_blank" rel="external">http://developer.51cto.com/art/201206/344308.htm</a> 有java 8默认接口的介绍</p>
-</div><footer class="post__foot u-cf"><ul class="post__tag u-fl"><li class="post__tag__item"><a href="/tags/lambda/" class="post__tag__link">lambda</a></li><li class="post__tag__item"><a href="/tags/学习笔记/" class="post__tag__link">学习笔记</a></li></ul><a class="post__foot-link u-fr"></a></footer></article><article class="post"><header class="post__head"><time datetime="2015-11-08T10:44:12.000Z" class="post__time">十一月 8, 2015</time><h1 class="post__title"><a href="/2015/11/08/ButterKnife_learning/">ButterKnife 学习</a></h1><hr/></header><div class="post__main echo"><h2 id="android_studio_ButterKnife_Zelezny插件的安装及使用">android studio ButterKnife Zelezny插件的安装及使用</h2><h3 id="安装">安装</h3><ol>
-<li>打开File-&gt;Settings，选中plugin，输入butterknife</li>
-<li>选择Android ButterKnife Zelezny点击安装，重启as</li>
-<li><p>修改Module对应的Gradle配置文件的dependencies节点中添加：</p>
- <figure class="highlight gradle"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">compile</span> <span class="string">'com.jakewharton:butterknife:7.0.0'</span></span><br></pre></td></tr></table></figure>
-</li>
-</ol>
-<h3 id="使用">使用</h3><blockquote>
-<p>注意：鼠标的光标要停留在<code>代码中的布局文件的资源id上面</code></p>
-</blockquote>
-<ul>
-<li>右键资源ID，选择Generate…，选择Generate xxx Injections，选中需要导入的view对象。</li>
-</ul>
-<h2 id="ButterKnife_学习">ButterKnife 学习</h2><h3 id="ButterKnife有什么好处">ButterKnife有什么好处</h3><ul>
-<li>省略findViewById，快速实现listener、批量设置控件属性</li>
-<li>代码清晰简洁</li>
-<li>学习成本低，android studio下的插件很好用，可以快速coding</li>
-</ul>
-<h3 id="学习内容">学习内容</h3><p>使用下面方法之前，需要配置好环境，并且已经将activity或者当前view跟butterknife进行绑定<code>ButterKnife.bind(this);</code>或者<code>ButterKnife.bind(this, v);</code></p>
-<ol>
-<li>如何省略<code>findViewById</code>：直接<code>@Bind(R.id.title) TextView title</code>;</li>
-<li>如何快速实现listener：直接<code>@OnClick(R.id.submit)</code>、<code>@OnLongClick(R.id.btn_three)</code>、<code>@OnItemClick(R.id.lv_listview)</code>、<code>@OnCheckedChanged</code>等，直接在下面写实现函数处理即可，对于传入参数，可以直接省略，或者传入几个需要的参数即可。</li>
-<li>对于有多个回调函数的listener，eg.默认的回调函数用<code>@OnItemSelected(R.id.my_spinner)</code>， 指定的函数用<code>@OnItemSelected(value = R.id.my_spinner, callback = OnItemSelected.Callback.NOTHING_SELECTED)</code></li>
-<li><p>批量设置控件属性</p>
-<ul>
-<li><p>提供的几种方法：其中的action，setter以及Property需要我们自己来实现，Property系统有自带的则可以不需要。</p>
-   <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> &lt;T extends View&gt; <span class="function"><span class="keyword">void</span> <span class="title">apply</span><span class="params">(List&lt;T&gt; list, Action&lt;? <span class="keyword">super</span> T&gt; action)</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> &lt;T extends View, V&gt; <span class="keyword">void</span> <span class="title">apply</span><span class="params">(List&lt;T&gt; list, Setter&lt;? <span class="keyword">super</span> T, V&gt; setter, V value)</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> &lt;T extends View, V&gt; <span class="keyword">void</span> <span class="title">apply</span><span class="params">(List&lt;T&gt; list, Property&lt;? <span class="keyword">super</span> T, V&gt; setter, V value)</span></span></span><br></pre></td></tr></table></figure>
-<ul>
-<li><p>范例：</p>
- <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//需要批量设置的控件</span></span><br><span class="line"><span class="annotation">@Bind</span>(&#123;R.id.tv_one, R.id.tv_two, R.id.tv_three&#125;)</span><br><span class="line">List&lt;TextView&gt; tvs;</span><br><span class="line">    </span><br><span class="line"><span class="comment">//自定义action</span></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">final</span> ButterKnife.Action&lt;View&gt; DISABLE = <span class="keyword">new</span> ButterKnife.Action&lt;View&gt;() &#123;</span><br><span class="line">    <span class="annotation">@Override</span> <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">apply</span><span class="params">(View view, <span class="keyword">int</span> index)</span> </span>&#123;</span><br><span class="line">        view.setEnabled(<span class="keyword">false</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br><span class="line"><span class="comment">//自定义setter</span></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">final</span> ButterKnife.Setter&lt;View, Boolean&gt; ENABLED = <span class="keyword">new</span> ButterKnife.Setter&lt;View, Boolean&gt;() &#123;</span><br><span class="line">    <span class="annotation">@Override</span> <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">set</span><span class="params">(View view, Boolean value, <span class="keyword">int</span> index)</span> </span>&#123;</span><br><span class="line">        view.setEnabled(value);</span><br><span class="line">        TextView v = (TextView)view;</span><br><span class="line">        v.setText(<span class="string">"heihei~"</span> + index);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br><span class="line"><span class="comment">//调用：根据个人需求选择使用一个或多个即可。</span></span><br><span class="line">ButterKnife.apply(tvs, DISABLE);</span><br><span class="line">ButterKnife.apply(tvs, ENABLED, <span class="keyword">true</span>);</span><br><span class="line">ButterKnife.apply(tvs, View.ALPHA, <span class="number">0.0f</span>);</span><br></pre></td></tr></table></figure>
-</li>
-</ul>
-</li>
-</ul>
-</li>
-<li><p>提供findById的方法</p>
-<ul>
-<li>ButterKnife.findById()可以用来获取Activity,Dialog或View中的任何View.</li>
-<li>ButterKnife自动完成了类型转换,所以获取出来以后不用进行显式强转,直接赋值给具体的View类型引用即可.</li>
-</ul>
-</li>
-<li><p>在生命周期跟activity不一样的view中进行绑定，则需要在<code>onDestroyView()</code>中执行<code>ButterKnife.unbind(this);</code>操作。</p>
-</li>
-<li><p>在写ListView的时候，ViewHolder也可以进行绑定，但是必须声明该adapter为public，并且ViewHolder需要为static的内部类，使用android studio则会自动帮我们创建该类，给力~~~：).</p>
-</li>
-</ol>
-<p>附上我自己实验的代码：<a href="https://github.com/lexiMee/Demos" target="_blank" rel="external">https://github.com/lexiMee/Demos</a></p>
-<p>参考文档：</p>
-<ul>
-<li>ButterKnife基本使用 <a href="http://www.cnblogs.com/mengdd/archive/2015/06/23/4595973.html" target="_blank" rel="external">http://www.cnblogs.com/mengdd/archive/2015/06/23/4595973.html</a></li>
-<li>开源中国源码学习（六）——ButterKnife的使用 <a href="http://www.mamicode.com/info-detail-978143.html" target="_blank" rel="external">http://www.mamicode.com/info-detail-978143.html</a></li>
-</ul>
-</div><footer class="post__foot u-cf"><ul class="post__tag u-fl"><li class="post__tag__item"><a href="/tags/ButterKnife/" class="post__tag__link">ButterKnife</a></li><li class="post__tag__item"><a href="/tags/学习笔记/" class="post__tag__link">学习笔记</a></li></ul><a class="post__foot-link u-fr"></a></footer></article></main><footer class="foot"><div class="foot-copy u-fl">&copy; 2015 LexiMee<bdi> Theme by <a href="https://github.com/andforce/hexo-theme-andforce" >andforce</a></bdi></div><menu class="page-menu u-fr"><li class="page-menu__item"><span title="Previous" class="page-menu__link icon-arrow-left page-menu__link--disabled"></span></li><li class="page-menu__item"><span title="Next" class="page-menu__link icon-arrow-right page-menu__link--disabled"></span></li></menu></footer></body></html>
+</div><footer class="post__foot u-cf"><ul class="post__tag u-fl"><li class="post__tag__item"><a href="/tags/lambda/" class="post__tag__link">lambda</a></li><li class="post__tag__item"><a href="/tags/学习笔记/" class="post__tag__link">学习笔记</a></li></ul><a class="post__foot-link u-fr"></a></footer></article></main><footer class="foot"><div class="foot-copy u-fl">&copy; 2015 LexiMee<bdi> Theme by <a href="https://github.com/andforce/hexo-theme-andforce" >andforce</a></bdi></div><menu class="page-menu u-fr"><li class="page-menu__item"><span title="Previous" class="page-menu__link icon-arrow-left page-menu__link--disabled"></span></li><li class="page-menu__item"><a title="Next" href="/page/2/" class="page-menu__link icon-arrow-right"></a></li></menu></footer></body></html>
