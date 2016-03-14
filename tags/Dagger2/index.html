@@ -1,94 +1,224 @@
-<!DOCTYPE html><html><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="alternative" href="/atom.xml" title="Thinking" type="application/atom+xml"><link rel="icon" href="/favicon.png"><title>Dagger2 - Thinking</title><link rel="stylesheet" href="/css/main.css" type="text/css"><!--[if lt IE 9]><script>(function(a,b){a="abbr article aside audio bdi canvas data datalist details dialog figcaption figure footer header hgroup main mark meter nav output progress section summary template time video".split(" ");for(b=a.length-1;b>=0;b--)document.createElement(a[b])})()</script><![endif]--></head><body><header class="head"><h1 class="head-title u-fl"><a href="/">Thinking</a></h1><nav class="head-nav u-fr"><ul class="head-nav__list"><li class="head-nav__item"><a href="/archives" class="head-nav__link">文章</a></li></ul></nav></header><main class="main"><article class="post"><header class="post__head"><time datetime="2015-11-22T06:26:02.000Z" class="post__time">十一月 22, 2015</time><h1 class="post__title"><a href="/2015/11/22/dagger2_second/">Dagger 2 SubComponent</a></h1><hr/></header><div class="post__main echo"><p>学习源码：<a href="https://github.com/mvarnagiris/Financius" target="_blank" rel="external">https://github.com/mvarnagiris/Financius</a></p>
-<p>本来该文章打算稍微介绍下Dagger2的SubComponent的，但是发现单单介绍这个标签好像并没有什么卵用，因为它的使用方法跟Component基本上没有太大区别。</p>
-<h3 id="SubComponent的使用">SubComponent的使用</h3><p>SubComponent的语法规则可以参考前一篇博客里面的Component的使用。</p>
-<p>那如何将Component和SubComponent关联起来呢？</p>
-<blockquote>
-<p>只需要在Component中声明一个函数返回值为该SubComponent即可：</p>
-</blockquote>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">ActivityComponent <span class="title">plus</span><span class="params">()</span></span>;</span><br></pre></td></tr></table></figure>
-<p>那SubComponent在apt生成的代码中的表现形式又是如何的呢？</p>
-<blockquote>
-<p>该SubComponent的实现类将直接成为Component的private final内部类。而如果是独立的Component，那它将拥有自己的一个public的实现类。由于是private final类，所以获取该SubComponent只能通过在Component中声明的函数进行获取。</p>
-</blockquote>
-<h3 id="总结开源项目SubComponent结合mvp架构">总结开源项目SubComponent结合mvp架构</h3><p>使用Dagger2的目的其实就是为了实现DI，在android上面，这种注入一般是注入到activity中，如果我们按照正常的Component去书写，去注入其实也是可以的，只是会存在比较多的耦合，而且对于每次注入的话，都需要我们手动进行书写这部分重复的代码，对于维护和扩展都是有比较大的限制的，违背了开闭原则。如何让注入的代码不会过多的耦合，这个开源项目就给出了一个解决方案，搭建自己的DI小框架。</p>
-<h6 id="文件结构">文件结构</h6><p>如下图：</p>
-<p><img src="/image/file_struct.png" alt="文件结构"></p>
-<h6 id="具体实现">具体实现</h6><ul>
-<li>BaseComponent：项目Component的父接口，所有的Component都必须继承于它。</li>
-<li><p>AppComponent：全局的Component，是个单例。这边必须把需要关联的SubComponent写入</p>
-  <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@Singleton</span> <span class="annotation">@Component</span>(modules = &#123;AppModule.class, ApiModule.class&#125;) <span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">AppComponent</span> <span class="keyword">extends</span> <span class="title">BaseComponent</span> </span>&#123;</span><br><span class="line">    <span class="function">ActivityComponent <span class="title">plus</span><span class="params">(ActivityModule module)</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>App：继承自Application，并且通过hashmap来维护所有的Component，提供AppComponent的唯一实例</p>
-  <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">App</span> <span class="keyword">extends</span> <span class="title">Application</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Map&lt;String, ? <span class="keyword">super</span> BaseComponent&gt; components = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> App <span class="title">with</span><span class="params">(@NonNull Context context)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> (App) context.getApplicationContext();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> AppComponent appComponent;</span><br><span class="line"></span><br><span class="line">    <span class="annotation">@Override</span> <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onCreate</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        appComponent = DaggerAppComponent.builder().appModule(<span class="keyword">new</span> AppModule(<span class="keyword">this</span>)).build();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> AppComponent <span class="title">getComponent</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> appComponent;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> &lt;C extends BaseComponent&gt; <span class="function">C <span class="title">getComponent</span><span class="params">(@NonNull String key)</span> </span>&#123;</span><br><span class="line">        <span class="comment">//noinspection unchecked</span></span><br><span class="line">        <span class="keyword">return</span> (C) components.get(key);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> &lt;C extends BaseComponent&gt; <span class="function"><span class="keyword">void</span> <span class="title">putComponent</span><span class="params">(@NonNull String key, @NonNull C component)</span> </span>&#123;</span><br><span class="line">        components.put(key, component);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">removeComponent</span><span class="params">(@NonNull String key)</span> </span>&#123;</span><br><span class="line">        components.remove(key);</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>ActivityComponent：第一层SubComponent，它的作用如同AppComponent，关联它下面的所有的SubComponent。如果添加新的模块则必须修改这边的代码，把对应的SubComponent添加进来，它的写法同AppComponent的。整个结构下来就如同一个倒挂的树。</p>
-</li>
-<li><p>OverviewComponent：具体的某个Module，可以对应一个或多个activity。它必须要包含需要注入的activity。</p>
-  <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@ActivityScope</span> <span class="annotation">@Subcomponent</span>(modules = OverviewModule.class) <span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">OverviewComponent</span> <span class="keyword">extends</span> <span class="title">BaseComponent</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">inject</span><span class="params">(OverviewActivity activity)</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>BaseActivity：所有activity的基类，它会将所有activity在onCreate所需要做的事情做了（模版方法），然后让子类去实现特殊化的操作。并且关联了presenter和activity的关系。</p>
-  <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">BaseActivity</span>&lt;<span class="title">V</span> <span class="keyword">extends</span> <span class="title">PresenterView</span>, <span class="title">C</span> <span class="keyword">extends</span> <span class="title">BaseComponent</span>&gt; <span class="keyword">extends</span> <span class="title">AppCompatActivity</span> </span>&#123;</span><br><span class="line">    String componentKey;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">abstract</span> <span class="keyword">int</span> <span class="title">getLayoutId</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="annotation">@Override</span> <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">onCreate</span><span class="params">(Bundle savedInstanceState)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>.onCreate(savedInstanceState);</span><br><span class="line">        inject(getComponent());</span><br><span class="line">        setContentView(getLayoutId());</span><br><span class="line">        onViewCreated(savedInstanceState);</span><br><span class="line">        getPresenter().onViewAttached(getPresenterView());</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">onViewCreated</span><span class="params">(Bundle savedInstanceState)</span> </span>&#123;&#125;</span><br><span class="line">    <span class="annotation">@Override</span> <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">onDestroy</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>.onDestroy();</span><br><span class="line">        getPresenter().onViewDetached();</span><br><span class="line">        <span class="keyword">if</span> (isFinishing()) &#123;</span><br><span class="line">            App.with(<span class="keyword">this</span>).removeComponent(componentKey);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="annotation">@NonNull</span> <span class="function"><span class="keyword">protected</span> <span class="keyword">abstract</span> C <span class="title">createComponent</span><span class="params">(@NonNull ActivityComponent component)</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">abstract</span> <span class="keyword">void</span> <span class="title">inject</span><span class="params">(@NonNull C component)</span></span>;</span><br><span class="line">    <span class="annotation">@NonNull</span> <span class="function"><span class="keyword">protected</span> <span class="keyword">abstract</span> Presenter&lt;V&gt; <span class="title">getPresenter</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="annotation">@NonNull</span> <span class="function"><span class="keyword">protected</span> <span class="keyword">abstract</span> V <span class="title">getPresenterView</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> C <span class="title">getComponent</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">final</span> App app = App.with(<span class="keyword">this</span>);</span><br><span class="line">        <span class="keyword">final</span> C component;</span><br><span class="line">        <span class="keyword">if</span> (componentKey == <span class="keyword">null</span>) &#123;</span><br><span class="line">            componentKey = UUID.randomUUID().toString();</span><br><span class="line">            component = createComponent(app.getComponent().plus(<span class="keyword">new</span> ActivityModule()));</span><br><span class="line">            app.putComponent(componentKey, component);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            component = app.getComponent(componentKey);</span><br><span class="line">            <span class="keyword">if</span> (component == <span class="keyword">null</span>) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"Component was not properly stored."</span>);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> component;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>  解析下这句<code>component = createComponent(app.getComponent().plus(new ActivityModule()));</code><br>  <code>app.getComponent().plus(new ActivityModule())</code>这个语句将会获得ActivityComponent，而具体的SubComponent是跟该ActivityComponent关联的，所以具体的Component是需要获取该对象的。这样才能在SubComponent中实现关联的。只要简单的实现createComponent，由于Module的特殊性，所以这个需要交给子类来实现。</p>
-<p>  子类如何实现该<code>createComponent(ActivityComponent ac)</code></p>
-  <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@NonNull</span> <span class="annotation">@Override</span> <span class="function"><span class="keyword">protected</span> OverviewComponent <span class="title">createComponent</span><span class="params">(@NonNull ActivityComponent component)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> component.plus(<span class="keyword">new</span> OverviewModule());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>  记得<code>plus()</code>函数的返回值是什么么？<br>  这样ActivityComponent的将会创造一个具体的Component返回，作为getComponent的返回值的同时将这个Component保存到AppComponent中。这样在BaseActivity的onCreate中的inject的时候就找到该activity对应的Component了。这样只要一个activity继承自BaseActivity，并且实现自己的createComponent和Inject的函数（每个Component自己定义的方法只有自己知道，所以必须子类来实现该调用。），这样就可以完成inject了。当然多个activity是可以使用同一个Component的。</p>
-</li>
-<li><p>Presenter：mvp模式中的p。mvp中是v和p互相关联，而p又只跟m关联，m可以理解为Dagger2中的Module。Activity需要实现接口<code>Presenter.view</code>.这边对于控件中的值变化是采用Rxjava来实现的，这部分还没完全理解透彻，后续搞懂了再更新。</p>
-</li>
+
+
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script type="text/javascript" src="http://tajs.qq.com/stats?sId=44218032" charset="UTF-8"></script>
+  <script>
+	var _hmt = _hmt || [];
+	(function() {
+	  var hm = document.createElement("script");
+	  hm.src = "//hm.baidu.com/hm.js?7192fa361f5cabb11d8a22de41c1ba8f";
+	  var s = document.getElementsByTagName("script")[0]; 
+	  s.parentNode.insertBefore(hm, s);
+	})();
+	</script>
+  
+  <title>Dagger2 | Thinking</title>
+  <meta name="author" content="LexiMee">
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  
+  <meta property="og:site_name" content="Thinking"/>
+
+  
+    <meta property="og:image" content="undefined"/>
+  
+
+  <link href="/imgs/favicon.ico" rel="icon" type="image/x-ico">
+  <link rel="alternate" href="/atom.xml" title="Thinking" type="application/atom+xml">
+  <link rel="stylesheet" href="/css/style.css" media="screen" type="text/css">
+  <!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+  <script src="//libs.baidu.com/jquery/1.8.0/jquery.min.js"></script>
+</head>
+
+
+<body>
+  <header><div>
+		
+			<div id="imglogo">
+				<a href="/"><img src="/imgs/logo.png" alt="Thinking" title="Thinking"/></a>
+			</div>
+			
+			<div id="textlogo">
+				<h1 class="site-name">Thinking</h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<nav class="animated">
+				<ul>
+					
+						<li><a href="/">Home</a></li>
+					
+						<li><a href="/archives">Archives</a></li>
+					
+						<li><a href="/about">About</a></li>
+					
+					<li> <a href="/atom.xml">RSS</a> </li>
+				</ul>
+			</nav>			
+</div>
+</header>
+  <div id="content" class="inner">
+    <div id="main-col" class="alignleft"><div id="wrapper">
+<h2 class="archive-title tag">Dagger2</h2>
+
+<div class="archive">
+
+  <article class="post">
+	<div class="post-content">
+	  <header>
+		<time datetime="2015-11-22T06:26:02.000Z"><a href="/2015/11/22/dagger2_second/">2015-11-22</a></time>
+		
+		  <h1 class="title"><a href="/2015/11/22/dagger2_second/">Dagger 2 SubComponent</a></h1>
+		
+	  </header>
+	</div>
+  </article>
+
+  <article class="post">
+	<div class="post-content">
+	  <header>
+		<time datetime="2015-11-13T13:55:09.000Z"><a href="/2015/11/13/dagger2_first/">2015-11-13</a></time>
+		
+		  <h1 class="title"><a href="/2015/11/13/dagger2_first/">Dagger 2 Component/Module/Inject的理解</a></h1>
+		
+	  </header>
+	</div>
+  </article>
+
+</div>
+</div></div>
+    <aside id="sidebar" class="alignright">
+  <div class="search">
+  <form action="//google.com/search" method="get" accept-charset="utf-8">
+    <input type="search" name="q" results="0" placeholder="搜索">
+    <input type="hidden" name="q" value="site:thinks.me">
+  </form>
+</div>
+
+  
+<div class="widget tag">
+  <h3 class="title">分类</h3>
+  <ul class="entry">
+  
+    <li><a href="/categories/android开发/JAVA开发/">JAVA开发</a><small>1</small></li>
+  
+    <li><a href="/categories/android开发/">android开发</a><small>7</small></li>
+  
+  </ul>
+</div>
+
+
+  
+<div class="widget tagcloud">
+  <h3 class="title">标签云</h3>
+  <div class="entry">
+    <a href="/tags/ButterKnife/" style="font-size: 10px;">ButterKnife</a> <a href="/tags/Dagger2/" style="font-size: 15px;">Dagger2</a> <a href="/tags/TTS/" style="font-size: 10px;">TTS</a> <a href="/tags/android-studio/" style="font-size: 10px;">android studio</a> <a href="/tags/audio/" style="font-size: 10px;">audio</a> <a href="/tags/lambda/" style="font-size: 10px;">lambda</a> <a href="/tags/学习笔记/" style="font-size: 20px;">学习笔记</a>
+  </div>
+</div>
+
+
+  <iframe width="100%" height="140" class="share_self"  frameborder="0" scrolling="no" src="http://widget.weibo.com/weiboshow/index.php?language=&width=0&height=550&fansRow=2&ptype=1&speed=0&skin=1&isTitle=1&noborder=1&isWeibo=0&isFans=0&uid=1923610190&verifier=6af5ad6a&colors=fafafa,fafafa,666666,0082cb,ecfbfd&dpc=1"></iframe>
+
+  <div class="widget tag">
+<h3 class="title">友情链接</h3>
+<ul class="entry">
+<li><a href="http://opiece.me" title="Chillax's Blog" target="_blank">Chillax</a></li>
 </ul>
-</div><footer class="post__foot u-cf"><ul class="post__tag u-fl"><li class="post__tag__item"><a href="/tags/Dagger2/" class="post__tag__link">Dagger2</a></li><li class="post__tag__item"><a href="/tags/学习笔记/" class="post__tag__link">学习笔记</a></li></ul><a class="post__foot-link u-fr"></a></footer></article><article class="post"><header class="post__head"><time datetime="2015-11-13T13:55:09.000Z" class="post__time">十一月 13, 2015</time><h1 class="post__title"><a href="/2015/11/13/dagger2_first/">Dagger 2 Component/Module/Inject的理解</a></h1><hr/></header><div class="post__main echo"><h3 id="简述">简述</h3><p>  我只想简简单单的描述下我对该框架使用上的理解。。<br>  而这些的理解来自于别人的文档、看别人代码、实践。<br>  不过还是得对这个框架有个初步的认识：这个框架作用，给某些类或方法提供依赖。是DI思想的一种呈现。主要手段是帮你构建工厂类。</p>
-<ul>
-<li>Component：首先，它是一个interface，其次，它的作用是将Module和Host进行关联，关联生效的时机是在host中调用了inject函数（这个函数是你在components中声明的方法）。由于上面的特性，所以Component是有作用域的，利用这个作用域就可以引入singleon和scope provider了。</li>
-<li>Module或Inject:Module和Inject都是class，Module可以给host提供多个依赖的对象，而Inject本身就是host依赖的对象。（这里面提到的Inject是在类的构造函数前面标注@Inject，表示自己可以提供依赖）</li>
-<li><p>被注入依赖的对象：这里我们称之为host（宿主）</p>
-<p>如果你对butterknife熟悉的话，那你可以把这个理解称为butterknife在类上面的扩展，更加的自由，但是前提是你也必须写更多的代码。</p>
-</li>
-</ul>
-<h3 id="Component">Component</h3><p>Component顾名思义是组件、单元的意思，感觉这边用单元来理解会贴切多，因为单元是有个范围的。Dagger2中的Component是支持通过注解声明生命周期。</p>
-<p>Component的主要作用是实现Module和Host的关联，apt会为它生成实现类，实现类的名字是以Dagger+你定义的interface的名字，实现类的成员组成包括Module提供各种依赖的工厂，还包括了将要注入的host。为了实现注入，host中所需依赖必须声明为public类型。如何注入的具体执行代码是非常简单的：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//这行代码是在Component内部的，这就是Component如何关联Module和host的关键所在</span></span><br><span class="line"><span class="comment">//从Module获取到对应依赖的工厂，在Inject函数调用的时候，进行赋值操作，即完成了DI。</span></span><br><span class="line">host.member = providerMember.get();</span><br></pre></td></tr></table></figure>
-<p>Component的实现类会提供一个静态内部类builder，使用者直接使用它进行构建所需的Component。如果关联的Modules中有需要带参数的，则需要在构建过程中传入</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">DaggerDaggerDemoComponent.builder()</span><br><span class="line"> .mainModule(<span class="keyword">new</span> MainModule(app)) <span class="comment">//带参数的Module，如果没有则无需码这行代码，如果有参数必须得码。。</span></span><br><span class="line"> .build();</span><br></pre></td></tr></table></figure>
-<ul>
-<li><p>语法规则</p>
-<p>  dependencies括弧内是依赖的Compnent的class类型，modules括弧内是依赖module的class类型。括弧内都可以包含多个，用逗号分割。括弧内的这些，都会成为该Component的成员。</p>
-  <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@Singleton</span></span><br><span class="line"><span class="annotation">@Component</span>(dependencies = &#123; superComponent.class &#125;, modules = &#123; dataModule.class &#125;)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">AppComponent</span> </span>&#123;&#125;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>使用@Singleton</p>
-</li>
-<li><p>使用自定义的注解声明范围,自定义注解写法：</p>
-  <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@Scope</span></span><br><span class="line"><span class="annotation">@Retention</span>(RUNTIME)</span><br><span class="line"><span class="keyword">public</span> <span class="annotation">@interface</span> PerActivity &#123;&#125;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>什么场景下使用：</p>
-<p>  希望某个对象，它的生命周期是在当前Component唯一，这个时候就可以派上用场了。不管是@Singleton还是自定义注解的形式，最终apt解析出来的，都是使用的单例模式。</p>
-<p>例子：</p>
-<p>  DBHelper是依赖类，它要注入到Host，并且它对于某个Component具有唯一性，所以标注为@PerActivity。当确定A Component中的Host依赖于DBHelper的时候，我们就需要在Component前面添加该注解，表示在这个作用域内是唯一的。如果依赖类添加了注解，而依赖该DBHelper的Component如果没有添加上注解的话，编译会报错的。具体效果是这样的：如果两个host获取到同一个Component，则它们获取到的DBHelper也会是同一个。</p>
-</li>
-</ul>
-<ul>
-<li><p>如何确保两个Host获取到同一个Component</p>
-<p>  为了保证两个Host是同个对象，我们可以在Component中添加如下方法：</p>
-  <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//在自定义的Component中声明该内部类，由于例子Module没有带有参数，所以builder的过程很简单，如果有参数的话，则需要添加到build的过程中，否则程序运行的时候会报错。</span></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">Initializer</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="title">Initializer</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    &#125; <span class="comment">// No instances.</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> DaggerDemoComponent <span class="title">init</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> DaggerDaggerDemoComponent.builder()</span><br><span class="line">                .build();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//继承Application的类中进行获取该Component保证其唯一性，并提供调用接口</span></span><br><span class="line"><span class="comment">//Component构造的调用方法。</span></span><br><span class="line">AppComponent.Initializer.init();</span><br></pre></td></tr></table></figure>
-</li>
-</ul>
-<h3 id="Module">Module</h3><p>Module是一个类，具备类所有的特征，其主要作用是用来提供依赖实例的。</p>
-<ul>
-<li><p>语法规则</p>
-<p>  @Module来指明是module，如果名字是以provider打头的函数都会被apt认为是用来提供依赖，会为它生成工厂类。而普通的函数，则就当成普通函数看待。</p>
-  <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@Module</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DataModule</span> </span>&#123;</span><br><span class="line">    <span class="annotation">@Provides</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">providerName</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="string">"test"</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="annotation">@Singleton</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Person <span class="title">providerPerson</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> Person();</span><br><span class="line">    &#125;</span><br><span class="line">｝</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>Module 提供的对象不只是Host中需要的依赖，它也可以提供给Component中的方法返回值类型。</p>
-<p>例子：</p>
-  <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//component中声明</span></span><br><span class="line"><span class="annotation">@PerActivity</span></span><br><span class="line"><span class="annotation">@Component</span>(dependencies = ApplicationComponent.class, modules = ActivityModule.class)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">ActivityComponent</span> </span>&#123;</span><br><span class="line">  <span class="comment">//Exposed to sub-graphs.</span></span><br><span class="line">  <span class="function">Activity <span class="title">activity</span><span class="params">()</span></span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//则Module的实现如下：</span></span><br><span class="line"><span class="annotation">@Module</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ActivityModule</span> </span>&#123;</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">final</span> Activity activity;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="title">ActivityModule</span><span class="params">(Activity activity)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.activity = activity;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">/**</span><br><span class="line">  * Expose the activity to dependents in the graph.</span><br><span class="line">  */</span></span><br><span class="line">  <span class="annotation">@Provides</span> <span class="annotation">@PerActivity</span> <span class="function">Activity <span class="title">activity</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span>.activity;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-</li>
-</ul>
-<h3 id="Inject">Inject</h3><ul>
-<li>声明在构造函数前面表示该类是可以被注入到Host的。</li>
-<li><p>声明在Host的成员变量的前面，表示该实例是由Dagger2来提供依赖的。</p>
-<p>  由于用法相对简单，所以不多说。。。</p>
-</li>
-</ul>
-<h3 id="android_studio配置使用dagger2">android studio配置使用dagger2</h3><p>只需要简单配置下Gradle的配置文件就可以支持。</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">//Module开头处加入apt plugin的使用</span><br><span class="line">apply plugin: <span class="string">'com.neenbedankt.android-apt'</span></span><br><span class="line"></span><br><span class="line">//Module的dependencies中添加下面三个选项</span><br><span class="line">dependencies &#123;</span><br><span class="line">	provided <span class="string">'javax.annotation:jsr250-api:1.0'</span></span><br><span class="line">    compile <span class="string">'com.google.dagger:dagger-compiler:2.0.1'</span></span><br><span class="line">    compile <span class="string">'com.google.dagger:dagger:2.0.1'</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h3 id="参考文章">参考文章</h3><p><a href="http://www.jcodecraeer.com/a/anzhuokaifa/androidkaifa/2015/0519/2892.html" target="_blank" rel="external">http://www.jcodecraeer.com/a/anzhuokaifa/androidkaifa/2015/0519/2892.html</a> 学习生命周期<br><a href="https://github.com/phajduk/dagger2-example" target="_blank" rel="external">https://github.com/phajduk/dagger2-example</a> dagger2 example代码</p>
-</div><footer class="post__foot u-cf"><ul class="post__tag u-fl"><li class="post__tag__item"><a href="/tags/Dagger2/" class="post__tag__link">Dagger2</a></li><li class="post__tag__item"><a href="/tags/学习笔记/" class="post__tag__link">学习笔记</a></li></ul><a class="post__foot-link u-fr"></a></footer></article></main><footer class="foot"><div class="foot-copy u-fl">&copy; 2015 LexiMee<bdi> Theme by <a href="https://github.com/andforce/hexo-theme-andforce" >andforce</a></bdi></div><menu class="page-menu u-fr"><li class="page-menu__item"><span title="Previous" class="page-menu__link icon-arrow-left page-menu__link--disabled"></span></li><li class="page-menu__item"><span title="Next" class="page-menu__link icon-arrow-right page-menu__link--disabled"></span></li></menu></footer></body></html>
+</div>
+</aside>
+    <div class="clearfix"></div>
+  </div>
+  <footer id="footer"><div id="footer" >
+	
+	<div class="line">
+		<span></span>
+		<div class="author"></div>
+	</div>
+	
+	
+	<section class="info">
+		<p> Hi,I&#39;m the designer of this theme. <br/>
+			You can download this theme on my github.</p>
+	</section>
+	 
+	<div class="social-font clearfix">
+		
+		<a href="http://weibo.com/1923610190" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/huangjunhui" target="_blank" title="github"></a>
+		
+		
+		<a href="https://www.facebook.com/huangjunhui" target="_blank" title="facebook"></a>
+		
+		
+		
+		<a href="mailto:jhhuang1993@foxmail.com" target="_blank" class="icon-email" title="Email Me"></a>
+		
+	</div>
+		<p class="copyright">Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a> and Theme by <a href="https://github.com/huangjunhui/concise" target="_blank" title="Concise">Concise</a> © 2016 
+		
+		<a href="http://thinks.me/about" target="_blank" title="LexiMee">LexiMee</a>
+		
+		</p>
+</div>
+</footer>
+  <script src="//libs.baidu.com/jquery/2.0.3/jquery.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+<script src="/js/counter.js"></script>
+
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+  $('.fancybox').fancybox();
+})(jQuery);
+</script>
+
+<div id="totop" style="position:fixed;bottom:100px;right:10px;cursor: pointer;">
+<a title="返回顶部"><img src="/imgs/scrollup.png"/></a>
+</div>
+<script src="/js/totop.js"></script>
+<!-- mathjax config similar to math.stackexchange -->
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+      processEscapes: true
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+    });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+
+<script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+</body>
+</html>
+
+

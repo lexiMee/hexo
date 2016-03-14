@@ -1,138 +1,292 @@
-<!DOCTYPE html><html><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="alternative" href="/atom.xml" title="Thinking" type="application/atom+xml"><link rel="icon" href="/favicon.png"><title>Thinking</title><link rel="stylesheet" href="/css/main.css" type="text/css"><!--[if lt IE 9]><script>(function(a,b){a="abbr article aside audio bdi canvas data datalist details dialog figcaption figure footer header hgroup main mark meter nav output progress section summary template time video".split(" ");for(b=a.length-1;b>=0;b--)document.createElement(a[b])})()</script><![endif]--></head><body><header class="head"><h1 class="head-title u-fl"><a href="/">Thinking</a></h1><nav class="head-nav u-fr"><ul class="head-nav__list"><li class="head-nav__item"><a href="/archives" class="head-nav__link">文章</a></li></ul></nav></header><main class="main"><article class="post"><header class="post__head"><time datetime="2015-11-08T10:44:12.000Z" class="post__time">十一月 8, 2015</time><h1 class="post__title"><a href="/2015/11/08/java_8_lambda_learning/">JAVA 8 lambda 学习</a></h1><hr/></header><div class="post__main echo"><h3 id="基础">基础</h3><ul>
-<li>lambda 语法：<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">(parameters) -&gt; expression</span><br><span class="line">或</span><br><span class="line">(parameters) -&gt;&#123; statements; &#125;</span><br></pre></td></tr></table></figure>
-</li>
+
+
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script type="text/javascript" src="http://tajs.qq.com/stats?sId=44218032" charset="UTF-8"></script>
+  <script>
+	var _hmt = _hmt || [];
+	(function() {
+	  var hm = document.createElement("script");
+	  hm.src = "//hm.baidu.com/hm.js?7192fa361f5cabb11d8a22de41c1ba8f";
+	  var s = document.getElementsByTagName("script")[0]; 
+	  s.parentNode.insertBefore(hm, s);
+	})();
+	</script>
+  
+  <title>第 2 页 | Thinking</title>
+  <meta name="author" content="LexiMee">
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  
+  <meta property="og:site_name" content="Thinking"/>
+
+  
+    <meta property="og:image" content="undefined"/>
+  
+
+  <link href="/imgs/favicon.ico" rel="icon" type="image/x-ico">
+  <link rel="alternate" href="/atom.xml" title="Thinking" type="application/atom+xml">
+  <link rel="stylesheet" href="/css/style.css" media="screen" type="text/css">
+  <!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+  <script src="//libs.baidu.com/jquery/1.8.0/jquery.min.js"></script>
+</head>
+
+
+<body>
+  <header><div>
+		
+			<div id="imglogo">
+				<a href="/"><img src="/imgs/logo.png" alt="Thinking" title="Thinking"/></a>
+			</div>
+			
+			<div id="textlogo">
+				<h1 class="site-name">Thinking</h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<nav class="animated">
+				<ul>
+					
+						<li><a href="/">Home</a></li>
+					
+						<li><a href="/archives">Archives</a></li>
+					
+						<li><a href="/about">About</a></li>
+					
+					<li> <a href="/atom.xml">RSS</a> </li>
+				</ul>
+			</nav>			
+</div>
+</header>
+  <div id="content" class="inner">
+    <div id="main-col" class="alignleft"><div id="wrapper">
+  <article class="post">
+  
+    <div class="gallery">
+  <div class="photoset">
+    
+      <img src="">
+    
+  </div>
+  <div class="control">
+    <div class="prev"></div>
+    <div class="next"></div>
+  </div>
+</div>
+  
+  <div class="post-content">
+    <header>
+      
+        <time datetime="2015-11-08T10:44:12.000Z"><a href="/2015/11/08/java_8_lambda_learning/">2015-11-08</a></time>
+      
+      
+  
+    <h1 class="title"><a href="/2015/11/08/java_8_lambda_learning/">JAVA 8 lambda 学习</a></h1>
+  
+
+    </header>
+    <div class="entry">
+		 
+    </div>
+    <footer>
+		<div class="alignleft">
+		<a href="/2015/11/08/java_8_lambda_learning/#more" class="more-link">Read more</a>
+		</div>
+		
+		<div class="comments-count">
+			
+			<a href="/2015/11/08/java_8_lambda_learning/#comment" class="ds-thread-count icon-comment" data-thread-key="2015/11/08/java_8_lambda_learning/" data-count-type="comments"></a>
+			
+		</div>
+		
+        <div class="clearfix"></div>
+    </footer>
+  </div>
+</article>
+
+  <article class="post">
+  
+    <div class="gallery">
+  <div class="photoset">
+    
+      <img src="">
+    
+  </div>
+  <div class="control">
+    <div class="prev"></div>
+    <div class="next"></div>
+  </div>
+</div>
+  
+  <div class="post-content">
+    <header>
+      
+        <time datetime="2015-11-08T10:44:12.000Z"><a href="/2015/11/08/ButterKnife_learning/">2015-11-08</a></time>
+      
+      
+  
+    <h1 class="title"><a href="/2015/11/08/ButterKnife_learning/">ButterKnife 学习</a></h1>
+  
+
+    </header>
+    <div class="entry">
+		 
+    </div>
+    <footer>
+		<div class="alignleft">
+		<a href="/2015/11/08/ButterKnife_learning/#more" class="more-link">Read more</a>
+		</div>
+		
+		<div class="comments-count">
+			
+			<a href="/2015/11/08/ButterKnife_learning/#comment" class="ds-thread-count icon-comment" data-thread-key="2015/11/08/ButterKnife_learning/" data-count-type="comments"></a>
+			
+		</div>
+		
+        <div class="clearfix"></div>
+    </footer>
+  </div>
+</article>
+
+
+
+    <nav id="page-navs">
+      <a class="extend prev" rel="prev" href="/">&laquo; Prev</a><a class="page-number" href="/">1</a><span class="page-number current">2</span>
+    </nav>
+
+
+</div></div>
+    <aside id="sidebar" class="alignright">
+  <div class="search">
+  <form action="//google.com/search" method="get" accept-charset="utf-8">
+    <input type="search" name="q" results="0" placeholder="搜索">
+    <input type="hidden" name="q" value="site:thinks.me">
+  </form>
+</div>
+
+  
+<div class="widget tag">
+  <h3 class="title">分类</h3>
+  <ul class="entry">
+  
+    <li><a href="/categories/android开发/JAVA开发/">JAVA开发</a><small>1</small></li>
+  
+    <li><a href="/categories/android开发/">android开发</a><small>7</small></li>
+  
+  </ul>
+</div>
+
+
+  
+<div class="widget tagcloud">
+  <h3 class="title">标签云</h3>
+  <div class="entry">
+    <a href="/tags/ButterKnife/" style="font-size: 10px;">ButterKnife</a> <a href="/tags/Dagger2/" style="font-size: 15px;">Dagger2</a> <a href="/tags/TTS/" style="font-size: 10px;">TTS</a> <a href="/tags/android-studio/" style="font-size: 10px;">android studio</a> <a href="/tags/audio/" style="font-size: 10px;">audio</a> <a href="/tags/lambda/" style="font-size: 10px;">lambda</a> <a href="/tags/学习笔记/" style="font-size: 20px;">学习笔记</a>
+  </div>
+</div>
+
+
+  <iframe width="100%" height="140" class="share_self"  frameborder="0" scrolling="no" src="http://widget.weibo.com/weiboshow/index.php?language=&width=0&height=550&fansRow=2&ptype=1&speed=0&skin=1&isTitle=1&noborder=1&isWeibo=0&isFans=0&uid=1923610190&verifier=6af5ad6a&colors=fafafa,fafafa,666666,0082cb,ecfbfd&dpc=1"></iframe>
+
+  <div class="widget tag">
+<h3 class="title">友情链接</h3>
+<ul class="entry">
+<li><a href="http://opiece.me" title="Chillax's Blog" target="_blank">Chillax</a></li>
 </ul>
-<p>表达式使用大括弧情况：</p>
-<ol>
-<li>接口中的方法的返回类型是void 原因：如果接口的方法的实现是有返回值，但是函数声明为void，不加大括弧则会认为函数的返回值为实现的返回值（lambda是不写return的，所以都认为有返回值）， 所以必须区别对待。</li>
-<li>如果Lambda表达式主体部分包含多条语句，也必须用花括号，并且return语句不能省。</li>
-</ol>
-<ul>
-<li>功能接口</li>
-</ul>
-<blockquote>
-<p>只包含一个方法的接口被称为功能接口，Lambda 表达式用用于任何功能接口适用的地方。</p>
-</blockquote>
-<ul>
-<li>编译器分析原理：</li>
-</ul>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//java正常写法</span></span><br><span class="line">File dir = <span class="keyword">new</span> File(<span class="string">"/an/dir/"</span>);</span><br><span class="line">   FileFilter directoryFilter = <span class="keyword">new</span> FileFilter() &#123;</span><br><span class="line">      <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">accept</span><span class="params">(File file)</span> </span>&#123;</span><br><span class="line">         <span class="keyword">return</span> file.isDirectory();</span><br><span class="line">      &#125;</span><br><span class="line">&#125;;</span><br><span class="line"><span class="comment">//lambda</span></span><br><span class="line">File dir = <span class="keyword">new</span> File(<span class="string">"/an/dir/"</span>);</span><br><span class="line">FileFilter directoryFilter = (File f) -&gt; f.isDirectory();</span><br><span class="line">File[] dirs = dir.listFiles(directoryFilter);</span><br><span class="line"><span class="comment">//或者</span></span><br><span class="line">File dir = <span class="keyword">new</span> File(<span class="string">"/an/dir/"</span>);</span><br><span class="line">File[] dirs = dir.listFiles((File f) -&gt; f.isDirectory());</span><br></pre></td></tr></table></figure>
-<blockquote>
-<p>编译器知道FileFilter只有一个方法accept()，所以accept()方法肯定对应(File f) -&gt; f.isDirectory()，而且accept()方法只有一个File类型的参数，所以(File f) -&gt; f.isDirectory()中的File f就是这个参数了.</p>
-</blockquote>
-<p>通俗说法，将接口的实现直接放到函数的参数中。</p>
-<ul>
-<li>从for循环开始</li>
-</ul>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">String[] atp = &#123;<span class="string">"Rafael Nadal"</span>, <span class="string">"Novak Djokovic"</span>,</span><br><span class="line">       <span class="string">"Stanislas Wawrinka"</span>,</span><br><span class="line">       <span class="string">"David Ferrer"</span>,<span class="string">"Roger Federer"</span>,</span><br><span class="line">       <span class="string">"Andy Murray"</span>,<span class="string">"Tomas Berdych"</span>,</span><br><span class="line">       <span class="string">"Juan Martin Del Potro"</span>&#125;;</span><br><span class="line">List&lt;String&gt; players =  Arrays.asList(atp);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 以前的循环方式</span></span><br><span class="line"><span class="keyword">for</span> (String player : players) &#123;</span><br><span class="line">     System.out.print(player + <span class="string">"; "</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 使用 lambda 表达式以及函数操作(functional operation)</span></span><br><span class="line">players.forEach((player) -&gt; System.out.print(player + <span class="string">"; "</span>));</span><br><span class="line"> </span><br><span class="line"><span class="comment">// 在 Java 8 中使用双冒号操作符(double colon operator)</span></span><br><span class="line">players.forEach(System.out::println);</span><br></pre></td></tr></table></figure>
-<ul>
-<li>匿名内部类</li>
-</ul>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//////各种Listener//////</span></span><br><span class="line"><span class="comment">// 使用匿名内部类</span></span><br><span class="line">btn.setOnAction(<span class="keyword">new</span> EventHandler&lt;ActionEvent&gt;() &#123;</span><br><span class="line">          <span class="annotation">@Override</span></span><br><span class="line">          <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">handle</span><span class="params">(ActionEvent event)</span> </span>&#123;</span><br><span class="line">              System.out.println(<span class="string">"Hello World!"</span>); </span><br><span class="line">          &#125;</span><br><span class="line">    &#125;);</span><br><span class="line"> </span><br><span class="line"><span class="comment">// 或者使用 lambda expression</span></span><br><span class="line">btn.setOnAction(event -&gt; System.out.println(<span class="string">"Hello World!"</span>));</span><br><span class="line"></span><br><span class="line"><span class="comment">//////针对线程实现//////</span></span><br><span class="line"><span class="comment">// 1.1使用匿名内部类</span></span><br><span class="line"><span class="keyword">new</span> Thread(<span class="keyword">new</span> Runnable() &#123;</span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"Hello world !"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;).start();</span><br><span class="line"></span><br><span class="line"><span class="comment">// 1.2使用 lambda expression</span></span><br><span class="line"><span class="keyword">new</span> Thread(() -&gt; System.out.println(<span class="string">"Hello world !"</span>)).start();</span><br><span class="line"></span><br><span class="line"><span class="comment">// 2.1使用匿名内部类</span></span><br><span class="line">Runnable race1 = <span class="keyword">new</span> Runnable() &#123;</span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"Hello world !"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 2.2使用 lambda expression</span></span><br><span class="line">Runnable race2 = () -&gt; System.out.println(<span class="string">"Hello world !"</span>);</span><br><span class="line"> </span><br><span class="line"><span class="comment">// 直接调用 run 方法(没开新线程哦!)</span></span><br><span class="line">race1.run();</span><br><span class="line">race2.run();</span><br></pre></td></tr></table></figure>
-<ul>
-<li>集合排序</li>
-</ul>
-<p>其实跟上面如出一辙。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//////之前java实现方法//////</span></span><br><span class="line">String[] players = &#123;<span class="string">"Rafael Nadal"</span>, <span class="string">"Novak Djokovic"</span>, </span><br><span class="line">    <span class="string">"Stanislas Wawrinka"</span>, <span class="string">"David Ferrer"</span>,</span><br><span class="line">    <span class="string">"Roger Federer"</span>, <span class="string">"Andy Murray"</span>,</span><br><span class="line">    <span class="string">"Tomas Berdych"</span>, <span class="string">"Juan Martin Del Potro"</span>,</span><br><span class="line">    <span class="string">"Richard Gasquet"</span>, <span class="string">"John Isner"</span>&#125;;</span><br><span class="line"> </span><br><span class="line"><span class="comment">// 1.1 使用匿名内部类根据 name 排序 players</span></span><br><span class="line">Arrays.sort(players, <span class="keyword">new</span> Comparator&lt;String&gt;() &#123;</span><br><span class="line">    <span class="annotation">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">compare</span><span class="params">(String s1, String s2)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> (s1.compareTo(s2));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;);</span><br><span class="line"><span class="comment">//////now//////</span></span><br><span class="line"><span class="comment">// 1.2 使用 lambda expression 排序 players</span></span><br><span class="line">Comparator&lt;String&gt; sortByName = (String s1, String s2) -&gt; (s1.compareTo(s2));</span><br><span class="line">Arrays.sort(players, sortByName);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 1.3 也可以采用如下形式:</span></span><br><span class="line">Arrays.sort(players, (String s1, String s2) -&gt; (s1.compareTo(s2)));</span><br></pre></td></tr></table></figure></p>
-<ul>
-<li>stream 引入 （重头戏）</li>
-</ul>
-<blockquote>
-<p>Stream是对集合的包装,通常和lambda一起使用。 使用lambdas可以支持许多操作,如 map, filter, limit, sorted, count, min, max, sum, collect 等等。 同样,Stream使用懒运算,他们并不会真正地读取所有数据,遇到像getFirst() 这样的方法就会结束链式语法。 </p>
-</blockquote>
-<p>跟着下面的例子走，去熟悉stream的用法</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Person</span> </span>&#123;</span><br><span class="line"></span><br><span class="line"><span class="keyword">private</span> String firstName, lastName, job, gender;</span><br><span class="line"><span class="keyword">private</span> <span class="keyword">int</span> salary, age;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">Person</span><span class="params">(String firstName, String lastName, String job,</span><br><span class="line">                String gender, <span class="keyword">int</span> age, <span class="keyword">int</span> salary)</span></span>&#123;</span><br><span class="line">          <span class="keyword">this</span>.firstName = firstName;</span><br><span class="line">          <span class="keyword">this</span>.lastName = lastName;</span><br><span class="line">          <span class="keyword">this</span>.gender = gender;</span><br><span class="line">          <span class="keyword">this</span>.age = age;</span><br><span class="line">          <span class="keyword">this</span>.job = job;</span><br><span class="line">          <span class="keyword">this</span>.salary = salary;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">List&lt;Person&gt; javaProgrammers = <span class="keyword">new</span> ArrayList&lt;Person&gt;() &#123;</span><br><span class="line">  &#123;</span><br><span class="line">    add(<span class="keyword">new</span> Person(<span class="string">"Elsdon"</span>, <span class="string">"Jaycob"</span>, <span class="string">"Java programmer"</span>, <span class="string">"male"</span>, <span class="number">43</span>, <span class="number">2000</span>));</span><br><span class="line">    add(<span class="keyword">new</span> Person(<span class="string">"Tamsen"</span>, <span class="string">"Brittany"</span>, <span class="string">"Java programmer"</span>, <span class="string">"female"</span>, <span class="number">23</span>, <span class="number">1500</span>));</span><br><span class="line">    add(<span class="keyword">new</span> Person(<span class="string">"Floyd"</span>, <span class="string">"Donny"</span>, <span class="string">"Java programmer"</span>, <span class="string">"male"</span>, <span class="number">33</span>, <span class="number">1800</span>));</span><br><span class="line">  &#125;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">List&lt;Person&gt; phpProgrammers = <span class="keyword">new</span> ArrayList&lt;Person&gt;() &#123;</span><br><span class="line">  &#123;</span><br><span class="line">    add(<span class="keyword">new</span> Person(<span class="string">"Jarrod"</span>, <span class="string">"Pace"</span>, <span class="string">"PHP programmer"</span>, <span class="string">"male"</span>, <span class="number">34</span>, <span class="number">1550</span>));</span><br><span class="line">    add(<span class="keyword">new</span> Person(<span class="string">"Clarette"</span>, <span class="string">"Cicely"</span>, <span class="string">"PHP programmer"</span>, <span class="string">"female"</span>, <span class="number">23</span>, <span class="number">1200</span>));</span><br><span class="line">    add(<span class="keyword">new</span> Person(<span class="string">"Victor"</span>, <span class="string">"Channing"</span>, <span class="string">"PHP programmer"</span>, <span class="string">"male"</span>, <span class="number">32</span>, <span class="number">1600</span>));</span><br><span class="line">  &#125;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
-<ul>
-<li><p>现在我们使用forEach方法来迭代输出上述列表:</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">System.out.println(<span class="string">"所有程序员的姓名:"</span>);</span><br><span class="line">javaProgrammers.forEach((p) -&gt; System.out.printf(<span class="string">"%s %s; "</span>, p.getFirstName(), p.getLastName()));</span><br><span class="line">phpProgrammers.forEach((p) -&gt; System.out.printf(<span class="string">"%s %s; "</span>, p.getFirstName(), p.getLastName()));</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>我们同样使用forEach方法,增加程序员的工资5%:</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">System.out.println(<span class="string">"给程序员加薪 5% :"</span>);</span><br><span class="line">Consumer&lt;Person&gt; giveRaise = e -&gt; e.setSalary(e.getSalary() / <span class="number">100</span> * <span class="number">5</span> + e.getSalary());</span><br><span class="line"></span><br><span class="line">javaProgrammers.forEach(giveRaise);</span><br><span class="line">phpProgrammers.forEach(giveRaise);</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>另一个有用的方法是过滤器filter() ,让我们显示月薪超过1400美元的PHP程序员:</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">System.out.println(<span class="string">"下面是月薪超过 $1,400 的PHP程序员:"</span>)</span><br><span class="line">phpProgrammers.stream()</span><br><span class="line">          .filter((p) -&gt; (p.getSalary() &gt; <span class="number">1400</span>))</span><br><span class="line">          .forEach((p) -&gt; System.out.printf(<span class="string">"%s %s; "</span>, p.getFirstName(), p.getLastName()));</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>我们也可以定义过滤器,然后重用它们来执行其他操作:</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 定义 filters</span></span><br><span class="line">Predicate&lt;Person&gt; ageFilter = (p) -&gt; (p.getAge() &gt; <span class="number">25</span>);</span><br><span class="line">Predicate&lt;Person&gt; salaryFilter = (p) -&gt; (p.getSalary() &gt; <span class="number">1400</span>);</span><br><span class="line">Predicate&lt;Person&gt; genderFilter = (p) -&gt; (<span class="string">"female"</span>.equals(p.getGender()));</span><br><span class="line"></span><br><span class="line">System.out.println(<span class="string">"下面是年龄大于 24岁且月薪在$1,400以上的女PHP程序员:"</span>);</span><br><span class="line">phpProgrammers.stream()</span><br><span class="line">          .filter(ageFilter)</span><br><span class="line">          .filter(salaryFilter)</span><br><span class="line">          .filter(genderFilter)</span><br><span class="line">          .forEach((p) -&gt; System.out.printf(<span class="string">"%s %s; "</span>, p.getFirstName(), p.getLastName()));</span><br><span class="line"></span><br><span class="line"><span class="comment">// 重用filters</span></span><br><span class="line">System.out.println(<span class="string">"年龄大于 24岁的女性 Java programmers:"</span>);</span><br><span class="line">javaProgrammers.stream()</span><br><span class="line">          .filter(ageFilter)</span><br><span class="line">          .filter(genderFilter)</span><br><span class="line">          .forEach((p) -&gt; System.out.printf(<span class="string">"%s %s; "</span>, p.getFirstName(), p.getLastName()));</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>使用limit方法,可以限制结果集的个数:</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">System.out.println(<span class="string">"最前面的3个 Java programmers:"</span>);</span><br><span class="line">javaProgrammers.stream()</span><br><span class="line">          .limit(<span class="number">3</span>)</span><br><span class="line">          .forEach((p) -&gt; System.out.printf(<span class="string">"%s %s; "</span>, p.getFirstName(), p.getLastName()));</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">System.out.println(<span class="string">"最前面的3个女性 Java programmers:"</span>);</span><br><span class="line">javaProgrammers.stream()</span><br><span class="line">          .filter(genderFilter)</span><br><span class="line">          .limit(<span class="number">3</span>)</span><br><span class="line">          .forEach((p) -&gt; System.out.printf(<span class="string">"%s %s; "</span>, p.getFirstName(), p.getLastName()));</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>排序呢? 我们在stream中能处理吗? 答案是肯定的。 在下面的例子中,我们将根据名字和薪水排序Java程序员,放到一个list中,然后显示列表:</p>
-<blockquote>
-<p>注意其中集合的使用。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">System.out.println(<span class="string">"根据 name 排序,并显示前5个 Java programmers:"</span>);</span><br><span class="line">List&lt;Person&gt; sortedJavaProgrammers = javaProgrammers</span><br><span class="line">          .stream()</span><br><span class="line">          .sorted((p, p2) -&gt; (p.getFirstName().compareTo(p2.getFirstName())))</span><br><span class="line">          .limit(<span class="number">5</span>)</span><br><span class="line">          .collect(toList());</span><br><span class="line"></span><br><span class="line">sortedJavaProgrammers.forEach((p) -&gt; System.out.printf(<span class="string">"%s %s; %n"</span>, p.getFirstName(), p.getLastName()));</span><br><span class="line"> </span><br><span class="line">System.out.println(<span class="string">"根据 salary 排序 Java programmers:"</span>);</span><br><span class="line">sortedJavaProgrammers = javaProgrammers</span><br><span class="line">          .stream()</span><br><span class="line">          .sorted( (p, p2) -&gt; (p.getSalary() - p2.getSalary()) )</span><br><span class="line">          .collect( toList() );</span><br><span class="line"></span><br><span class="line">sortedJavaProgrammers.forEach((p) -&gt; System.out.printf(<span class="string">"%s %s; %n"</span>, p.getFirstName(), p.getLastName()));</span><br></pre></td></tr></table></figure>
-</blockquote>
-</li>
-<li><p>如果我们只对最低和最高的薪水感兴趣,比排序后选择第一个/最后一个 更快的是min和max方法:</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">System.out.println(<span class="string">"工资最低的 Java programmer:"</span>);</span><br><span class="line">Person pers = javaProgrammers</span><br><span class="line">          .stream()</span><br><span class="line">          .min((p1, p2) -&gt; (p1.getSalary() - p2.getSalary()))</span><br><span class="line">          .get()</span><br><span class="line"></span><br><span class="line">System.out.printf(<span class="string">"Name: %s %s; Salary: $%,d."</span>, pers.getFirstName(), pers.getLastName(), pers.getSalary())</span><br><span class="line"></span><br><span class="line">System.out.println(<span class="string">"工资最高的 Java programmer:"</span>);</span><br><span class="line">Person person = javaProgrammers</span><br><span class="line">          .stream()</span><br><span class="line">          .max((p, p2) -&gt; (p.getSalary() - p2.getSalary()))</span><br><span class="line">          .get()</span><br><span class="line"></span><br><span class="line">System.out.printf(<span class="string">"Name: %s %s; Salary: $%,d."</span>, person.getFirstName(), person.getLastName(), person.getSalary())</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>结合 map 方法,我们可以使用 collect 方法来将我们的结果集放到一个字符串,一个 Set 或一个TreeSet中:</p>
-</li>
-</ul>
-<blockquote>
-<p>map作用有点类似forEach，不同的是，它会将这些返回值进行整合。传递给下一个操作。<br>使用collect可以将结果转换成多种形式输出，string、set、treeset、list等。</p>
-</blockquote>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">System.out.println(<span class="string">"将 PHP programmers 的 first name 拼接成字符串:"</span>);</span><br><span class="line">String phpDevelopers = phpProgrammers</span><br><span class="line">          .stream()</span><br><span class="line">          .map(Person::getFirstName)</span><br><span class="line">          .collect(joining(<span class="string">" ; "</span>)); <span class="comment">// 在进一步的操作中可以作为标记(token)   </span></span><br><span class="line"></span><br><span class="line">System.out.println(<span class="string">"将 Java programmers 的 first name 存放到 Set:"</span>);</span><br><span class="line">Set&lt;String&gt; javaDevFirstName = javaProgrammers</span><br><span class="line">          .stream()</span><br><span class="line">          .map(Person::getFirstName)</span><br><span class="line">          .collect(toSet());</span><br><span class="line"></span><br><span class="line">System.out.println(<span class="string">"将 Java programmers 的 first name 存放到 TreeSet:"</span>);</span><br><span class="line">TreeSet&lt;String&gt; javaDevLastName = javaProgrammers</span><br><span class="line">          .stream()</span><br><span class="line">          .map(Person::getLastName)</span><br><span class="line">          .collect(toCollection(TreeSet::<span class="keyword">new</span>));</span><br></pre></td></tr></table></figure>
-<ul>
-<li><p>Streams 还可以是并行的(parallel)。 示例如下:</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">System.out.println(<span class="string">"计算付给 Java programmers 的所有money:"</span>);</span><br><span class="line"><span class="keyword">int</span> totalSalary = javaProgrammers</span><br><span class="line">          .parallelStream()</span><br><span class="line">          .mapToInt(p -&gt; p.getSalary())</span><br><span class="line">          .sum();</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>我们可以使用summaryStatistics方法获得stream 中元素的各种汇总数据。 接下来,我们可以访问这些方法,比如getMax, getMin, getSum或getAverage:</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//计算 count, min, max, sum, and average for numbers</span></span><br><span class="line">List&lt;Integer&gt; numbers = Arrays.asList(<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>, <span class="number">7</span>, <span class="number">8</span>, <span class="number">9</span>, <span class="number">10</span>);</span><br><span class="line">IntSummaryStatistics stats = numbers</span><br><span class="line">          .stream()</span><br><span class="line">          .mapToInt((x) -&gt; x)</span><br><span class="line">          .summaryStatistics();</span><br><span class="line"></span><br><span class="line">System.out.println(<span class="string">"List中最大的数字 : "</span> + stats.getMax());</span><br><span class="line">System.out.println(<span class="string">"List中最小的数字 : "</span> + stats.getMin());</span><br><span class="line">System.out.println(<span class="string">"所有数字的总和   : "</span> + stats.getSum());</span><br><span class="line">System.out.println(<span class="string">"所有数字的平均值 : "</span> + stats.getAverage());</span><br></pre></td></tr></table></figure>
-</li>
-</ul>
-<p>参考文章：</p>
-<p><a href="http://blog.csdn.net/dm_vincent/article/category/2268127" target="_blank" rel="external">http://blog.csdn.net/dm_vincent/article/category/2268127</a> （一个系列，未看完。。。）<br><a href="http://blog.csdn.net/renfufei/article/details/24600507" target="_blank" rel="external">http://blog.csdn.net/renfufei/article/details/24600507</a><br><a href="http://developer.51cto.com/art/201206/344308.htm" target="_blank" rel="external">http://developer.51cto.com/art/201206/344308.htm</a> 有java 8默认接口的介绍</p>
-</div><footer class="post__foot u-cf"><ul class="post__tag u-fl"><li class="post__tag__item"><a href="/tags/lambda/" class="post__tag__link">lambda</a></li><li class="post__tag__item"><a href="/tags/学习笔记/" class="post__tag__link">学习笔记</a></li></ul><a class="post__foot-link u-fr"></a></footer></article><article class="post"><header class="post__head"><time datetime="2015-11-08T10:44:12.000Z" class="post__time">十一月 8, 2015</time><h1 class="post__title"><a href="/2015/11/08/ButterKnife_learning/">ButterKnife 学习</a></h1><hr/></header><div class="post__main echo"><h2 id="android_studio_ButterKnife_Zelezny插件的安装及使用">android studio ButterKnife Zelezny插件的安装及使用</h2><h3 id="安装">安装</h3><ol>
-<li>打开File-&gt;Settings，选中plugin，输入butterknife</li>
-<li>选择Android ButterKnife Zelezny点击安装，重启as</li>
-<li><p>修改Module对应的Gradle配置文件的dependencies节点中添加：</p>
- <figure class="highlight gradle"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">compile</span> <span class="string">'com.jakewharton:butterknife:7.0.0'</span></span><br></pre></td></tr></table></figure>
-</li>
-</ol>
-<h3 id="使用">使用</h3><blockquote>
-<p>注意：鼠标的光标要停留在<code>代码中的布局文件的资源id上面</code></p>
-</blockquote>
-<ul>
-<li>右键资源ID，选择Generate…，选择Generate xxx Injections，选中需要导入的view对象。</li>
-</ul>
-<h2 id="ButterKnife_学习">ButterKnife 学习</h2><h3 id="ButterKnife有什么好处">ButterKnife有什么好处</h3><ul>
-<li>省略findViewById，快速实现listener、批量设置控件属性</li>
-<li>代码清晰简洁</li>
-<li>学习成本低，android studio下的插件很好用，可以快速coding</li>
-</ul>
-<h3 id="学习内容">学习内容</h3><p>使用下面方法之前，需要配置好环境，并且已经将activity或者当前view跟butterknife进行绑定<code>ButterKnife.bind(this);</code>或者<code>ButterKnife.bind(this, v);</code></p>
-<ol>
-<li>如何省略<code>findViewById</code>：直接<code>@Bind(R.id.title) TextView title</code>;</li>
-<li>如何快速实现listener：直接<code>@OnClick(R.id.submit)</code>、<code>@OnLongClick(R.id.btn_three)</code>、<code>@OnItemClick(R.id.lv_listview)</code>、<code>@OnCheckedChanged</code>等，直接在下面写实现函数处理即可，对于传入参数，可以直接省略，或者传入几个需要的参数即可。</li>
-<li>对于有多个回调函数的listener，eg.默认的回调函数用<code>@OnItemSelected(R.id.my_spinner)</code>， 指定的函数用<code>@OnItemSelected(value = R.id.my_spinner, callback = OnItemSelected.Callback.NOTHING_SELECTED)</code></li>
-<li><p>批量设置控件属性</p>
-<ul>
-<li><p>提供的几种方法：其中的action，setter以及Property需要我们自己来实现，Property系统有自带的则可以不需要。</p>
-   <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> &lt;T extends View&gt; <span class="function"><span class="keyword">void</span> <span class="title">apply</span><span class="params">(List&lt;T&gt; list, Action&lt;? <span class="keyword">super</span> T&gt; action)</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> &lt;T extends View, V&gt; <span class="keyword">void</span> <span class="title">apply</span><span class="params">(List&lt;T&gt; list, Setter&lt;? <span class="keyword">super</span> T, V&gt; setter, V value)</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> &lt;T extends View, V&gt; <span class="keyword">void</span> <span class="title">apply</span><span class="params">(List&lt;T&gt; list, Property&lt;? <span class="keyword">super</span> T, V&gt; setter, V value)</span></span></span><br></pre></td></tr></table></figure>
-<ul>
-<li><p>范例：</p>
- <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//需要批量设置的控件</span></span><br><span class="line"><span class="annotation">@Bind</span>(&#123;R.id.tv_one, R.id.tv_two, R.id.tv_three&#125;)</span><br><span class="line">List&lt;TextView&gt; tvs;</span><br><span class="line">    </span><br><span class="line"><span class="comment">//自定义action</span></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">final</span> ButterKnife.Action&lt;View&gt; DISABLE = <span class="keyword">new</span> ButterKnife.Action&lt;View&gt;() &#123;</span><br><span class="line">    <span class="annotation">@Override</span> <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">apply</span><span class="params">(View view, <span class="keyword">int</span> index)</span> </span>&#123;</span><br><span class="line">        view.setEnabled(<span class="keyword">false</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br><span class="line"><span class="comment">//自定义setter</span></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">final</span> ButterKnife.Setter&lt;View, Boolean&gt; ENABLED = <span class="keyword">new</span> ButterKnife.Setter&lt;View, Boolean&gt;() &#123;</span><br><span class="line">    <span class="annotation">@Override</span> <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">set</span><span class="params">(View view, Boolean value, <span class="keyword">int</span> index)</span> </span>&#123;</span><br><span class="line">        view.setEnabled(value);</span><br><span class="line">        TextView v = (TextView)view;</span><br><span class="line">        v.setText(<span class="string">"heihei~"</span> + index);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br><span class="line"><span class="comment">//调用：根据个人需求选择使用一个或多个即可。</span></span><br><span class="line">ButterKnife.apply(tvs, DISABLE);</span><br><span class="line">ButterKnife.apply(tvs, ENABLED, <span class="keyword">true</span>);</span><br><span class="line">ButterKnife.apply(tvs, View.ALPHA, <span class="number">0.0f</span>);</span><br></pre></td></tr></table></figure>
-</li>
-</ul>
-</li>
-</ul>
-</li>
-<li><p>提供findById的方法</p>
-<ul>
-<li>ButterKnife.findById()可以用来获取Activity,Dialog或View中的任何View.</li>
-<li>ButterKnife自动完成了类型转换,所以获取出来以后不用进行显式强转,直接赋值给具体的View类型引用即可.</li>
-</ul>
-</li>
-<li><p>在生命周期跟activity不一样的view中进行绑定，则需要在<code>onDestroyView()</code>中执行<code>ButterKnife.unbind(this);</code>操作。</p>
-</li>
-<li><p>在写ListView的时候，ViewHolder也可以进行绑定，但是必须声明该adapter为public，并且ViewHolder需要为static的内部类，使用android studio则会自动帮我们创建该类，给力~~~：).</p>
-</li>
-</ol>
-<p>附上我自己实验的代码：<a href="https://github.com/lexiMee/Demos" target="_blank" rel="external">https://github.com/lexiMee/Demos</a></p>
-<p>参考文档：</p>
-<ul>
-<li>ButterKnife基本使用 <a href="http://www.cnblogs.com/mengdd/archive/2015/06/23/4595973.html" target="_blank" rel="external">http://www.cnblogs.com/mengdd/archive/2015/06/23/4595973.html</a></li>
-<li>开源中国源码学习（六）——ButterKnife的使用 <a href="http://www.mamicode.com/info-detail-978143.html" target="_blank" rel="external">http://www.mamicode.com/info-detail-978143.html</a></li>
-</ul>
-</div><footer class="post__foot u-cf"><ul class="post__tag u-fl"><li class="post__tag__item"><a href="/tags/ButterKnife/" class="post__tag__link">ButterKnife</a></li><li class="post__tag__item"><a href="/tags/学习笔记/" class="post__tag__link">学习笔记</a></li></ul><a class="post__foot-link u-fr"></a></footer></article></main><footer class="foot"><div class="foot-copy u-fl">&copy; 2015 LexiMee<bdi> Theme by <a href="https://github.com/andforce/hexo-theme-andforce" >andforce</a></bdi></div><menu class="page-menu u-fr"><li class="page-menu__item"><a title="Previous" href="/" class="page-menu__link icon-arrow-left"></a></li><li class="page-menu__item"><span title="Next" class="page-menu__link icon-arrow-right page-menu__link--disabled"></span></li></menu></footer></body></html>
+</div>
+</aside>
+    <div class="clearfix"></div>
+  </div>
+  <footer id="footer"><div id="footer" >
+	
+	<div class="line">
+		<span></span>
+		<div class="author"></div>
+	</div>
+	
+	
+	<section class="info">
+		<p> Hi,I&#39;m the designer of this theme. <br/>
+			You can download this theme on my github.</p>
+	</section>
+	 
+	<div class="social-font clearfix">
+		
+		<a href="http://weibo.com/1923610190" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/huangjunhui" target="_blank" title="github"></a>
+		
+		
+		<a href="https://www.facebook.com/huangjunhui" target="_blank" title="facebook"></a>
+		
+		
+		
+		<a href="mailto:jhhuang1993@foxmail.com" target="_blank" class="icon-email" title="Email Me"></a>
+		
+	</div>
+		<p class="copyright">Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a> and Theme by <a href="https://github.com/huangjunhui/concise" target="_blank" title="Concise">Concise</a> © 2016 
+		
+		<a href="http://thinks.me/about" target="_blank" title="LexiMee">LexiMee</a>
+		
+		</p>
+</div>
+</footer>
+  <script src="//libs.baidu.com/jquery/2.0.3/jquery.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+<script src="/js/counter.js"></script>
+
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+  $('.fancybox').fancybox();
+})(jQuery);
+</script>
+
+<div id="totop" style="position:fixed;bottom:100px;right:10px;cursor: pointer;">
+<a title="返回顶部"><img src="/imgs/scrollup.png"/></a>
+</div>
+<script src="/js/totop.js"></script>
+<!-- mathjax config similar to math.stackexchange -->
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+      processEscapes: true
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+    });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+
+<script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+</body>
+</html>
+
+
