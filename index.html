@@ -226,8 +226,8 @@
             
               
                 
-                <a class="post-title-link" href="/2015/12/19/audioflinger_buffer/" itemprop="url">
-                  AudioFlinger Thread中的几个buffer
+                <a class="post-title-link" href="/2016/03/14/android_tts/" itemprop="url">
+                  Android TTS学习
                 </a>
               
             
@@ -240,8 +240,8 @@
               <i class="fa fa-calendar-o"></i>
             </span>
             <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2015-12-19T23:51:52+08:00" content="2015-12-19">
-              2015-12-19
+            <time itemprop="dateCreated" datetime="2016-03-14T18:55:44+08:00" content="2016-03-14">
+              2016-03-14
             </time>
           </span>
 
@@ -270,8 +270,8 @@
             
               <span class="post-comments-count">
                 &nbsp; | &nbsp;
-                <a href="/2015/12/19/audioflinger_buffer/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2015/12/19/audioflinger_buffer/" itemprop="commentsCount"></span>
+                <a href="/2016/03/14/android_tts/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/03/14/android_tts/" itemprop="commentsCount"></span>
                 </a>
               </span>
             
@@ -294,48 +294,12 @@
 
       
         
-          
-            <h3 id="简述">简述</h3><p>AudioFlinger是实现上层跟Hal层进行交互的重要的一层，它主要就是通过Thread进行沟通，不管是数据流还是控制流都是需要经由AudioFlinger Thread往下分发的。这两天有空梳理了一下Thread中几个重要的buffer，在这边做个总结，东西很浅，留作备忘。</p>
-<h3 id="内容">内容</h3><p>主要是下面三个buffer：</p>
-<ol>
-<li>mSinkBuffer，这个buffer的数据最后是要写到hal去的，但是你会发现一开始都没有对它操作，只有在写之前最后一步的时候会进行拷贝操作，将之前处理过的数据的buffer拷贝到该buffer中来。</li>
-<li>mMixerBuffer 在没有效果的情况下，使用这个buffer进行前期处理</li>
-<li>mEffectBuffer 如果有效果的话，该buffer会直接取代mMixerBuffer进行处理。</li>
-</ol>
-<p>AudioPolicyManager在进行初始化的时候会去解析audio_policy.conf文件，会创建Flag为primary的output，在open的过程中会将audio_policy.conf中关于该节点的数据传递给底层streamout对象，每个线程都有自己的streamout对象：</p>
-<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//hwDevHal对应的是hal primary的so，参数config即为audio_policy.conf中该节点的相关参数，包括支持的采样率、format、ChannelMask(表示可以支持到多少channel)等。</span></span><br><span class="line"><span class="keyword">status_t</span> status = hwDevHal-&gt;open_output_stream(hwDevHal,</span><br><span class="line">                                               *output,</span><br><span class="line">                                               devices,</span><br><span class="line">                                               flags,</span><br><span class="line">                                               config,</span><br><span class="line">                                               &amp;outStream,</span><br><span class="line">                                               address.<span class="built_in">string</span>());</span><br></pre></td></tr></table></figure>
-<p>这些参数是后来决定Thread进行初始化的时候相关buffer的大小。</p>
-<h6 id="1-_初始化">1. 初始化</h6><p>buffer初始化是在对应Thread中的readOutputParameters_l()完成的：</p>
-<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line">mSampleRate = mOutput-&gt;stream-&gt;common.get_sample_rate(&amp;mOutput-&gt;stream-&gt;common);</span><br><span class="line">mChannelMask = mOutput-&gt;stream-&gt;common.get_channels(&amp;mOutput-&gt;stream-&gt;common);</span><br><span class="line">mChannelCount = audio_channel_count_from_out_mask(mChannelMask);</span><br><span class="line">mHALFormat = mOutput-&gt;stream-&gt;common.get_format(&amp;mOutput-&gt;stream-&gt;common);</span><br><span class="line">mFormat = mHALFormat;</span><br><span class="line"><span class="comment">//确认一帧占多少字节，也是通过format*channel进行转换的。</span></span><br><span class="line">mFrameSize = audio_stream_out_frame_size(mOutput-&gt;stream);</span><br><span class="line"><span class="comment">//获取底层缓冲区大小</span></span><br><span class="line">mBufferSize = mOutput-&gt;stream-&gt;common.get_buffer_size(&amp;mOutput-&gt;stream-&gt;common);</span><br><span class="line"><span class="comment">//换算出Hal层缓冲区容纳的帧数</span></span><br><span class="line">mFrameCount = mBufferSize / mFrameSize;</span><br><span class="line"><span class="comment">//这边我们先不管multiplier，这个值跟FastMixer相关。</span></span><br><span class="line">mNormalFrameCount = multiplier * mFrameCount;</span><br><span class="line"><span class="comment">//开始初始化SinkBuffer</span></span><br><span class="line"><span class="built_in">free</span>(mSinkBuffer);</span><br><span class="line">mSinkBuffer = <span class="literal">NULL</span>;</span><br><span class="line"><span class="comment">// For sink buffer size, we use the frame size from the downstream sink to avoid problems</span></span><br><span class="line"><span class="comment">// with non PCM formats for compressed music, e.g. AAC, and Offload threads.</span></span><br><span class="line"><span class="comment">// SinkBuffer 这边使用的是上面计算出来的FrameSize，而下面则是重新计算的，这边谷歌给出了说明：</span></span><br><span class="line"><span class="comment">// 为了防止使用了Non PCM Format的一些格式，比如AAC,或者是offload场景下，为了避免存在大小问题，直接从底层获取该帧的位数</span></span><br><span class="line"><span class="keyword">const</span> <span class="keyword">size_t</span> sinkBufferSize = mNormalFrameCount * mFrameSize;</span><br><span class="line">(<span class="keyword">void</span>)posix_memalign((<span class="keyword">void</span>**)&amp;mSinkBuffer, <span class="number">32</span>, sinkBufferSize);</span><br><span class="line"></span><br><span class="line"><span class="comment">//mMixerBufferEnabled该变量是否为true，是由AudioFlinger::kEnableExtendedPrecision决定的，并且只存在在MixerThread中，如果有扩展的精度的话，就需要用到该缓冲区,默认情况下是开启的</span></span><br><span class="line"><span class="built_in">free</span>(mMixerBuffer);</span><br><span class="line">mMixerBuffer = <span class="literal">NULL</span>;</span><br><span class="line"><span class="keyword">if</span> (mMixerBufferEnabled) &#123;</span><br><span class="line">    mMixerBufferFormat = AUDIO_FORMAT_PCM_FLOAT; <span class="comment">// also valid: AUDIO_FORMAT_PCM_16_BIT.</span></span><br><span class="line">    mMixerBufferSize = <span class="function">mNormalFrameCount * mChannelCount</span><br><span class="line">            * <span class="title">audio_bytes_per_sample</span><span class="params">(mMixerBufferFormat)</span></span>;</span><br><span class="line">    (<span class="keyword">void</span>)posix_memalign(&amp;mMixerBuffer, <span class="number">32</span>, mMixerBufferSize);</span><br><span class="line">&#125;</span><br><span class="line"><span class="built_in">free</span>(mEffectBuffer);</span><br><span class="line">mEffectBuffer = <span class="literal">NULL</span>;</span><br><span class="line"><span class="comment">//同上面</span></span><br><span class="line"><span class="keyword">if</span> (mEffectBufferEnabled) &#123;</span><br><span class="line">    mEffectBufferFormat = AUDIO_FORMAT_PCM_16_BIT; <span class="comment">// Note: Effects support 16b only</span></span><br><span class="line">    mEffectBufferSize = <span class="function">mNormalFrameCount * mChannelCount</span><br><span class="line">            * <span class="title">audio_bytes_per_sample</span><span class="params">(mEffectBufferFormat)</span></span>;</span><br><span class="line">    (<span class="keyword">void</span>)posix_memalign(&amp;mEffectBuffer, <span class="number">32</span>, mEffectBufferSize);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h6 id="2-_buffer牵扯到的流程">2. buffer牵扯到的流程</h6><p>其实看这几个buffer，主要就是为了想搞清楚这数据流是怎么从audiotrack-&gt;audiomixer-&gt;audioeffect-&gt;audio hal的。</p>
-<p>############ 1. audiotrack的创建<br>我们可以直接看<code>AudioFlinger::PlaybackThread::createTrack_l()</code>该函数的返回值是一个audiotrack在AudioFlinger这边的对应实例，其实就是实例化了个Track对象，在AudioFlinger里面会封装成trackHandle给用户空间进行操作，并且该track会边添加到AudioFlinger thread中的mTracks中。在创建track的过程中，还需要考虑effect的问题，会通过获取audiotrack提供的sessionid去查看是否有对应的EffectChain，如果有的话，则会将track的mainBuffer设置为chain的InBuffer，我这边先透露下这个InBuffer对于全局的音效而言，其实就是mEffectBuffer了。还有通过代码中我们知道Track其实继承来自BufferProvider的，所以它本身是个BufferProvider，这也符合track的定义，就是提供数据。<br>对于audiotrack我们只需要知道到这就可以了。</p>
-<p>############ 2. audiotrack到audiomixer部分<br>我们看的这部分需要从<code>AudioFlinger::PlaybackThread::threadLoop()</code>看起，不过我们可以直接跳到ThreadLoop中的<code>AudioFlinger::PlaybackThread::mixer_state AudioFlinger::MixerThread::prepareTracks_l()</code>中来，这个函数主要为了后面进行mix和write的做准备的，而能否到下一步就得需要有数据，并且状态进入mixer_ready的情况，这边的具体就不说了，我们只看看有激活的audiotrack并且是有数据的情况下，在满足上述条件下，thread会去判断当前的track的mainBuffer是否不为SinkBuffer和MixerBuffer，如果都不是，那就是EffectBuffer，会重新去获取chain，一堆操作之后，会将该track对象给到audiomixer去，并且会设置audiomixer中的mainbuffer为track的mainbuffer，其实就是输出buffer，后面我们看audiomixer的代码的时候会看到的。</p>
-<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">mAudioMixer-&gt;setBufferProvider(name, track);</span><br><span class="line">mAudioMixer-&gt;setParameter(</span><br><span class="line">        name,</span><br><span class="line">        AudioMixer::TRACK,</span><br><span class="line">        AudioMixer::MAIN_BUFFER, (<span class="keyword">void</span> *)track-&gt;mainBuffer());</span><br></pre></td></tr></table></figure>
-<p>############ 3. audiomixer如何处理数据部分<br><code>AudioFlinger::MixerThread::prepareTracks_l()</code>之后我们就要看<code>AudioFlinger::MixerThread::threadLoop_mix()</code>的部分了，这边就直接调用了audiomixer的process函数。直接到audiomixer中去看下这部分。这边我们只关注下简单的函数<code>process_NoResampleOneTrack()</code>的场景就好了，想来想去这部分把代码贴出来吧，流程其实就是从track中获取数据，然后mix之后放到out中，out就是之前在AudioFlinger中设置的track的mainbuffer，如果这个时候你没记错的话，这个buffer其实就是EffectBuffer。</p>
-<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">template</span> &lt;<span class="keyword">int</span> MIXTYPE, <span class="keyword">typename</span> TO, <span class="keyword">typename</span> TI, <span class="keyword">typename</span> TA&gt;</span><br><span class="line"><span class="keyword">void</span> AudioMixer::process_NoResampleOneTrack(<span class="keyword">state_t</span>* state, <span class="keyword">int64_t</span> pts)</span><br><span class="line">&#123;</span><br><span class="line">    ALOGVV(<span class="string">"process_NoResampleOneTrack\n"</span>);</span><br><span class="line">    <span class="comment">// CLZ is faster than CTZ on ARM, though really not sure if true after 31 - clz.</span></span><br><span class="line">    <span class="keyword">const</span> <span class="keyword">int</span> i = <span class="number">31</span> - __builtin_clz(state-&gt;enabledTracks);</span><br><span class="line">    ALOG_ASSERT((<span class="number">1</span> &lt;&lt; i) == state-&gt;enabledTracks, <span class="string">"more than 1 track enabled"</span>);</span><br><span class="line">    <span class="keyword">track_t</span> *t = &amp;state-&gt;tracks[i];</span><br><span class="line">    <span class="keyword">const</span> <span class="keyword">uint32_t</span> channels = t-&gt;mMixerChannelCount;</span><br><span class="line">    <span class="comment">//out 对应的 是track的mainBuffer，其实就是EffectBuffer。</span></span><br><span class="line">    TO* out = <span class="keyword">reinterpret_cast</span>&lt;TO*&gt;(t-&gt;mainBuffer);</span><br><span class="line">    <span class="comment">//这个暂且不关心吧，不知道auxiliary effect是哪种类型，以后发现再来补充</span></span><br><span class="line">    TA* aux = <span class="keyword">reinterpret_cast</span>&lt;TA*&gt;(t-&gt;auxBuffer);</span><br><span class="line">    <span class="keyword">const</span> <span class="keyword">bool</span> ramp = t-&gt;needsRamp();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">size_t</span> numFrames = state-&gt;frameCount; numFrames; ) &#123;</span><br><span class="line">        AudioBufferProvider::<span class="function">Buffer&amp; <span class="title">b</span><span class="params">(t-&gt;buffer)</span></span>;</span><br><span class="line">        <span class="comment">// get input buffer</span></span><br><span class="line">        b.frameCount = numFrames;</span><br><span class="line">        <span class="keyword">const</span> <span class="keyword">int64_t</span> outputPTS = calculateOutputPTS(*t, pts, state-&gt;frameCount - numFrames);</span><br><span class="line">        <span class="comment">//从track中去取数据</span></span><br><span class="line">        t-&gt;bufferProvider-&gt;getNextBuffer(&amp;b, outputPTS);</span><br><span class="line">        <span class="comment">//in 指向的就是获取到的数据buffer</span></span><br><span class="line">        <span class="keyword">const</span> TI *in = <span class="keyword">reinterpret_cast</span>&lt;TI*&gt;(b.raw);</span><br><span class="line"></span><br><span class="line">        <span class="keyword">const</span> <span class="keyword">size_t</span> outFrames = b.frameCount;</span><br><span class="line">        <span class="comment">//做下音量处理。每种类型的声音，都有各自不同的音量，并且输出到out缓冲区。</span></span><br><span class="line">        volumeMix&lt;MIXTYPE, is_same&lt;TI, <span class="keyword">float</span>&gt;::value, <span class="literal">false</span>&gt; (</span><br><span class="line">                out, outFrames, in, aux, ramp, t);</span><br><span class="line"></span><br><span class="line">        out += outFrames * channels;</span><br><span class="line">        <span class="keyword">if</span> (aux != <span class="literal">NULL</span>) &#123;</span><br><span class="line">            aux += channels;</span><br><span class="line">        &#125;</span><br><span class="line">        numFrames -= b.frameCount;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// release buffer</span></span><br><span class="line">        t-&gt;bufferProvider-&gt;releaseBuffer(&amp;b);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (ramp) &#123;</span><br><span class="line">        t-&gt;adjustVolumeRamp(aux != <span class="literal">NULL</span>, is_same&lt;TI, <span class="keyword">float</span>&gt;::value);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>ok，到此位置，audiotrack的数据已经经过mix到effectBuffer中来了。</p>
-<p>############ 4. audiomixer到audioeffect部分<br>处理完mix之后，就要处理effect了。也是直接调用EffectChain中的process</p>
-<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (sleepTime == <span class="number">0</span> &amp;&amp; mType != OFFLOAD) &#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">size_t</span> i = <span class="number">0</span>; i &lt; effectChains.size(); i ++) &#123;</span><br><span class="line">        effectChains[i]-&gt;process_l();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>我们到Effects.cpp中去一探究竟吧。代码就补贴了，直接遍历EffectChain中的effect，然后一个个调用各自的process函数。这部分我们需要注意下咯。我把一些逻辑无关的东西去掉。其实就一个函数调用mEffectInterface的process，这边我们就不用去care了，具体的实现是在效果的类库中，我们也没有代码的。那为什么贴出这个东西来，因为下面的buffer是我们关心的东西。</p>
-<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">void</span> AudioFlinger::EffectModule::process()</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">if</span> (isProcessEnabled()) &#123;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// do the actual processing in the effect engine</span></span><br><span class="line">        <span class="keyword">int</span> ret = (*mEffectInterface)-&gt;process(mEffectInterface,</span><br><span class="line">                                               &amp;mConfig.inputCfg.buffer,</span><br><span class="line">                                               &amp;mConfig.outputCfg.buffer);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> ((mDescriptor.flags &amp; EFFECT_FLAG_TYPE_MASK) == EFFECT_FLAG_TYPE_INSERT &amp;&amp;</span><br><span class="line">                mConfig.inputCfg.buffer.raw != mConfig.outputCfg.buffer.raw) &#123;</span><br><span class="line">		...</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>ok，我们来看看这个buffer指向哪里？那我们得从创建全局的效果开始。</p>
-<p>在output thread中创建全局音效的流程大致如此（这边重点关注primary mixer）对应代码<code>AudioFlinger::ThreadBase::createEffect_l(）</code>：</p>
-<ol>
-<li>常规检查自己看代码（对于mixer超过2个通道的将被cut掉，全局音效只用于offload和mixer的线程等等）</li>
-<li>通过id去尝试获取chain，发现获取到的id为0，所以必须自己创建chain，并且添加到线程的chain vector中</li>
-<li>接下来是创建effect，会先将该效果注册到AudioPolicyManager中，然后创建Effect（其实就是EffectModule）</li>
-<li>将该Effect添加到chain来，这里面就需要注意了，因为这边有我们关注的东西，effect的InBuffer是chain的InBuffer，而OutBuffer则这个效果插入到chain的第几位，如果是最后一个的话，则OutBuffer就是chain的OutBuffer，否则是InBuffer，为什么这样？（chain是一节一节处理的，你只需要将buffer指向同一块这样就省去了传递的麻烦。）</li>
-</ol>
-<p>那到这边我们还得去寻找EffectChain中InBuffer和OutBuffer。这部分的代码在<code>AudioFlinger::PlaybackThread::addEffectChain_l()</code>中，</p>
-<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">int16_t</span>* buffer = <span class="keyword">reinterpret_cast</span>&lt;<span class="keyword">int16_t</span>*&gt;(mEffectBufferEnabled</span><br><span class="line">        ? mEffectBuffer : mSinkBuffer);</span><br><span class="line">chain-&gt;setThread(<span class="keyword">this</span>);</span><br><span class="line">chain-&gt;setInBuffer(buffer, ownsBuffer);</span><br><span class="line">chain-&gt;setOutBuffer(<span class="keyword">reinterpret_cast</span>&lt;<span class="keyword">int16_t</span>*&gt;(mEffectBufferEnabled</span><br><span class="line">        ? mEffectBuffer : mSinkBuffer));</span><br></pre></td></tr></table></figure>
-<p>好吧，这个InBuffer和outBuffer就是mEffectBuffer了，跑不掉了。</p>
-<p>这边得稍微总结下了，要不感觉乱乱的，Effect中的In和Out的buffer是会指向EffectChain中的In或者Out的buffer的，而EffectChain的buffer由指向mEffectBuffer，同时Audiotrack的MainBuffer也指向该mEffectBuffer，最为mixer输出的buffer，同时也作为effect输入输出的buffer。</p>
-<p>如图。</p>
-<p><img src="image/bufferroute.jpg" alt="xxx"></p>
-<p>############ 5. 最后把处理好的数据复制到mSinkBuffer中，到此我们的旅程也结束了。</p>
-<p>That’s All.</p>
-
-          
+          <h3 id="简述">简述</h3><p>TTS是Text To Speech的简称，就是将字符串转换成语音。Talkback是用来给帮助盲人朋友使用手机的apk，是android辅助功能的插件，安装完之后可以到辅助功能里面使能它，之后只要你触摸到android系统中的任何控件，都会将控件中的信息转变成语音的形式播放出来。<br>
+          <div class="post-more-link text-center">
+            <a class="btn" href="/2016/03/14/android_tts/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
         
       
     </div>
@@ -379,8 +343,8 @@
             
               
                 
-                <a class="post-title-link" href="/2015/12/13/android_tts/" itemprop="url">
-                  Android TTS学习
+                <a class="post-title-link" href="/2016/03/14/audioflinger_buffer/" itemprop="url">
+                  AudioFlinger Thread中的几个buffer
                 </a>
               
             
@@ -393,8 +357,8 @@
               <i class="fa fa-calendar-o"></i>
             </span>
             <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2015-12-13T22:02:17+08:00" content="2015-12-13">
-              2015-12-13
+            <time itemprop="dateCreated" datetime="2016-03-14T18:54:22+08:00" content="2016-03-14">
+              2016-03-14
             </time>
           </span>
 
@@ -423,8 +387,8 @@
             
               <span class="post-comments-count">
                 &nbsp; | &nbsp;
-                <a href="/2015/12/13/android_tts/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2015/12/13/android_tts/" itemprop="commentsCount"></span>
+                <a href="/2016/03/14/audioflinger_buffer/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/03/14/audioflinger_buffer/" itemprop="commentsCount"></span>
                 </a>
               </span>
             
@@ -447,32 +411,12 @@
 
       
         
-          
-            <h3 id="简述">简述</h3><p>TTS是Text To Speech的简称，就是将字符串转换成语音。Talkback是用来给帮助盲人朋友使用手机的apk，是android辅助功能的插件，安装完之后可以到辅助功能里面使能它，之后只要你触摸到android系统中的任何控件，都会将控件中的信息转变成语音的形式播放出来。</p>
-<h3 id="内容">内容</h3><p>TTS的语音是可以自由选择第三方或者是官方默认语音包，默认是pico，可以在源码external/svox这个文件夹找到对应的源码和语音包。我们去看源码的时候也会发现它必须继承并且实现android Framework中提供的TextToSpeechService，并且实现里面指定的一些抽象方法，这个是至关重要的。</p>
-<p>最近工作遇到了一个跟TTS相关的bug，于是就有了这个总结。只是简单的对主要流程进行梳理，先看图，然后再结合下面的文字来理解吧。</p>
-<p><img src="image/tts2.jpg" alt="流程图"></p>
-<p>先假设下场景：我们使能了Talkback，并且点击了settings的某个控件，这个时候控件会给AccessiblityService那边发送事件，然后AccessiblityService会给Talkback转发事件，Talkback接收到事件根据事件类型来决定最后的处理，假设这个时候有个文本信息需要转成语音信息，则会调用TextToSpeech的speak接口，我们从这边开始往下讲。</p>
-<p>TextToSpeech这个类是Framework实现给第三方应用使用的，是图中椭圆形的TTS，它主要是封装了对TextToSpeechService的binder，这样第三方应用就无需再去获取该service，而可以直接使用TextToSpeech里面的方法跟service进行交互。</p>
-<p>接着Talkback调用到TextToSpeech的speak的接口</p>
-<ol>
-<li>在Service这边构件一个<code>SynthesisSpeechItemV1</code>，然后将这个item投入到MainLoop中，而这个MainLoop的处理handler是<code>SynthHandler</code>，会从MainLoop中获取item，然后进行执行，即图中的第二点，每种类型的item几乎都实现了自己的playimpl方法，这样当SynthHandler调用到自己的时候就走到自己的流程了，对于SynthesisSpeechItemV1，它的源码流程是这样的：</li>
-</ol>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//1.创建一个PlaybackSynthesisCallback的回调实现</span></span><br><span class="line">synthesisCallback = <span class="keyword">new</span> PlaybackSynthesisCallback(getAudioParams(),mAudioPlaybackHandler, <span class="keyword">this</span>, getCallerIdentity(), mEventLogger, <span class="keyword">false</span>);</span><br><span class="line"><span class="comment">//2.调用serivce中的onSynthesizeText，将回调和请求传递给该函数的实现者，其实就是第三方语音包，如pico</span></span><br><span class="line">TextToSpeechService.<span class="keyword">this</span>.onSynthesizeText(mSynthesisRequest, synthesisCallback);</span><br></pre></td></tr></table></figure>
-<p>上面源码中想必你也注意到了<code>mSynthesisRequest</code>, 这个就是一开始构件SynthesisSpeechItemV1的时候创建的对象，里面封装了需要播放的文本，速度，语言，国家等一系列的信息。</p>
-<ol>
-<li>pico拿到数据和回调实例之后，就会开始准备自己的环境，当环境准备好之后它就会利用回调实例发送start的指令，该指令的实现主要是下面几个过程：</li>
-</ol>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//1.创建SynthesisPlaybackQueueItem</span></span><br><span class="line">SynthesisPlaybackQueueItem item = <span class="keyword">new</span> SynthesisPlaybackQueueItem(</span><br><span class="line">                    mAudioParams, sampleRateInHz, audioFormat, channelCount,</span><br><span class="line">                    mDispatcher, mCallerIdentity, mLogger);</span><br><span class="line"><span class="comment">//2.将该item投入到PlayAudioHandler的信箱中。</span></span><br><span class="line">mAudioTrackHandler.enqueue(item);</span><br></pre></td></tr></table></figure>
-<p>非常简单，只是创建了另外一个item，然后将这个item丢给另外一个loop，让另外一个loop去处理播放事件。<br>需要注意的是<code>SynthesisPlaybackQueueItem</code>是属于回调实例的成员，而生产者和接收者的大部分实现则是在这里面。</p>
-<ol>
-<li>之后pico如果有产生数据则会调用回调实例的<code>audioAvailable</code>来将数据递给<code>SynthesisPlaybackQueueItem</code>，而<code>mAudioTrackHandler</code>如果正在处理该item的时候，并且发现有数据则会进行读取，并通过audiotrack进行播放（其实也只是单纯的调用了<code>SynthesisPlaybackQueueItem</code>中的<code>run</code>函数罢了）.</li>
-</ol>
-<p>这样基本完成了播放的流程了。</p>
-<p>到这边基本上完成了本文要讲的大部分内容了。不过还有一点需要注意一下的就是TextToSpeechService中函数<code>onSynthesizeText</code>是一个阻塞函数。会一直等待到pico返回的。</p>
-<p>感觉这边的代码对于写音视频类的app应该是有借鉴作用的，这部分代码我只想说可以利用！！这边讲得很粗糙并且不够深入，代码里面有更多的实现细节，只能后面用到的时候再进一步归纳，总结了。。。</p>
-
-          
+          <h3 id="简述">简述</h3><p>AudioFlinger是实现上层跟Hal层进行交互的重要的一层，它主要就是通过Thread进行沟通，不管是数据流还是控制流都是需要经由AudioFlinger Thread往下分发的。这两天有空梳理了一下Thread中几个重要的buffer，在这边做个总结，东西很浅，留作备忘。<br>
+          <div class="post-more-link text-center">
+            <a class="btn" href="/2016/03/14/audioflinger_buffer/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
         
       
     </div>
@@ -584,8 +528,7 @@
 
       
         
-          
-            <p>学习源码：<a href="https://github.com/mvarnagiris/Financius" target="_blank" rel="external">https://github.com/mvarnagiris/Financius</a></p>
+          <p>学习源码：<a href="https://github.com/mvarnagiris/Financius">https://github.com/mvarnagiris/Financius</a></p>
 <p>本来该文章打算稍微介绍下Dagger2的SubComponent的，但是发现单单介绍这个标签好像并没有什么卵用，因为它的使用方法跟Component基本上没有太大区别。</p>
 <h3 id="SubComponent的使用">SubComponent的使用</h3><p>SubComponent的语法规则可以参考前一篇博客里面的Component的使用。</p>
 <p>那如何将Component和SubComponent关联起来呢？</p>
@@ -597,34 +540,11 @@
 <blockquote>
 <p>该SubComponent的实现类将直接成为Component的private final内部类。而如果是独立的Component，那它将拥有自己的一个public的实现类。由于是private final类，所以获取该SubComponent只能通过在Component中声明的函数进行获取。</p>
 </blockquote>
-<h3 id="总结开源项目SubComponent结合mvp架构">总结开源项目SubComponent结合mvp架构</h3><p>使用Dagger2的目的其实就是为了实现DI，在android上面，这种注入一般是注入到activity中，如果我们按照正常的Component去书写，去注入其实也是可以的，只是会存在比较多的耦合，而且对于每次注入的话，都需要我们手动进行书写这部分重复的代码，对于维护和扩展都是有比较大的限制的，违背了开闭原则。如何让注入的代码不会过多的耦合，这个开源项目就给出了一个解决方案，搭建自己的DI小框架。</p>
-<h6 id="文件结构">文件结构</h6><p>如下图：</p>
-<p><img src="/image/file_struct.png" alt="文件结构"></p>
-<h6 id="具体实现">具体实现</h6><ul>
-<li>BaseComponent：项目Component的父接口，所有的Component都必须继承于它。</li>
-<li><p>AppComponent：全局的Component，是个单例。这边必须把需要关联的SubComponent写入</p>
-  <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@Singleton</span> <span class="annotation">@Component</span>(modules = &#123;AppModule.class, ApiModule.class&#125;) <span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">AppComponent</span> <span class="keyword">extends</span> <span class="title">BaseComponent</span> </span>&#123;</span><br><span class="line">    <span class="function">ActivityComponent <span class="title">plus</span><span class="params">(ActivityModule module)</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>App：继承自Application，并且通过hashmap来维护所有的Component，提供AppComponent的唯一实例</p>
-  <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">App</span> <span class="keyword">extends</span> <span class="title">Application</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Map&lt;String, ? <span class="keyword">super</span> BaseComponent&gt; components = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> App <span class="title">with</span><span class="params">(@NonNull Context context)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> (App) context.getApplicationContext();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> AppComponent appComponent;</span><br><span class="line"></span><br><span class="line">    <span class="annotation">@Override</span> <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onCreate</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        appComponent = DaggerAppComponent.builder().appModule(<span class="keyword">new</span> AppModule(<span class="keyword">this</span>)).build();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> AppComponent <span class="title">getComponent</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> appComponent;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> &lt;C extends BaseComponent&gt; <span class="function">C <span class="title">getComponent</span><span class="params">(@NonNull String key)</span> </span>&#123;</span><br><span class="line">        <span class="comment">//noinspection unchecked</span></span><br><span class="line">        <span class="keyword">return</span> (C) components.get(key);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> &lt;C extends BaseComponent&gt; <span class="function"><span class="keyword">void</span> <span class="title">putComponent</span><span class="params">(@NonNull String key, @NonNull C component)</span> </span>&#123;</span><br><span class="line">        components.put(key, component);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">removeComponent</span><span class="params">(@NonNull String key)</span> </span>&#123;</span><br><span class="line">        components.remove(key);</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>ActivityComponent：第一层SubComponent，它的作用如同AppComponent，关联它下面的所有的SubComponent。如果添加新的模块则必须修改这边的代码，把对应的SubComponent添加进来，它的写法同AppComponent的。整个结构下来就如同一个倒挂的树。</p>
-</li>
-<li><p>OverviewComponent：具体的某个Module，可以对应一个或多个activity。它必须要包含需要注入的activity。</p>
-  <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@ActivityScope</span> <span class="annotation">@Subcomponent</span>(modules = OverviewModule.class) <span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">OverviewComponent</span> <span class="keyword">extends</span> <span class="title">BaseComponent</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">inject</span><span class="params">(OverviewActivity activity)</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>BaseActivity：所有activity的基类，它会将所有activity在onCreate所需要做的事情做了（模版方法），然后让子类去实现特殊化的操作。并且关联了presenter和activity的关系。</p>
-  <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">BaseActivity</span>&lt;<span class="title">V</span> <span class="keyword">extends</span> <span class="title">PresenterView</span>, <span class="title">C</span> <span class="keyword">extends</span> <span class="title">BaseComponent</span>&gt; <span class="keyword">extends</span> <span class="title">AppCompatActivity</span> </span>&#123;</span><br><span class="line">    String componentKey;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">abstract</span> <span class="keyword">int</span> <span class="title">getLayoutId</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="annotation">@Override</span> <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">onCreate</span><span class="params">(Bundle savedInstanceState)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>.onCreate(savedInstanceState);</span><br><span class="line">        inject(getComponent());</span><br><span class="line">        setContentView(getLayoutId());</span><br><span class="line">        onViewCreated(savedInstanceState);</span><br><span class="line">        getPresenter().onViewAttached(getPresenterView());</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">onViewCreated</span><span class="params">(Bundle savedInstanceState)</span> </span>&#123;&#125;</span><br><span class="line">    <span class="annotation">@Override</span> <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">onDestroy</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>.onDestroy();</span><br><span class="line">        getPresenter().onViewDetached();</span><br><span class="line">        <span class="keyword">if</span> (isFinishing()) &#123;</span><br><span class="line">            App.with(<span class="keyword">this</span>).removeComponent(componentKey);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="annotation">@NonNull</span> <span class="function"><span class="keyword">protected</span> <span class="keyword">abstract</span> C <span class="title">createComponent</span><span class="params">(@NonNull ActivityComponent component)</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">abstract</span> <span class="keyword">void</span> <span class="title">inject</span><span class="params">(@NonNull C component)</span></span>;</span><br><span class="line">    <span class="annotation">@NonNull</span> <span class="function"><span class="keyword">protected</span> <span class="keyword">abstract</span> Presenter&lt;V&gt; <span class="title">getPresenter</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="annotation">@NonNull</span> <span class="function"><span class="keyword">protected</span> <span class="keyword">abstract</span> V <span class="title">getPresenterView</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> C <span class="title">getComponent</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">final</span> App app = App.with(<span class="keyword">this</span>);</span><br><span class="line">        <span class="keyword">final</span> C component;</span><br><span class="line">        <span class="keyword">if</span> (componentKey == <span class="keyword">null</span>) &#123;</span><br><span class="line">            componentKey = UUID.randomUUID().toString();</span><br><span class="line">            component = createComponent(app.getComponent().plus(<span class="keyword">new</span> ActivityModule()));</span><br><span class="line">            app.putComponent(componentKey, component);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            component = app.getComponent(componentKey);</span><br><span class="line">            <span class="keyword">if</span> (component == <span class="keyword">null</span>) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"Component was not properly stored."</span>);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> component;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>  解析下这句<code>component = createComponent(app.getComponent().plus(new ActivityModule()));</code><br>  <code>app.getComponent().plus(new ActivityModule())</code>这个语句将会获得ActivityComponent，而具体的SubComponent是跟该ActivityComponent关联的，所以具体的Component是需要获取该对象的。这样才能在SubComponent中实现关联的。只要简单的实现createComponent，由于Module的特殊性，所以这个需要交给子类来实现。</p>
-<p>  子类如何实现该<code>createComponent(ActivityComponent ac)</code></p>
-  <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@NonNull</span> <span class="annotation">@Override</span> <span class="function"><span class="keyword">protected</span> OverviewComponent <span class="title">createComponent</span><span class="params">(@NonNull ActivityComponent component)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> component.plus(<span class="keyword">new</span> OverviewModule());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>  记得<code>plus()</code>函数的返回值是什么么？<br>  这样ActivityComponent的将会创造一个具体的Component返回，作为getComponent的返回值的同时将这个Component保存到AppComponent中。这样在BaseActivity的onCreate中的inject的时候就找到该activity对应的Component了。这样只要一个activity继承自BaseActivity，并且实现自己的createComponent和Inject的函数（每个Component自己定义的方法只有自己知道，所以必须子类来实现该调用。），这样就可以完成inject了。当然多个activity是可以使用同一个Component的。</p>
-</li>
-<li><p>Presenter：mvp模式中的p。mvp中是v和p互相关联，而p又只跟m关联，m可以理解为Dagger2中的Module。Activity需要实现接口<code>Presenter.view</code>.这边对于控件中的值变化是采用Rxjava来实现的，这部分还没完全理解透彻，后续搞懂了再更新。</p>
-</li>
-</ul>
-
-          
+          <div class="post-more-link text-center">
+            <a class="btn" href="/2015/11/22/dagger2_second/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
         
       
     </div>
@@ -736,64 +656,17 @@
 
       
         
-          
-            <h3 id="简述">简述</h3><p>  我只想简简单单的描述下我对该框架使用上的理解。。<br>  而这些的理解来自于别人的文档、看别人代码、实践。<br>  不过还是得对这个框架有个初步的认识：这个框架作用，给某些类或方法提供依赖。是DI思想的一种呈现。主要手段是帮你构建工厂类。</p>
+          <h3 id="简述">简述</h3><p>  我只想简简单单的描述下我对该框架使用上的理解。。<br>  而这些的理解来自于别人的文档、看别人代码、实践。<br>  不过还是得对这个框架有个初步的认识：这个框架作用，给某些类或方法提供依赖。是DI思想的一种呈现。主要手段是帮你构建工厂类。</p>
 <ul>
 <li>Component：首先，它是一个interface，其次，它的作用是将Module和Host进行关联，关联生效的时机是在host中调用了inject函数（这个函数是你在components中声明的方法）。由于上面的特性，所以Component是有作用域的，利用这个作用域就可以引入singleon和scope provider了。</li>
 <li>Module或Inject:Module和Inject都是class，Module可以给host提供多个依赖的对象，而Inject本身就是host依赖的对象。（这里面提到的Inject是在类的构造函数前面标注@Inject，表示自己可以提供依赖）</li>
 <li><p>被注入依赖的对象：这里我们称之为host（宿主）</p>
 <p>如果你对butterknife熟悉的话，那你可以把这个理解称为butterknife在类上面的扩展，更加的自由，但是前提是你也必须写更多的代码。</p>
-</li>
-</ul>
-<h3 id="Component">Component</h3><p>Component顾名思义是组件、单元的意思，感觉这边用单元来理解会贴切多，因为单元是有个范围的。Dagger2中的Component是支持通过注解声明生命周期。</p>
-<p>Component的主要作用是实现Module和Host的关联，apt会为它生成实现类，实现类的名字是以Dagger+你定义的interface的名字，实现类的成员组成包括Module提供各种依赖的工厂，还包括了将要注入的host。为了实现注入，host中所需依赖必须声明为public类型。如何注入的具体执行代码是非常简单的：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//这行代码是在Component内部的，这就是Component如何关联Module和host的关键所在</span></span><br><span class="line"><span class="comment">//从Module获取到对应依赖的工厂，在Inject函数调用的时候，进行赋值操作，即完成了DI。</span></span><br><span class="line">host.member = providerMember.get();</span><br></pre></td></tr></table></figure>
-<p>Component的实现类会提供一个静态内部类builder，使用者直接使用它进行构建所需的Component。如果关联的Modules中有需要带参数的，则需要在构建过程中传入</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">DaggerDaggerDemoComponent.builder()</span><br><span class="line"> .mainModule(<span class="keyword">new</span> MainModule(app)) <span class="comment">//带参数的Module，如果没有则无需码这行代码，如果有参数必须得码。。</span></span><br><span class="line"> .build();</span><br></pre></td></tr></table></figure>
-<ul>
-<li><p>语法规则</p>
-<p>  dependencies括弧内是依赖的Compnent的class类型，modules括弧内是依赖module的class类型。括弧内都可以包含多个，用逗号分割。括弧内的这些，都会成为该Component的成员。</p>
-  <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@Singleton</span></span><br><span class="line"><span class="annotation">@Component</span>(dependencies = &#123; superComponent.class &#125;, modules = &#123; dataModule.class &#125;)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">AppComponent</span> </span>&#123;&#125;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>使用@Singleton</p>
-</li>
-<li><p>使用自定义的注解声明范围,自定义注解写法：</p>
-  <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@Scope</span></span><br><span class="line"><span class="annotation">@Retention</span>(RUNTIME)</span><br><span class="line"><span class="keyword">public</span> <span class="annotation">@interface</span> PerActivity &#123;&#125;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>什么场景下使用：</p>
-<p>  希望某个对象，它的生命周期是在当前Component唯一，这个时候就可以派上用场了。不管是@Singleton还是自定义注解的形式，最终apt解析出来的，都是使用的单例模式。</p>
-<p>例子：</p>
-<p>  DBHelper是依赖类，它要注入到Host，并且它对于某个Component具有唯一性，所以标注为@PerActivity。当确定A Component中的Host依赖于DBHelper的时候，我们就需要在Component前面添加该注解，表示在这个作用域内是唯一的。如果依赖类添加了注解，而依赖该DBHelper的Component如果没有添加上注解的话，编译会报错的。具体效果是这样的：如果两个host获取到同一个Component，则它们获取到的DBHelper也会是同一个。</p>
-</li>
-</ul>
-<ul>
-<li><p>如何确保两个Host获取到同一个Component</p>
-<p>  为了保证两个Host是同个对象，我们可以在Component中添加如下方法：</p>
-  <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//在自定义的Component中声明该内部类，由于例子Module没有带有参数，所以builder的过程很简单，如果有参数的话，则需要添加到build的过程中，否则程序运行的时候会报错。</span></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">Initializer</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="title">Initializer</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    &#125; <span class="comment">// No instances.</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> DaggerDemoComponent <span class="title">init</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> DaggerDaggerDemoComponent.builder()</span><br><span class="line">                .build();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//继承Application的类中进行获取该Component保证其唯一性，并提供调用接口</span></span><br><span class="line"><span class="comment">//Component构造的调用方法。</span></span><br><span class="line">AppComponent.Initializer.init();</span><br></pre></td></tr></table></figure>
-</li>
-</ul>
-<h3 id="Module">Module</h3><p>Module是一个类，具备类所有的特征，其主要作用是用来提供依赖实例的。</p>
-<ul>
-<li><p>语法规则</p>
-<p>  @Module来指明是module，如果名字是以provider打头的函数都会被apt认为是用来提供依赖，会为它生成工厂类。而普通的函数，则就当成普通函数看待。</p>
-  <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="annotation">@Module</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DataModule</span> </span>&#123;</span><br><span class="line">    <span class="annotation">@Provides</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">providerName</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="string">"test"</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="annotation">@Singleton</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Person <span class="title">providerPerson</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> Person();</span><br><span class="line">    &#125;</span><br><span class="line">｝</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>Module 提供的对象不只是Host中需要的依赖，它也可以提供给Component中的方法返回值类型。</p>
-<p>例子：</p>
-  <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//component中声明</span></span><br><span class="line"><span class="annotation">@PerActivity</span></span><br><span class="line"><span class="annotation">@Component</span>(dependencies = ApplicationComponent.class, modules = ActivityModule.class)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">ActivityComponent</span> </span>&#123;</span><br><span class="line">  <span class="comment">//Exposed to sub-graphs.</span></span><br><span class="line">  <span class="function">Activity <span class="title">activity</span><span class="params">()</span></span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//则Module的实现如下：</span></span><br><span class="line"><span class="annotation">@Module</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ActivityModule</span> </span>&#123;</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">final</span> Activity activity;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="title">ActivityModule</span><span class="params">(Activity activity)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.activity = activity;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="comment">/**</span><br><span class="line">  * Expose the activity to dependents in the graph.</span><br><span class="line">  */</span></span><br><span class="line">  <span class="annotation">@Provides</span> <span class="annotation">@PerActivity</span> <span class="function">Activity <span class="title">activity</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span>.activity;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-</li>
-</ul>
-<h3 id="Inject">Inject</h3><ul>
-<li>声明在构造函数前面表示该类是可以被注入到Host的。</li>
-<li><p>声明在Host的成员变量的前面，表示该实例是由Dagger2来提供依赖的。</p>
-<p>  由于用法相对简单，所以不多说。。。</p>
-</li>
-</ul>
-<h3 id="android_studio配置使用dagger2">android studio配置使用dagger2</h3><p>只需要简单配置下Gradle的配置文件就可以支持。</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">//Module开头处加入apt plugin的使用</span><br><span class="line">apply plugin: <span class="string">'com.neenbedankt.android-apt'</span></span><br><span class="line"></span><br><span class="line">//Module的dependencies中添加下面三个选项</span><br><span class="line">dependencies &#123;</span><br><span class="line">	provided <span class="string">'javax.annotation:jsr250-api:1.0'</span></span><br><span class="line">    compile <span class="string">'com.google.dagger:dagger-compiler:2.0.1'</span></span><br><span class="line">    compile <span class="string">'com.google.dagger:dagger:2.0.1'</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h3 id="参考文章">参考文章</h3><p><a href="http://www.jcodecraeer.com/a/anzhuokaifa/androidkaifa/2015/0519/2892.html" target="_blank" rel="external">http://www.jcodecraeer.com/a/anzhuokaifa/androidkaifa/2015/0519/2892.html</a> 学习生命周期<br><a href="https://github.com/phajduk/dagger2-example" target="_blank" rel="external">https://github.com/phajduk/dagger2-example</a> dagger2 example代码</p>
-
-          
+          <div class="post-more-link text-center">
+            <a class="btn" href="/2015/11/13/dagger2_first/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
         
       
     </div>
@@ -905,36 +778,16 @@
 
       
         
-          
-            <ol>
+          <ol>
 <li><p>项目的gradle配置文件中buildscript节点下面dependencies增加：</p>
  <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">classpath <span class="string">'me.tatarka:gradle-retrolambda:3.2.3'</span></span><br></pre></td></tr></table></figure>
 </li>
-<li><p>Module对应的gradle配置文件开始的地方增加：</p>
- <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">apply plugin: <span class="string">'me.tatarka.retrolambda'</span></span><br></pre></td></tr></table></figure>
-</li>
-<li><p>Module对应的gradle配置文件android节点下面增加：</p>
- <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">compileOptions &#123;</span><br><span class="line">    <span class="built_in">source</span>Compatibility JavaVersion.VERSION_1_8</span><br><span class="line">    targetCompatibility JavaVersion.VERSION_1_8</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>（可选）从2.4.0开始retrolambda已经支持proguard，在Module的proguard-rules.pro中增加：</p>
- <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">-dontwarn java.lang.invoke.*</span><br></pre></td></tr></table></figure>
-</li>
 </ol>
-<blockquote>
-<p>感觉支持的还是很有限，可能主要还是用在listener的实现吧。后面对于RxJava学习，再补充了</p>
-</blockquote>
-<ol>
-<li><p>测试代码：</p>
- <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">btnThree.setOnClickListener(v1 -&gt; Toast.makeText(MainActivity.<span class="keyword">this</span>, <span class="string">"clicked"</span>, Toast.LENGTH_LONG).show());</span><br></pre></td></tr></table></figure>
-</li>
-</ol>
-<blockquote>
-<p>装完重启一下android studio 要不可能会无法识别lambda。</p>
-</blockquote>
-<p>参考资料：</p>
-<p><a href="https://github.com/evant/gradle-retrolambda" target="_blank" rel="external">https://github.com/evant/gradle-retrolambda</a></p>
-
-          
+          <div class="post-more-link text-center">
+            <a class="btn" href="/2015/11/08/java_8_lambda_learning/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
         
       
     </div>

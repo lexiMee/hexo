@@ -311,6 +311,7 @@ SubComponent的使用SubComponent的语法规则可以参考前一篇博客里�
 <blockquote>
 <p>该SubComponent的实现类将直接成为Component的private final内部类。而如果是独立的Component，那它将拥有自己的一个public的实现类。由于是private final类，所以获取该SubComponent只能通过在Component中声明的函数进行获取。</p>
 </blockquote>
+<a id="more"></a>
 <h3 id="总结开源项目SubComponent结合mvp架构">总结开源项目SubComponent结合mvp架构</h3><p>使用Dagger2的目的其实就是为了实现DI，在android上面，这种注入一般是注入到activity中，如果我们按照正常的Component去书写，去注入其实也是可以的，只是会存在比较多的耦合，而且对于每次注入的话，都需要我们手动进行书写这部分重复的代码，对于维护和扩展都是有比较大的限制的，违背了开闭原则。如何让注入的代码不会过多的耦合，这个开源项目就给出了一个解决方案，搭建自己的DI小框架。</p>
 <h6 id="文件结构">文件结构</h6><p>如下图：</p>
 <p><img src="/image/file_struct.png" alt="文件结构"></p>
@@ -370,8 +371,8 @@ SubComponent的使用SubComponent的语法规则可以参考前一篇博客里�
 
           <div class="post-nav-prev post-nav-item">
             
-              <a href="/2015/12/13/android_tts/" rel="prev" title="Android TTS学习">
-                Android TTS学习 <i class="fa fa-chevron-right"></i>
+              <a href="/2016/03/14/audioflinger_buffer/" rel="prev" title="AudioFlinger Thread中的几个buffer">
+                AudioFlinger Thread中的几个buffer <i class="fa fa-chevron-right"></i>
               </a>
             
           </div>

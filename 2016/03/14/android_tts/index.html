@@ -57,20 +57,17 @@
 
 
 
-<meta name="description" content="简述TTS是Text To Speech的简称，就是将字符串转换成语音。Talkback是用来给帮助盲人朋友使用手机的apk，是android辅助功能的插件，安装完之后可以到辅助功能里面使能它，之后只要你触摸到android系统中的任何控件，都会将控件中的信息转变成语音的形式播放出来。
-内容TTS的语音是可以自由选择第三方或者是官方默认语音包，默认是pico，可以在源码external/svox这">
+<meta name="description" content="简述TTS是Text To Speech的简称，就是将字符串转换成语音。Talkback是用来给帮助盲人朋友使用手机的apk，是android辅助功能的插件，安装完之后可以到辅助功能里面使能它，之后只要你触摸到android系统中的任何控件，都会将控件中的信息转变成语音的形式播放出来。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Android TTS学习">
-<meta property="og:url" content="http://thinks.me/2015/12/13/android_tts/index.html">
+<meta property="og:url" content="http://thinks.me/2016/03/14/android_tts/index.html">
 <meta property="og:site_name" content="Thinking">
-<meta property="og:description" content="简述TTS是Text To Speech的简称，就是将字符串转换成语音。Talkback是用来给帮助盲人朋友使用手机的apk，是android辅助功能的插件，安装完之后可以到辅助功能里面使能它，之后只要你触摸到android系统中的任何控件，都会将控件中的信息转变成语音的形式播放出来。
-内容TTS的语音是可以自由选择第三方或者是官方默认语音包，默认是pico，可以在源码external/svox这">
+<meta property="og:description" content="简述TTS是Text To Speech的简称，就是将字符串转换成语音。Talkback是用来给帮助盲人朋友使用手机的apk，是android辅助功能的插件，安装完之后可以到辅助功能里面使能它，之后只要你触摸到android系统中的任何控件，都会将控件中的信息转变成语音的形式播放出来。">
 <meta property="og:image" content="http://thinks.me/image/tts2.jpg">
-<meta property="og:updated_time" content="2015-12-13T14:02:17.380Z">
+<meta property="og:updated_time" content="2016-03-14T10:55:44.772Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Android TTS学习">
-<meta name="twitter:description" content="简述TTS是Text To Speech的简称，就是将字符串转换成语音。Talkback是用来给帮助盲人朋友使用手机的apk，是android辅助功能的插件，安装完之后可以到辅助功能里面使能它，之后只要你触摸到android系统中的任何控件，都会将控件中的信息转变成语音的形式播放出来。
-内容TTS的语音是可以自由选择第三方或者是官方默认语音包，默认是pico，可以在源码external/svox这">
+<meta name="twitter:description" content="简述TTS是Text To Speech的简称，就是将字符串转换成语音。Talkback是用来给帮助盲人朋友使用手机的apk，是android辅助功能的插件，安装完之后可以到辅助功能里面使能它，之后只要你触摸到android系统中的任何控件，都会将控件中的信息转变成语音的形式播放出来。">
 
 
 
@@ -240,8 +237,8 @@
               <i class="fa fa-calendar-o"></i>
             </span>
             <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2015-12-13T22:02:17+08:00" content="2015-12-13">
-              2015-12-13
+            <time itemprop="dateCreated" datetime="2016-03-14T18:55:44+08:00" content="2016-03-14">
+              2016-03-14
             </time>
           </span>
 
@@ -270,8 +267,8 @@
             
               <span class="post-comments-count">
                 &nbsp; | &nbsp;
-                <a href="/2015/12/13/android_tts/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2015/12/13/android_tts/" itemprop="commentsCount"></span>
+                <a href="/2016/03/14/android_tts/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/03/14/android_tts/" itemprop="commentsCount"></span>
                 </a>
               </span>
             
@@ -293,7 +290,7 @@
       
 
       
-        <h3 id="简述">简述</h3><p>TTS是Text To Speech的简称，就是将字符串转换成语音。Talkback是用来给帮助盲人朋友使用手机的apk，是android辅助功能的插件，安装完之后可以到辅助功能里面使能它，之后只要你触摸到android系统中的任何控件，都会将控件中的信息转变成语音的形式播放出来。</p>
+        <h3 id="简述">简述</h3><p>TTS是Text To Speech的简称，就是将字符串转换成语音。Talkback是用来给帮助盲人朋友使用手机的apk，是android辅助功能的插件，安装完之后可以到辅助功能里面使能它，之后只要你触摸到android系统中的任何控件，都会将控件中的信息转变成语音的形式播放出来。<br><a id="more"></a></p>
 <h3 id="内容">内容</h3><p>TTS的语音是可以自由选择第三方或者是官方默认语音包，默认是pico，可以在源码external/svox这个文件夹找到对应的源码和语音包。我们去看源码的时候也会发现它必须继承并且实现android Framework中提供的TextToSpeechService，并且实现里面指定的一些抽象方法，这个是至关重要的。</p>
 <p>最近工作遇到了一个跟TTS相关的bug，于是就有了这个总结。只是简单的对主要流程进行梳理，先看图，然后再结合下面的文字来理解吧。</p>
 <p><img src="image/tts2.jpg" alt="流程图"></p>
@@ -341,17 +338,13 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2015/11/22/dagger2_second/" rel="next" title="Dagger 2 SubComponent">
-                <i class="fa fa-chevron-left"></i> Dagger 2 SubComponent
+              <a href="/2016/03/14/audioflinger_buffer/" rel="next" title="AudioFlinger Thread中的几个buffer">
+                <i class="fa fa-chevron-left"></i> AudioFlinger Thread中的几个buffer
               </a>
             
           </div>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2015/12/19/audioflinger_buffer/" rel="prev" title="AudioFlinger Thread中的几个buffer">
-                AudioFlinger Thread中的几个buffer <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -377,8 +370,8 @@
           
   <div class="comments" id="comments">
     
-      <div class="ds-thread" data-thread-key="2015/12/13/android_tts/"
-           data-title="Android TTS学习" data-url="http://thinks.me/2015/12/13/android_tts/">
+      <div class="ds-thread" data-thread-key="2016/03/14/android_tts/"
+           data-title="Android TTS学习" data-url="http://thinks.me/2016/03/14/android_tts/">
       </div>
     
   </div>

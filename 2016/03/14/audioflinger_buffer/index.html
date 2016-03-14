@@ -57,26 +57,17 @@
 
 
 
-<meta name="description" content="简述AudioFlinger是实现上层跟Hal层进行交互的重要的一层，它主要就是通过Thread进行沟通，不管是数据流还是控制流都是需要经由AudioFlinger Thread往下分发的。这两天有空梳理了一下Thread中几个重要的buffer，在这边做个总结，东西很浅，留作备忘。
-内容主要是下面三个buffer：
-
-mSinkBuffer，这个buffer的数据最后是要写到hal去的，但是你会">
+<meta name="description" content="简述AudioFlinger是实现上层跟Hal层进行交互的重要的一层，它主要就是通过Thread进行沟通，不管是数据流还是控制流都是需要经由AudioFlinger Thread往下分发的。这两天有空梳理了一下Thread中几个重要的buffer，在这边做个总结，东西很浅，留作备忘。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="AudioFlinger Thread中的几个buffer">
-<meta property="og:url" content="http://thinks.me/2015/12/19/audioflinger_buffer/index.html">
+<meta property="og:url" content="http://thinks.me/2016/03/14/audioflinger_buffer/index.html">
 <meta property="og:site_name" content="Thinking">
-<meta property="og:description" content="简述AudioFlinger是实现上层跟Hal层进行交互的重要的一层，它主要就是通过Thread进行沟通，不管是数据流还是控制流都是需要经由AudioFlinger Thread往下分发的。这两天有空梳理了一下Thread中几个重要的buffer，在这边做个总结，东西很浅，留作备忘。
-内容主要是下面三个buffer：
-
-mSinkBuffer，这个buffer的数据最后是要写到hal去的，但是你会">
+<meta property="og:description" content="简述AudioFlinger是实现上层跟Hal层进行交互的重要的一层，它主要就是通过Thread进行沟通，不管是数据流还是控制流都是需要经由AudioFlinger Thread往下分发的。这两天有空梳理了一下Thread中几个重要的buffer，在这边做个总结，东西很浅，留作备忘。">
 <meta property="og:image" content="http://thinks.me/image/bufferroute.jpg">
-<meta property="og:updated_time" content="2015-12-19T15:51:52.167Z">
+<meta property="og:updated_time" content="2016-03-14T10:54:22.175Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="AudioFlinger Thread中的几个buffer">
-<meta name="twitter:description" content="简述AudioFlinger是实现上层跟Hal层进行交互的重要的一层，它主要就是通过Thread进行沟通，不管是数据流还是控制流都是需要经由AudioFlinger Thread往下分发的。这两天有空梳理了一下Thread中几个重要的buffer，在这边做个总结，东西很浅，留作备忘。
-内容主要是下面三个buffer：
-
-mSinkBuffer，这个buffer的数据最后是要写到hal去的，但是你会">
+<meta name="twitter:description" content="简述AudioFlinger是实现上层跟Hal层进行交互的重要的一层，它主要就是通过Thread进行沟通，不管是数据流还是控制流都是需要经由AudioFlinger Thread往下分发的。这两天有空梳理了一下Thread中几个重要的buffer，在这边做个总结，东西很浅，留作备忘。">
 
 
 
@@ -246,8 +237,8 @@ mSinkBuffer，这个buffer的数据最后是要写到hal去的，但是你会">
               <i class="fa fa-calendar-o"></i>
             </span>
             <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2015-12-19T23:51:52+08:00" content="2015-12-19">
-              2015-12-19
+            <time itemprop="dateCreated" datetime="2016-03-14T18:54:22+08:00" content="2016-03-14">
+              2016-03-14
             </time>
           </span>
 
@@ -276,8 +267,8 @@ mSinkBuffer，这个buffer的数据最后是要写到hal去的，但是你会">
             
               <span class="post-comments-count">
                 &nbsp; | &nbsp;
-                <a href="/2015/12/19/audioflinger_buffer/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2015/12/19/audioflinger_buffer/" itemprop="commentsCount"></span>
+                <a href="/2016/03/14/audioflinger_buffer/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/03/14/audioflinger_buffer/" itemprop="commentsCount"></span>
                 </a>
               </span>
             
@@ -299,7 +290,7 @@ mSinkBuffer，这个buffer的数据最后是要写到hal去的，但是你会">
       
 
       
-        <h3 id="简述">简述</h3><p>AudioFlinger是实现上层跟Hal层进行交互的重要的一层，它主要就是通过Thread进行沟通，不管是数据流还是控制流都是需要经由AudioFlinger Thread往下分发的。这两天有空梳理了一下Thread中几个重要的buffer，在这边做个总结，东西很浅，留作备忘。</p>
+        <h3 id="简述">简述</h3><p>AudioFlinger是实现上层跟Hal层进行交互的重要的一层，它主要就是通过Thread进行沟通，不管是数据流还是控制流都是需要经由AudioFlinger Thread往下分发的。这两天有空梳理了一下Thread中几个重要的buffer，在这边做个总结，东西很浅，留作备忘。<br><a id="more"></a></p>
 <h3 id="内容">内容</h3><p>主要是下面三个buffer：</p>
 <ol>
 <li>mSinkBuffer，这个buffer的数据最后是要写到hal去的，但是你会发现一开始都没有对它操作，只有在写之前最后一步的时候会进行拷贝操作，将之前处理过的数据的buffer拷贝到该buffer中来。</li>
@@ -363,13 +354,17 @@ mSinkBuffer，这个buffer的数据最后是要写到hal去的，但是你会">
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2015/12/13/android_tts/" rel="next" title="Android TTS学习">
-                <i class="fa fa-chevron-left"></i> Android TTS学习
+              <a href="/2015/11/22/dagger2_second/" rel="next" title="Dagger 2 SubComponent">
+                <i class="fa fa-chevron-left"></i> Dagger 2 SubComponent
               </a>
             
           </div>
 
           <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2016/03/14/android_tts/" rel="prev" title="Android TTS学习">
+                Android TTS学习 <i class="fa fa-chevron-right"></i>
+              </a>
             
           </div>
         </div>
@@ -395,8 +390,8 @@ mSinkBuffer，这个buffer的数据最后是要写到hal去的，但是你会">
           
   <div class="comments" id="comments">
     
-      <div class="ds-thread" data-thread-key="2015/12/19/audioflinger_buffer/"
-           data-title="AudioFlinger Thread中的几个buffer" data-url="http://thinks.me/2015/12/19/audioflinger_buffer/">
+      <div class="ds-thread" data-thread-key="2016/03/14/audioflinger_buffer/"
+           data-title="AudioFlinger Thread中的几个buffer" data-url="http://thinks.me/2016/03/14/audioflinger_buffer/">
       </div>
     
   </div>

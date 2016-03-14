@@ -301,9 +301,10 @@ Component：首先，它是一个interface，其次，它的作用是将Module�
 <li>Module或Inject:Module和Inject都是class，Module可以给host提供多个依赖的对象，而Inject本身就是host依赖的对象。（这里面提到的Inject是在类的构造函数前面标注@Inject，表示自己可以提供依赖）</li>
 <li><p>被注入依赖的对象：这里我们称之为host（宿主）</p>
 <p>如果你对butterknife熟悉的话，那你可以把这个理解称为butterknife在类上面的扩展，更加的自由，但是前提是你也必须写更多的代码。</p>
-</li>
+<a id="more"></a>
+<h3 id="Component">Component</h3></li>
 </ul>
-<h3 id="Component">Component</h3><p>Component顾名思义是组件、单元的意思，感觉这边用单元来理解会贴切多，因为单元是有个范围的。Dagger2中的Component是支持通过注解声明生命周期。</p>
+<p>Component顾名思义是组件、单元的意思，感觉这边用单元来理解会贴切多，因为单元是有个范围的。Dagger2中的Component是支持通过注解声明生命周期。</p>
 <p>Component的主要作用是实现Module和Host的关联，apt会为它生成实现类，实现类的名字是以Dagger+你定义的interface的名字，实现类的成员组成包括Module提供各种依赖的工厂，还包括了将要注入的host。为了实现注入，host中所需依赖必须声明为public类型。如何注入的具体执行代码是非常简单的：</p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//这行代码是在Component内部的，这就是Component如何关联Module和host的关键所在</span></span><br><span class="line"><span class="comment">//从Module获取到对应依赖的工厂，在Inject函数调用的时候，进行赋值操作，即完成了DI。</span></span><br><span class="line">host.member = providerMember.get();</span><br></pre></td></tr></table></figure>
 <p>Component的实现类会提供一个静态内部类builder，使用者直接使用它进行构建所需的Component。如果关联的Modules中有需要带参数的，则需要在构建过程中传入</p>
