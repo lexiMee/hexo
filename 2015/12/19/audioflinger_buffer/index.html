@@ -327,8 +327,7 @@
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">int16_t</span>* buffer = <span class="keyword">reinterpret_cast</span>&lt;<span class="keyword">int16_t</span>*&gt;(mEffectBufferEnabled</span><br><span class="line">        ? mEffectBuffer : mSinkBuffer);</span><br><span class="line">chain-&gt;setThread(<span class="keyword">this</span>);</span><br><span class="line">chain-&gt;setInBuffer(buffer, ownsBuffer);</span><br><span class="line">chain-&gt;setOutBuffer(<span class="keyword">reinterpret_cast</span>&lt;<span class="keyword">int16_t</span>*&gt;(mEffectBufferEnabled</span><br><span class="line">        ? mEffectBuffer : mSinkBuffer));</span><br></pre></td></tr></table></figure>
 <p>好吧，这个InBuffer和outBuffer就是mEffectBuffer了，跑不掉了。</p>
 <p>这边得稍微总结下了，要不感觉乱乱的，Effect中的In和Out的buffer是会指向EffectChain中的In或者Out的buffer的，而EffectChain的buffer由指向mEffectBuffer，同时Audiotrack的MainBuffer也指向该mEffectBuffer，最为mixer输出的buffer，同时也作为effect输入输出的buffer。</p>
-<p>如图。</p>
-<p><img src="image/bufferroute.jpg" alt="xxx"></p>
+<p>如图。<br><img src="http://thinks.me/image/bufferroute.jpg" alt=""></p>
 <p>############ 5. 最后把处理好的数据复制到mSinkBuffer中，到此我们的旅程也结束了。</p>
 <p>That’s All.</p>
 
