@@ -303,8 +303,30 @@
 <li>判断audioformat是否是我们定义的</li>
 <li>调用native的min buffer size</li>
 </ol>
-<p>接着来看native的代码。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> jint <span class="title">android_media_AudioTrack_get_min_buff_size</span><span class="params">(JNIEnv *env,  jobject thiz,</span><br><span class="line">    jint sampleRateInHertz, jint channelCount, jint audioFormat)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    size_t frameCount;</span><br><span class="line">    <span class="comment">// 通过AudioTrack去获取需要的最少的帧数。</span></span><br><span class="line">    <span class="keyword">const</span> status_t status = AudioTrack::getMinFrameCount(&amp;frameCount, AUDIO_STREAM_DEFAULT,</span><br><span class="line">            sampleRateInHertz);</span><br><span class="line">    <span class="keyword">if</span> (status != NO_ERROR) &#123;</span><br><span class="line">        <span class="keyword">return</span> -<span class="number">1</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 将上层的audioFormat转换成native的格式 java层是一个递增索引，在native是位活的形式</span></span><br><span class="line">    <span class="keyword">const</span> audio_format_t format = audioFormatToNative(audioFormat);</span><br><span class="line">    <span class="comment">// 判断是否是线性的pcm数据流，因为只有线性数据流我们才能计算出帧对应多少字节。</span></span><br><span class="line">    <span class="keyword">if</span> (audio_is_linear_pcm(format)) &#123;</span><br><span class="line">        <span class="comment">// 获取每一帧占多少个字节</span></span><br><span class="line">        <span class="keyword">const</span> size_t bytesPerSample = audio_bytes_per_sample(format);</span><br><span class="line">        <span class="comment">// 帧数 * 每帧字节数 * 通道数 就是我们所要得到的buffer的字节数了。</span></span><br><span class="line">        <span class="keyword">return</span> frameCount * channelCount * bytesPerSample;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> frameCount;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<p>上面的代码牵扯到一个帧到字节的计算方式。<br><em>buffersize = 帧数 x 每帧占用字节数 x 通道数</em></p>
+<p>接着来看native的代码。</p>
+<pre><code><span class="function"><span class="keyword">static</span> jint <span class="title">android_media_AudioTrack_get_min_buff_size</span><span class="params">(JNIEnv *env,  jobject thiz,
+    jint sampleRateInHertz, jint channelCount, jint audioFormat)</span> </span>{
+
+    <span class="keyword">size_t</span> frameCount;
+    <span class="comment">// 通过AudioTrack去获取需要的最少的帧数。</span>
+    <span class="keyword">const</span> <span class="keyword">status_t</span> status = AudioTrack::getMinFrameCount(&amp;frameCount, AUDIO_STREAM_DEFAULT,
+            sampleRateInHertz);
+    <span class="keyword">if</span> (status != NO_ERROR) {
+        <span class="keyword">return</span> -<span class="number">1</span>;
+    }
+    <span class="comment">// 将上层的audioFormat转换成native的格式 java层是一个递增索引，在native是位活的形式</span>
+    <span class="keyword">const</span> <span class="keyword">audio_format_t</span> format = audioFormatToNative(audioFormat);
+    <span class="comment">// 判断是否是线性的pcm数据流，因为只有线性数据流我们才能计算出帧对应多少字节。</span>
+    <span class="keyword">if</span> (audio_is_linear_pcm(format)) {
+        <span class="comment">// 获取每一帧占多少个字节</span>
+        <span class="keyword">const</span> <span class="keyword">size_t</span> bytesPerSample = audio_bytes_per_sample(format);
+        <span class="comment">// 帧数 * 每帧字节数 * 通道数 就是我们所要得到的buffer的字节数了。</span>
+        <span class="keyword">return</span> frameCount * channelCount * bytesPerSample;
+    } <span class="keyword">else</span> {
+        <span class="keyword">return</span> frameCount;
+    }
+}
+</code></pre><p>上面的代码牵扯到一个帧到字节的计算方式。<br><em>buffersize = 帧数 x 每帧占用字节数 x 通道数</em></p>
 <p>format这个参数，我们可以理解为采样精度，每帧占用字节数如下图：<br><img src="http://thinks.me/image/audioformat.jpg" alt=""></p>
 <p>现在还有frameCount这个变量是未知的，我们来看下函数<code>AudioTrack::getMinFrameCount</code></p>
 <pre><code><span class="keyword">status_t</span> AudioTrack::getMinFrameCount(
