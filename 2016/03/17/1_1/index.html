@@ -69,7 +69,8 @@
 <meta property="og:description" content="1.1 audiotrack的create流程简述这部分，我们主要讲解两个函数getMinBufferSize和AudioTrack。
 正文一、getMinBufferSize函数解析直接帖整段的java的代码，不打算省略了。可能很占空间，但是我们可以把每个变量都看一遍。
 123456789101112131415161718192021222324252627282930313233343536">
-<meta property="og:updated_time" content="2016-03-17T03:33:43.825Z">
+<meta property="og:image" content="http://thinks.me/image/audiotrack_create.jpg">
+<meta property="og:updated_time" content="2016-03-17T03:48:26.189Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Thinking">
 <meta name="twitter:description" content="1.1 audiotrack的create流程简述这部分，我们主要讲解两个函数getMinBufferSize和AudioTrack。
@@ -244,7 +245,7 @@
               <i class="fa fa-calendar-o"></i>
             </span>
             <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2016-03-17T11:33:43+08:00" content="2016-03-17">
+            <time itemprop="dateCreated" datetime="2016-03-17T11:48:26+08:00" content="2016-03-17">
               2016-03-17
             </time>
           </span>
@@ -2095,6 +2096,7 @@ Exit:
 }
 </code></pre><p>这边完成创建了server端的proxy了，刚才我们在看audiotrack那边的创建的时候也创建了自己的代理。</p>
 <p>把所有的代码贴出来，主要是为了看到整个创建的细节，并不是为了单纯完成对流程的梳理，创建流程可以看下图：</p>
+<p><img src="http://thinks.me/image/audiotrack_create.jpg" alt=""></p>
 <p>这边我们再补充下AudioTrack那边创建的线程现在的状态：</p>
 <pre><code>AudioTrack::AudioTrackThread::AudioTrackThread(AudioTrack&amp; receiver, bool bCanCallJava)
     : Thread(bCanCallJava), mReceiver(receiver), mPaused(<span class="keyword">true</span>), mPausedInt(<span class="keyword">false</span>), mPausedNs(0LL),
