@@ -2112,7 +2112,7 @@ Exit:
 </code></pre><p>这边完成创建了server端的proxy了，刚才我们在看audiotrack那边的创建的时候也创建了自己的代理。</p>
 <h3 id="总结创建流">总结创建流</h3><p>把所有的代码贴出来，主要是为了看到整个创建的细节，并不是为了单纯完成对流程的梳理，创建流程可以看下图：</p>
 <p><img src="http://thinks.me/image/audiotrack_create.jpg" alt=""></p>
-<p>这边我们再补充下AudioTrack那边创建的线程现在的状态：</p>
+<h3 id="补充">补充</h3><p>这边我们再补充下AudioTrack那边创建的线程现在的状态：</p>
 <pre><code>AudioTrack::AudioTrackThread::AudioTrackThread(AudioTrack&amp; receiver, bool bCanCallJava)
     : Thread(bCanCallJava), mReceiver(receiver), mPaused(<span class="keyword">true</span>), mPausedInt(<span class="keyword">false</span>), mPausedNs(0LL),
       mIgnoreNextPausedInt(<span class="keyword">false</span>)
@@ -2326,7 +2326,7 @@ bool AudioTrack::AudioTrackThread::threadLoop()
               
             
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#简述"><span class="nav-number">1.</span> <span class="nav-text">简述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#正文"><span class="nav-number">2.</span> <span class="nav-text">正文</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#一、getMinBufferSize函数解析"><span class="nav-number">2.1.</span> <span class="nav-text">一、getMinBufferSize函数解析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#二、AudioTrack的创建流程"><span class="nav-number">2.2.</span> <span class="nav-text">二、AudioTrack的创建流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#总结创建流"><span class="nav-number">2.3.</span> <span class="nav-text">总结创建流</span></a></li></ol></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#简述"><span class="nav-number">1.</span> <span class="nav-text">简述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#正文"><span class="nav-number">2.</span> <span class="nav-text">正文</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#一、getMinBufferSize函数解析"><span class="nav-number">2.1.</span> <span class="nav-text">一、getMinBufferSize函数解析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#二、AudioTrack的创建流程"><span class="nav-number">2.2.</span> <span class="nav-text">二、AudioTrack的创建流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#总结创建流"><span class="nav-number">2.3.</span> <span class="nav-text">总结创建流</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#补充"><span class="nav-number">2.4.</span> <span class="nav-text">补充</span></a></li></ol></li></ol></div>
             
           </div>
           <div class="post-toc-indicator-bottom post-toc-indicator">
