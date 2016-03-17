@@ -59,15 +59,22 @@
 
 
 
-<meta name="description" content="leave me alone">
-<meta property="og:type" content="website">
+<meta name="description" content="1.1 audiotrack的create流程简述这部分，我们主要讲解两个函数getMinBufferSize和AudioTrack。
+正文一、getMinBufferSize函数解析直接帖整段的java的代码，不打算省略了。可能很占空间，但是我们可以把每个变量都看一遍。
+123456789101112131415161718192021222324252627282930313233343536">
+<meta property="og:type" content="article">
 <meta property="og:title" content="Thinking">
-<meta property="og:url" content="http://thinks.me/index.html">
+<meta property="og:url" content="http://thinks.me/2016/03/17/1_1/index.html">
 <meta property="og:site_name" content="Thinking">
-<meta property="og:description" content="leave me alone">
+<meta property="og:description" content="1.1 audiotrack的create流程简述这部分，我们主要讲解两个函数getMinBufferSize和AudioTrack。
+正文一、getMinBufferSize函数解析直接帖整段的java的代码，不打算省略了。可能很占空间，但是我们可以把每个变量都看一遍。
+123456789101112131415161718192021222324252627282930313233343536">
+<meta property="og:updated_time" content="2016-03-17T03:33:43.825Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Thinking">
-<meta name="twitter:description" content="leave me alone">
+<meta name="twitter:description" content="1.1 audiotrack的create流程简述这部分，我们主要讲解两个函数getMinBufferSize和AudioTrack。
+正文一、getMinBufferSize函数解析直接帖整段的java的代码，不打算省略了。可能很占空间，但是我们可以把每个变量都看一遍。
+123456789101112131415161718192021222324252627282930313233343536">
 
 
 
@@ -85,7 +92,7 @@
   };
 </script>
 
-  <title> Thinking </title>
+  <title>  | Thinking </title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -116,9 +123,7 @@
     
   
 
-  <div class="container one-collumn sidebar-position-left 
-   page-home 
- ">
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
     <div class="headband"></div>
 
     <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
@@ -205,9 +210,9 @@
         <div class="content-wrap">
           <div id="content" class="content">
             
-  <section id="posts" class="posts-expand">
+
+  <div id="posts" class="posts-expand">
     
-      
 
   
   
@@ -228,9 +233,6 @@
             
               
                 
-                <a class="post-title-link" href="/2016/03/17/1_1/" itemprop="url">
-                  未命名
-                </a>
               
             
           </h1>
@@ -276,9 +278,7 @@
       
 
       
-        
-          
-            <h1 id="1-1_audiotrack的create流程">1.1 audiotrack的create流程</h1><h2 id="简述">简述</h2><p>这部分，我们主要讲解两个函数<code>getMinBufferSize</code>和<code>AudioTrack</code>。</p>
+        <h1 id="1-1_audiotrack的create流程">1.1 audiotrack的create流程</h1><h2 id="简述">简述</h2><p>这部分，我们主要讲解两个函数<code>getMinBufferSize</code>和<code>AudioTrack</code>。</p>
 <h2 id="正文">正文</h2><h3 id="一、getMinBufferSize函数解析">一、getMinBufferSize函数解析</h3><p>直接帖整段的java的代码，不打算省略了。可能很占空间，但是我们可以把每个变量都看一遍。</p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">public</span> <span class="keyword">int</span> <span class="title">getMinBufferSize</span><span class="params">(<span class="keyword">int</span> sampleRateInHz, <span class="keyword">int</span> channelConfig, <span class="keyword">int</span> audioFormat)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">int</span> channelCount = <span class="number">0</span>;</span><br><span class="line">    <span class="comment">// 传入的声道配置。CHANNEL_OUT_MONO、CHANNEL_CONFIGURATION_MONO是一样的主要是为了兼容以前。</span></span><br><span class="line">    <span class="comment">// CHANNEL_OUT_MONO单声道 CHANNEL_OUT_STEREO 双声道。</span></span><br><span class="line">    <span class="keyword">switch</span>(channelConfig) &#123;</span><br><span class="line">    <span class="keyword">case</span> AudioFormat.CHANNEL_OUT_MONO:</span><br><span class="line">    <span class="keyword">case</span> AudioFormat.CHANNEL_CONFIGURATION_MONO:</span><br><span class="line">        channelCount = <span class="number">1</span>;</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">    <span class="keyword">case</span> AudioFormat.CHANNEL_OUT_STEREO:</span><br><span class="line">    <span class="keyword">case</span> AudioFormat.CHANNEL_CONFIGURATION_STEREO:</span><br><span class="line">        channelCount = <span class="number">2</span>;</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">    <span class="keyword">default</span>:</span><br><span class="line">        <span class="comment">// 判断是否支持全方位的声道数，总共是8个，支持的话，需要支持前左、前右、后左、后右、左边、右边</span></span><br><span class="line">        <span class="keyword">if</span> (!isMultichannelConfigSupported(channelConfig)) &#123;</span><br><span class="line">            loge(<span class="string">"getMinBufferSize(): Invalid channel configuration."</span>);</span><br><span class="line">            <span class="keyword">return</span> ERROR_BAD_VALUE;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="comment">// 如果支持，就计算出它的声道数。</span></span><br><span class="line">            channelCount = AudioFormat.channelCountFromOutChannelMask(channelConfig);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 检查下format的格式是否正确。</span></span><br><span class="line">    <span class="keyword">if</span> (!AudioFormat.isPublicEncoding(audioFormat)) &#123;</span><br><span class="line">        loge(<span class="string">"getMinBufferSize(): Invalid audio format."</span>);</span><br><span class="line">        <span class="keyword">return</span> ERROR_BAD_VALUE;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// sample rate, note these values are subject to change</span></span><br><span class="line">    <span class="comment">// 确保采样率在我们规定的范围，如果自行扩展采样率的话，就需要修改这边的静态变量。</span></span><br><span class="line">    <span class="keyword">if</span> ( (sampleRateInHz &lt; SAMPLE_RATE_HZ_MIN) || (sampleRateInHz &gt; SAMPLE_RATE_HZ_MAX) ) &#123;</span><br><span class="line">        loge(<span class="string">"getMinBufferSize(): "</span> + sampleRateInHz + <span class="string">" Hz is not a supported sample rate."</span>);</span><br><span class="line">        <span class="keyword">return</span> ERROR_BAD_VALUE;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 接下来就直接调用native的方法了。</span></span><br><span class="line">    <span class="keyword">int</span> size = native_get_min_buff_size(sampleRateInHz, channelCount, audioFormat);</span><br><span class="line">    <span class="keyword">if</span> (size &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">        loge(<span class="string">"getMinBufferSize(): error querying hardware"</span>);</span><br><span class="line">        <span class="keyword">return</span> ERROR;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> size;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <p>上面的函数做了几件事：</p>
@@ -2149,12 +2149,12 @@ bool AudioTrack::AudioTrackThread::threadLoop()
     }
 }
 </code></pre>
-          
-        
       
     </div>
 
     <div>
+      
+        
       
     </div>
 
@@ -2162,507 +2162,32 @@ bool AudioTrack::AudioTrackThread::threadLoop()
       
 
       
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
-      
-
-  
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
             
+              <a href="/2015/12/19/audioflinger_buffer/" rel="next" title="AudioFlinger Thread中的几个buffer">
+                <i class="fa fa-chevron-left"></i> AudioFlinger Thread中的几个buffer
+              </a>
             
-              
-                
-                <a class="post-title-link" href="/2015/12/19/audioflinger_buffer/" itemprop="url">
-                  AudioFlinger Thread中的几个buffer
-                </a>
-              
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
             
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            <span class="post-meta-item-icon">
-              <i class="fa fa-calendar-o"></i>
-            </span>
-            <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2015-12-19T23:46:31+08:00" content="2015-12-19">
-              2015-12-19
-            </time>
-          </span>
-
-          
-            <span class="post-category" >
-              &nbsp; | &nbsp;
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-              
-                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
-                  <a href="/categories/android开发/" itemprop="url" rel="index">
-                    <span itemprop="name">android开发</span>
-                  </a>
-                </span>
-
-                
-                
-
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                &nbsp; | &nbsp;
-                <a href="/2015/12/19/audioflinger_buffer/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2015/12/19/audioflinger_buffer/" itemprop="commentsCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-
-          
-          
-
+          </div>
         </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
       
 
       
-        
-          <h3 id="简述">简述</h3><p>AudioFlinger是实现上层跟Hal层进行交互的重要的一层，它主要就是通过Thread进行沟通，不管是数据流还是控制流都是需要经由AudioFlinger Thread往下分发的。这两天有空梳理了一下Thread中几个重要的buffer，在这边做个总结，东西很浅，留作备忘。<br>
-          <div class="post-more-link text-center">
-            <a class="btn" href="/2015/12/19/audioflinger_buffer/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
       
     </footer>
   </article>
 
 
-    
-      
 
-  
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/2015/12/13/android_tts/" itemprop="url">
-                  Android TTS学习
-                </a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            <span class="post-meta-item-icon">
-              <i class="fa fa-calendar-o"></i>
-            </span>
-            <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2015-12-13T21:59:29+08:00" content="2015-12-13">
-              2015-12-13
-            </time>
-          </span>
-
-          
-            <span class="post-category" >
-              &nbsp; | &nbsp;
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-              
-                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
-                  <a href="/categories/android开发/" itemprop="url" rel="index">
-                    <span itemprop="name">android开发</span>
-                  </a>
-                </span>
-
-                
-                
-
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                &nbsp; | &nbsp;
-                <a href="/2015/12/13/android_tts/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2015/12/13/android_tts/" itemprop="commentsCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-
-          
-          
-
-        </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <h3 id="简述">简述</h3><p>TTS是Text To Speech的简称，就是将字符串转换成语音。Talkback是用来给帮助盲人朋友使用手机的apk，是android辅助功能的插件，安装完之后可以到辅助功能里面使能它，之后只要你触摸到android系统中的任何控件，都会将控件中的信息转变成语音的形式播放出来。<br>
-          <div class="post-more-link text-center">
-            <a class="btn" href="/2015/12/13/android_tts/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
-        
+    <div class="post-spread">
       
     </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
-      
-
-  
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/2015/11/22/dagger2_second/" itemprop="url">
-                  Dagger 2 SubComponent
-                </a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            <span class="post-meta-item-icon">
-              <i class="fa fa-calendar-o"></i>
-            </span>
-            <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2015-11-22T14:26:02+08:00" content="2015-11-22">
-              2015-11-22
-            </time>
-          </span>
-
-          
-            <span class="post-category" >
-              &nbsp; | &nbsp;
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-              
-                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
-                  <a href="/categories/android开发/" itemprop="url" rel="index">
-                    <span itemprop="name">android开发</span>
-                  </a>
-                </span>
-
-                
-                
-
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                &nbsp; | &nbsp;
-                <a href="/2015/11/22/dagger2_second/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2015/11/22/dagger2_second/" itemprop="commentsCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-
-          
-          
-
-        </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <p>学习源码：<a href="https://github.com/mvarnagiris/Financius">https://github.com/mvarnagiris/Financius</a></p>
-<p>本来该文章打算稍微介绍下Dagger2的SubComponent的，但是发现单单介绍这个标签好像并没有什么卵用，因为它的使用方法跟Component基本上没有太大区别。</p>
-<h3 id="SubComponent的使用">SubComponent的使用</h3><p>SubComponent的语法规则可以参考前一篇博客里面的Component的使用。</p>
-<p>那如何将Component和SubComponent关联起来呢？</p>
-<blockquote>
-<p>只需要在Component中声明一个函数返回值为该SubComponent即可：</p>
-</blockquote>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">ActivityComponent <span class="title">plus</span><span class="params">()</span></span>;</span><br></pre></td></tr></table></figure>
-<p>那SubComponent在apt生成的代码中的表现形式又是如何的呢？</p>
-<blockquote>
-<p>该SubComponent的实现类将直接成为Component的private final内部类。而如果是独立的Component，那它将拥有自己的一个public的实现类。由于是private final类，所以获取该SubComponent只能通过在Component中声明的函数进行获取。</p>
-</blockquote>
-          <div class="post-more-link text-center">
-            <a class="btn" href="/2015/11/22/dagger2_second/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
-      
-
-  
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/2015/11/13/dagger2_first/" itemprop="url">
-                  Dagger 2 Component/Module/Inject的理解
-                </a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            <span class="post-meta-item-icon">
-              <i class="fa fa-calendar-o"></i>
-            </span>
-            <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2015-11-13T21:55:09+08:00" content="2015-11-13">
-              2015-11-13
-            </time>
-          </span>
-
-          
-            <span class="post-category" >
-              &nbsp; | &nbsp;
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-              
-                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
-                  <a href="/categories/android开发/" itemprop="url" rel="index">
-                    <span itemprop="name">android开发</span>
-                  </a>
-                </span>
-
-                
-                
-
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                &nbsp; | &nbsp;
-                <a href="/2015/11/13/dagger2_first/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2015/11/13/dagger2_first/" itemprop="commentsCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-
-          
-          
-
-        </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <h3 id="简述">简述</h3><p>  我只想简简单单的描述下我对该框架使用上的理解。。<br>  而这些的理解来自于别人的文档、看别人代码、实践。<br>  不过还是得对这个框架有个初步的认识：这个框架作用，给某些类或方法提供依赖。是DI思想的一种呈现。主要手段是帮你构建工厂类。</p>
-<ul>
-<li>Component：首先，它是一个interface，其次，它的作用是将Module和Host进行关联，关联生效的时机是在host中调用了inject函数（这个函数是你在components中声明的方法）。由于上面的特性，所以Component是有作用域的，利用这个作用域就可以引入singleon和scope provider了。</li>
-<li>Module或Inject:Module和Inject都是class，Module可以给host提供多个依赖的对象，而Inject本身就是host依赖的对象。（这里面提到的Inject是在类的构造函数前面标注@Inject，表示自己可以提供依赖）</li>
-<li><p>被注入依赖的对象：这里我们称之为host（宿主）</p>
-<p>如果你对butterknife熟悉的话，那你可以把这个理解称为butterknife在类上面的扩展，更加的自由，但是前提是你也必须写更多的代码。</p>
-          <div class="post-more-link text-center">
-            <a class="btn" href="/2015/11/13/dagger2_first/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
-  </section>
-
-  
-  <nav class="pagination">
-    <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><a class="extend next" rel="next" href="/page/2/"><i class="fa fa-angle-right"></i></a>
-  </nav>
-
+  </div>
 
 
           </div>
@@ -2670,6 +2195,14 @@ bool AudioTrack::AudioTrackThread::threadLoop()
 
 
           
+  <div class="comments" id="comments">
+    
+      <div class="ds-thread" data-thread-key="2016/03/17/1_1/"
+           data-title="" data-url="http://thinks.me/2016/03/17/1_1/">
+      </div>
+    
+  </div>
+
 
         </div>
         
@@ -2689,8 +2222,17 @@ bool AudioTrack::AudioTrackThread::threadLoop()
       
 
       
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
 
-      <section class="site-overview sidebar-panel  sidebar-panel-active ">
+      <section class="site-overview sidebar-panel ">
         <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
           <img class="site-author-image" itemprop="image"
                src="/images/avatar.png"
@@ -2749,6 +2291,23 @@ bool AudioTrack::AudioTrackThread::threadLoop()
 
       </section>
 
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator">
+            <i class="fa fa-angle-double-up"></i>
+          </div>
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1-1_audiotrack的create流程"><span class="nav-number">1.</span> <span class="nav-text">1.1 audiotrack的create流程</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#简述"><span class="nav-number">1.1.</span> <span class="nav-text">简述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#正文"><span class="nav-number">1.2.</span> <span class="nav-text">正文</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#一、getMinBufferSize函数解析"><span class="nav-number">1.2.1.</span> <span class="nav-text">一、getMinBufferSize函数解析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#二、AudioTrack的创建流程"><span class="nav-number">1.2.2.</span> <span class="nav-text">二、AudioTrack的创建流程</span></a></li></ol></li></ol></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator">
+            <i class="fa fa-angle-double-down"></i>
+          </div>
+        </section>
       
 
     </div>
@@ -2840,6 +2399,167 @@ bool AudioTrack::AudioTrackThread::threadLoop()
 
 
   
+  
+<script type="text/javascript" src="/js/src/scrollspy.js?v=0.5.0"></script>
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 1 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = NexT.utils.escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    NexT.motion.middleWares.sidebar = function () {
+      var $tocContent = $('.post-toc-content');
+
+      if (CONFIG.scheme !== 'Pisces' && (CONFIG.sidebar.display === 'post' || CONFIG.sidebar.display === 'always')) {
+        if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+          NexT.utils.displaySidebar();
+        }
+      }
+    };
+  });
+</script>
+
+
 
   
 
