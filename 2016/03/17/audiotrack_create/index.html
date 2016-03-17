@@ -327,7 +327,7 @@
     }
 }
 </code></pre><p>上面的代码牵扯到一个帧到字节的计算方式。<br><em>buffersize = 帧数 x 每帧占用字节数 x 通道数</em></p>
-<p>每帧占用字节数如下图：<br><img src="http://thinks.me/image/audioformat.jpg" alt=""></p>
+<p>format这个参数，我们可以理解为采样精度，每帧占用字节数如下图：<br><img src="http://thinks.me/image/audioformat.jpg" alt=""></p>
 <p>现在还有多少帧是未知的了，我们来看下函数<code>AudioTrack::getMinFrameCount</code></p>
 <pre><code><span class="keyword">status_t</span> AudioTrack::getMinFrameCount(
         <span class="keyword">size_t</span>* frameCount,
