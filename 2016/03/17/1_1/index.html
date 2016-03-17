@@ -69,8 +69,9 @@
 <meta property="og:description" content="1.1 audiotrack的create流程简述这部分，我们主要讲解两个函数getMinBufferSize和AudioTrack。
 正文一、getMinBufferSize函数解析直接帖整段的java的代码，不打算省略了。可能很占空间，但是我们可以把每个变量都看一遍。
 123456789101112131415161718192021222324252627282930313233343536">
+<meta property="og:image" content="http://thinks.me/image/audioformat.jpg">
 <meta property="og:image" content="http://thinks.me/image/audiotrack_create.jpg">
-<meta property="og:updated_time" content="2016-03-17T03:48:26.189Z">
+<meta property="og:updated_time" content="2016-03-17T03:49:42.025Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Thinking">
 <meta name="twitter:description" content="1.1 audiotrack的create流程简述这部分，我们主要讲解两个函数getMinBufferSize和AudioTrack。
@@ -245,7 +246,7 @@
               <i class="fa fa-calendar-o"></i>
             </span>
             <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2016-03-17T11:48:26+08:00" content="2016-03-17">
+            <time itemprop="dateCreated" datetime="2016-03-17T11:49:42+08:00" content="2016-03-17">
               2016-03-17
             </time>
           </span>
@@ -312,7 +313,7 @@
     }
 }
 </code></pre><p>上面的代码牵扯到一个帧到字节的计算方式。<br><em>buffersize = 帧数 x 每帧占用字节数 x 通道数</em></p>
-<p>每帧占用字节数如下图：</p>
+<p>每帧占用字节数如下图：<br><img src="http://thinks.me/image/audioformat.jpg" alt=""></p>
 <p>现在还有多少帧是未知的了，我们来看下函数<code>AudioTrack::getMinFrameCount</code></p>
 <pre><code><span class="keyword">status_t</span> AudioTrack::getMinFrameCount(
         <span class="keyword">size_t</span>* frameCount,
