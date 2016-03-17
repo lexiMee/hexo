@@ -2165,7 +2165,56 @@ bool AudioTrack::AudioTrackThread::threadLoop()
         <span class="keyword">return</span> <span class="keyword">true</span>;
     }
 }
-</code></pre>
+</code></pre><p>由于就算不是采用callback的形式，但是一旦是从java层创建的audiotrack都是必然会产生该线程的，并且会进入run的状态，但是由于一开始是会被pause住的，pause的取消是在后面audiotrack的<code>start</code>函数被触发。<br>我们来看jni帮java提供的回调函数的实现吧：</p>
+<pre><code><span class="keyword">static</span> void audioCallback(<span class="keyword">int</span> event, void* user, void *info) {
+
+    audiotrack_callback_cookie *callbackInfo = (audiotrack_callback_cookie *)user;
+    {
+        Mutex::Autolock l(sLock);
+        <span class="keyword">if</span> (sAudioTrackCallBackCookies.indexOf(callbackInfo) &lt; <span class="number">0</span>) {
+            <span class="keyword">return</span>;
+        }
+        callbackInfo-&gt;busy = <span class="keyword">true</span>;
+    }
+
+    <span class="keyword">switch</span> (event) {
+    <span class="keyword">case</span> AudioTrack::EVENT_MARKER: {
+        JNIEnv *env = AndroidRuntime::getJNIEnv();
+        <span class="keyword">if</span> (user != <span class="keyword">NULL</span> &amp;&amp; env != <span class="keyword">NULL</span>) {
+            env-&gt;CallStaticVoidMethod(
+                callbackInfo-&gt;audioTrack_class,
+                javaAudioTrackFields.postNativeEventInJava,
+                callbackInfo-&gt;audioTrack_ref, event, <span class="number">0</span>,<span class="number">0</span>, <span class="keyword">NULL</span>);
+            <span class="keyword">if</span> (env-&gt;ExceptionCheck()) {
+                env-&gt;ExceptionDescribe();
+                env-&gt;ExceptionClear();
+            }
+        }
+        } <span class="keyword">break</span>;
+
+    <span class="keyword">case</span> AudioTrack::EVENT_NEW_POS: {
+        JNIEnv *env = AndroidRuntime::getJNIEnv();
+        <span class="keyword">if</span> (user != <span class="keyword">NULL</span> &amp;&amp; env != <span class="keyword">NULL</span>) {
+            env-&gt;CallStaticVoidMethod(
+                callbackInfo-&gt;audioTrack_class,
+                javaAudioTrackFields.postNativeEventInJava,
+                callbackInfo-&gt;audioTrack_ref, event, <span class="number">0</span>,<span class="number">0</span>, <span class="keyword">NULL</span>);
+            <span class="keyword">if</span> (env-&gt;ExceptionCheck()) {
+                env-&gt;ExceptionDescribe();
+                env-&gt;ExceptionClear();
+            }
+        }
+        } <span class="keyword">break</span>;
+    }
+
+    {
+        Mutex::Autolock l(sLock);
+        callbackInfo-&gt;busy = <span class="keyword">false</span>;
+        callbackInfo-&gt;cond.broadcast();
+    }
+}
+</code></pre><p>可以看出来只是提供了两个事件的回调，一个是<code>EVENT_MARKER</code>一个是<code>EVENT_NEW_POS</code>一个是设置警戒线，一个是设置提示的帧的位置。而触发回调audiotrack的<code>processAudioBuffer</code>中，那我们可以猜想，java下来的audiotrack的话，该线程是不需要跑的，除非需要知道marker和new pos，否则可以一直进入sleep状态。<br>那如果上层设置了，但是我们并不是采用callback的形式提供数据，那线程每次执行一次的<code>processAudioBuffer</code>就会触发一次数据的更新，这个时候就可以反馈marker和new pos了。</p>
+
       
     </div>
 
