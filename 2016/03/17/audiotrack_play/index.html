@@ -65,7 +65,8 @@
 <meta property="og:url" content="http://thinks.me/2016/03/17/audiotrack_play/index.html">
 <meta property="og:site_name" content="Thinking">
 <meta property="og:description" content="简述AudioTrack已经创建出来了，那第二步就是执行它的play方法，最后才是写数据，当然，你也可以先写一点点数据，然后在执行play的。因为AudioTrack创建结束就已经代表了你已经完成了对空间的申请了，并且在output thread中也有track的对象存在，只是如果没有执行play的话，那这个track是不属于active track，output thread在执行的过程中，并不">
-<meta property="og:updated_time" content="2016-03-18T03:13:19.761Z">
+<meta property="og:image" content="http://thinks.me/image/audiotrack_play.jpg">
+<meta property="og:updated_time" content="2016-03-18T03:14:08.886Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="audiotrack的create流程">
 <meta name="twitter:description" content="简述AudioTrack已经创建出来了，那第二步就是执行它的play方法，最后才是写数据，当然，你也可以先写一点点数据，然后在执行play的。因为AudioTrack创建结束就已经代表了你已经完成了对空间的申请了，并且在output thread中也有track的对象存在，只是如果没有执行play的话，那这个track是不属于active track，output thread在执行的过程中，并不">
@@ -650,7 +651,10 @@ no_init:
 }
 </code></pre><p>从上面的代码逻辑上看，在<code>start</code>函数中调用获取buffer操作，看似没啥用，其实是为了处理，某个track之前有被stop或者pause，并且被flush的场景。</p>
 <p>从上面的代码上看，flush是将清掉flush到front这区间的数据。不过这个需要取决于flush值是如何计算的，因为如果计算出来filled的空间不在framecount的预期内的话，会将front设置为rear，也就是整个buffer都清空。</p>
-<h3 id="总结图表">总结图表</h3>
+<h3 id="总结图表">总结图表</h3><p>流程图示：</p>
+<p><img src="http://thinks.me/image/audiotrack_play.jpg" alt=""></p>
+<p>状态机更新：</p>
+
       
     </div>
 
