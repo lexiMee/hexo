@@ -61,14 +61,15 @@
 
 <meta name="description" content="简述AudioTrack已经创建出来了，那第二步就是执行它的play方法，最后才是写数据，当然，你也可以先写一点点数据，然后在执行play的。因为AudioTrack创建结束就已经代表了你已经完成了对空间的申请了，并且在output thread中也有track的对象存在，只是如果没有执行play的话，那这个track是不属于active track，output thread在执行的过程中，并不">
 <meta property="og:type" content="article">
-<meta property="og:title" content="audiotrack的create流程">
+<meta property="og:title" content="audiotrack的play流程">
 <meta property="og:url" content="http://thinks.me/2016/03/17/audiotrack_play/index.html">
 <meta property="og:site_name" content="Thinking">
 <meta property="og:description" content="简述AudioTrack已经创建出来了，那第二步就是执行它的play方法，最后才是写数据，当然，你也可以先写一点点数据，然后在执行play的。因为AudioTrack创建结束就已经代表了你已经完成了对空间的申请了，并且在output thread中也有track的对象存在，只是如果没有执行play的话，那这个track是不属于active track，output thread在执行的过程中，并不">
 <meta property="og:image" content="http://thinks.me/image/audiotrack_play.jpg">
-<meta property="og:updated_time" content="2016-03-18T03:14:08.886Z">
+<meta property="og:image" content="http://thinks.me/image/audiotrack_statemachine.jpg">
+<meta property="og:updated_time" content="2016-03-18T04:49:26.000Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="audiotrack的create流程">
+<meta name="twitter:title" content="audiotrack的play流程">
 <meta name="twitter:description" content="简述AudioTrack已经创建出来了，那第二步就是执行它的play方法，最后才是写数据，当然，你也可以先写一点点数据，然后在执行play的。因为AudioTrack创建结束就已经代表了你已经完成了对空间的申请了，并且在output thread中也有track的对象存在，只是如果没有执行play的话，那这个track是不属于active track，output thread在执行的过程中，并不">
 
 
@@ -87,7 +88,7 @@
   };
 </script>
 
-  <title> audiotrack的create流程 | Thinking </title>
+  <title> audiotrack的play流程 | Thinking </title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -227,7 +228,7 @@
             
             
               
-                audiotrack的create流程
+                audiotrack的play流程
               
             
           </h1>
@@ -654,6 +655,9 @@ no_init:
 <h3 id="总结图表">总结图表</h3><p>流程图示：</p>
 <p><img src="http://thinks.me/image/audiotrack_play.jpg" alt=""></p>
 <p>状态机更新：</p>
+<p>audiotrack:</p>
+<p><img src="http://thinks.me/image/audiotrack_statemachine.jpg" alt=""></p>
+<p>AudioFlinger端的track的状态机：</p>
 
       
     </div>
@@ -712,7 +716,7 @@ no_init:
   <div class="comments" id="comments">
     
       <div class="ds-thread" data-thread-key="2016/03/17/audiotrack_play/"
-           data-title="audiotrack的create流程" data-url="http://thinks.me/2016/03/17/audiotrack_play/">
+           data-title="audiotrack的play流程" data-url="http://thinks.me/2016/03/17/audiotrack_play/">
       </div>
     
   </div>
