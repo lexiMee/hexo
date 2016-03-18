@@ -67,6 +67,7 @@
 <meta property="og:description" content="简述AudioTrack已经创建出来了，那第二步就是执行它的play方法，最后才是写数据，当然，你也可以先写一点点数据，然后在执行play的。因为AudioTrack创建结束就已经代表了你已经完成了对空间的申请了，并且在output thread中也有track的对象存在，只是如果没有执行play的话，那这个track是不属于active track，output thread在执行的过程中，并不">
 <meta property="og:image" content="http://thinks.me/image/audiotrack_play.jpg">
 <meta property="og:image" content="http://thinks.me/image/audiotrack_statemachine.jpg">
+<meta property="og:image" content="http://thinks.me/image/track_statemachine.jpg">
 <meta property="og:updated_time" content="2016-03-18T04:49:26.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="audiotrack的play流程">
@@ -658,6 +659,7 @@ no_init:
 <p>audiotrack:</p>
 <p><img src="http://thinks.me/image/audiotrack_statemachine.jpg" alt=""></p>
 <p>AudioFlinger端的track的状态机：</p>
+<p><img src="http://thinks.me/image/track_statemachine.jpg" alt=""></p>
 
       
     </div>
