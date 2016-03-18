@@ -71,7 +71,7 @@
 读写数据的操作是一个生产者和消费者的逻辑。这边的逻辑是这样的：
 
 生产者写数据，线程消费数据，线程消费了n个数据之后，发现已经完成minbuffersize的消费，会去通知你继续填充数据">
-<meta property="og:updated_time" content="2016-03-18T13:34:42.819Z">
+<meta property="og:updated_time" content="2016-03-18T15:33:26.815Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="audiotrack的write流程">
 <meta name="twitter:description" content="简述到目前为止，我们已经完成了audiotrack创建和设置，它完成了cblk、clientproxy、serverproxy、track、output等的创建和关联，并且打开了音频通路，紧接着就等我们写数据了。
@@ -311,6 +311,7 @@
 <li>生产和消费速度相当。生产者数据写完了，等待消费者消费到minbuffersize，然后唤醒生产者继续填充，生产者的生产速度极慢，每次填充都正好满足消费者的。这边看起来就是异步的了，一边一直在填充、一边一直在消费，基本上没有唤醒情况</li>
 <li>生产速度远远小于消费速度。生产者的数据写入太慢，消费者消费过快，这个时候就会出现underrun了，这个时候消费者会给生产者一定的机会，如果还是没能够给到数据，则就将其赶出判断的行列。</li>
 </ol>
+<a id="more"></a>
 <h2 id="正文">正文</h2><h3 id="生产者部分">生产者部分</h3><p>从java开始看，我们平常调用的不指定是否阻塞，默认就是阻塞的。</p>
 <pre><code><span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">write</span><span class="params">(@NonNull <span class="keyword">short</span>[] audioData, <span class="keyword">int</span> offsetInShorts, <span class="keyword">int</span> sizeInShorts)</span> </span>{
     <span class="keyword">return</span> write(audioData, offsetInShorts, sizeInShorts, WRITE_BLOCKING);
