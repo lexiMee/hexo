@@ -62,7 +62,7 @@
 <meta name="description" content="简述AudioTrack已经创建出来了，那第二步就是执行它的play方法，最后才是写数据，当然，你也可以先写一点点数据，然后在执行play的。因为AudioTrack创建结束就已经代表了你已经完成了对空间的申请了，并且在output thread中也有track的对象存在，只是如果没有执行play的话，那这个track是不属于active track，output thread在执行的过程中，并不">
 <meta property="og:type" content="article">
 <meta property="og:title" content="audiotrack的play流程">
-<meta property="og:url" content="http://thinks.me/2016/03/17/audiotrack_play/index.html">
+<meta property="og:url" content="http://thinks.me/2016/03/18/audiotrack_play/index.html">
 <meta property="og:site_name" content="Thinking">
 <meta property="og:description" content="简述AudioTrack已经创建出来了，那第二步就是执行它的play方法，最后才是写数据，当然，你也可以先写一点点数据，然后在执行play的。因为AudioTrack创建结束就已经代表了你已经完成了对空间的申请了，并且在output thread中也有track的对象存在，只是如果没有执行play的话，那这个track是不属于active track，output thread在执行的过程中，并不">
 <meta property="og:image" content="http://thinks.me/image/audiotrack_play.jpg">
@@ -241,8 +241,8 @@
               <i class="fa fa-calendar-o"></i>
             </span>
             <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2016-03-17T15:08:32+08:00" content="2016-03-17">
-              2016-03-17
+            <time itemprop="dateCreated" datetime="2016-03-18T12:49:26+08:00" content="2016-03-18">
+              2016-03-18
             </time>
           </span>
 
@@ -271,8 +271,8 @@
             
               <span class="post-comments-count">
                 &nbsp; | &nbsp;
-                <a href="/2016/03/17/audiotrack_play/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/03/17/audiotrack_play/" itemprop="commentsCount"></span>
+                <a href="/2016/03/18/audiotrack_play/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/03/18/audiotrack_play/" itemprop="commentsCount"></span>
                 </a>
               </span>
             
@@ -653,7 +653,14 @@ no_init:
 }
 </code></pre><p>从上面的代码逻辑上看，在<code>start</code>函数中调用获取buffer操作，看似没啥用，其实是为了处理，某个track之前有被stop或者pause，并且被flush的场景。</p>
 <p>从上面的代码上看，flush是将清掉flush到front这区间的数据。不过这个需要取决于flush值是如何计算的，因为如果计算出来filled的空间不在framecount的预期内的话，会将front设置为rear，也就是整个buffer都清空。</p>
-<h3 id="总结图表">总结图表</h3><p>流程图示：</p>
+<h3 id="总结">总结</h3><p>我们来大致梳理下，这个play都干嘛了。</p>
+<ol>
+<li>状态的设置</li>
+<li>路由通路打开</li>
+<li>将该track添加到active track中</li>
+<li>对缓冲区进行flush操作</li>
+</ol>
+<p>流程图示：</p>
 <p><img src="http://thinks.me/image/audiotrack_play.jpg" alt=""></p>
 <p>状态机更新：</p>
 <p>audiotrack:</p>
@@ -693,6 +700,10 @@ no_init:
 
           <div class="post-nav-prev post-nav-item">
             
+              <a href="/2016/03/18/audiotrack_write/" rel="prev" title="audiotrack的write流程">
+                audiotrack的write流程 <i class="fa fa-chevron-right"></i>
+              </a>
+            
           </div>
         </div>
       
@@ -717,8 +728,8 @@ no_init:
           
   <div class="comments" id="comments">
     
-      <div class="ds-thread" data-thread-key="2016/03/17/audiotrack_play/"
-           data-title="audiotrack的play流程" data-url="http://thinks.me/2016/03/17/audiotrack_play/">
+      <div class="ds-thread" data-thread-key="2016/03/18/audiotrack_play/"
+           data-title="audiotrack的play流程" data-url="http://thinks.me/2016/03/18/audiotrack_play/">
       </div>
     
   </div>
@@ -763,7 +774,7 @@ no_init:
         <nav class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">9</span>
+              <span class="site-state-item-count">10</span>
               <span class="site-state-item-name">日志</span>
             </a>
           </div>
@@ -821,7 +832,7 @@ no_init:
               
             
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#简述"><span class="nav-number">1.</span> <span class="nav-text">简述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#正文"><span class="nav-number">2.</span> <span class="nav-text">正文</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#play函数解析"><span class="nav-number">2.1.</span> <span class="nav-text">play函数解析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#总结图表"><span class="nav-number">2.2.</span> <span class="nav-text">总结图表</span></a></li></ol></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#简述"><span class="nav-number">1.</span> <span class="nav-text">简述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#正文"><span class="nav-number">2.</span> <span class="nav-text">正文</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#play函数解析"><span class="nav-number">2.1.</span> <span class="nav-text">play函数解析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#总结"><span class="nav-number">2.2.</span> <span class="nav-text">总结</span></a></li></ol></li></ol></div>
             
           </div>
           <div class="post-toc-indicator-bottom post-toc-indicator">
