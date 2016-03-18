@@ -1,0 +1,1116 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css"/>
+
+
+
+
+  <link href="//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=0.5.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Android,AudioTrack," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="Thinking" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=0.5.0" />
+
+
+
+
+
+
+<meta name="description" content="简述AudioTrack已经创建出来了，那第二步就是执行它的play方法，最后才是写数据，当然，你也可以先写一点点数据，然后在执行play的。因为AudioTrack创建结束就已经代表了你已经完成了对空间的申请了，并且在output thread中也有track的对象存在，只是如果没有执行play的话，那这个track是不属于active track，output thread在执行的过程中，并不">
+<meta property="og:type" content="article">
+<meta property="og:title" content="audiotrack的create流程">
+<meta property="og:url" content="http://thinks.me/2016/03/17/audiotrack_play/index.html">
+<meta property="og:site_name" content="Thinking">
+<meta property="og:description" content="简述AudioTrack已经创建出来了，那第二步就是执行它的play方法，最后才是写数据，当然，你也可以先写一点点数据，然后在执行play的。因为AudioTrack创建结束就已经代表了你已经完成了对空间的申请了，并且在output thread中也有track的对象存在，只是如果没有执行play的话，那这个track是不属于active track，output thread在执行的过程中，并不">
+<meta property="og:updated_time" content="2016-03-18T03:13:19.761Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="audiotrack的create流程">
+<meta name="twitter:description" content="简述AudioTrack已经创建出来了，那第二步就是执行它的play方法，最后才是写数据，当然，你也可以先写一点点数据，然后在执行play的。因为AudioTrack创建结束就已经代表了你已经完成了对空间的申请了，并且在output thread中也有track的对象存在，只是如果没有执行play的话，那这个track是不属于active track，output thread在执行的过程中，并不">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Pisces',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 0,
+      author: '博主'
+    }
+  };
+</script>
+
+  <title> audiotrack的create流程 | Thinking </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?1a17ff812788f97b5ec90bee6eba907f";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Thinking</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle"></p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-home fa-fw"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-th fa-fw"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-archive fa-fw"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-tags fa-fw"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                audiotrack的create流程
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2016-03-17T15:08:32+08:00" content="2016-03-17">
+              2016-03-17
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/android开发/" itemprop="url" rel="index">
+                    <span itemprop="name">android开发</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2016/03/17/audiotrack_play/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/03/17/audiotrack_play/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="简述">简述</h2><p>AudioTrack已经创建出来了，那第二步就是执行它的<code>play</code>方法，最后才是写数据，当然，你也可以先写一点点数据，然后在执行play的。因为AudioTrack创建结束就已经代表了你已经完成了对空间的申请了，并且在output thread中也有track的对象存在，只是如果没有执行<code>play</code>的话，那这个track是不属于active track，output thread在执行的过程中，并不会去看这个track的数据是否已经填充满了。并且正常情况下，我们填充数据也是阻塞的形式的，所以如果是先执行<code>write</code>再<code>play</code>的话，你需要注意一下填充的量，不要让它进入阻塞，就需要赶紧执行<code>play</code>了。</p>
+<p>当然你也可以执行完<code>play</code>之后不去执行<code>write</code>，但是经过一定的时间之后，这个track就会被移出active track行列。</p>
+<p>我们直接来看code吧，这部分其实也会跟AudioPolicy打交道，但是我们还是先做绕过吧，那部分后面我们再做讲解。</p>
+<a id="more"></a>
+<h2 id="正文">正文</h2><p>还是从java层开始往下看，代码太多，最后也会弄一张图来梳理流程，这样看起来会清晰一些，代码的部分更注重扣细节吧。</p>
+<h3 id="play函数解析">play函数解析</h3><pre><code><span class="keyword">public</span> <span class="function"><span class="keyword">void</span> <span class="title">play</span><span class="params">()</span>
+<span class="keyword">throws</span> IllegalStateException </span>{
+    <span class="keyword">if</span> (mState != STATE_INITIALIZED) {
+        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"play() called on uninitialized AudioTrack."</span>);
+    }
+    <span class="comment">// 这个私密模式是干嘛？</span>
+    <span class="keyword">if</span> (isRestricted()) {
+        setVolume(<span class="number">0</span>);
+    }
+    <span class="keyword">synchronized</span>(mPlayStateLock) {
+        native_start();
+        <span class="comment">// 进行play之后将mPlayState设置为PLAYSTATE_PLAYING</span>
+        mPlayState = PLAYSTATE_PLAYING;
+    }
+}
+</code></pre><p>jni的代码只是简单的调用了audiotrack的<code>start</code>函数，所以我们直接看native的audiotrack的<code>start</code>函数</p>
+<pre><code><span class="keyword">status_t</span> AudioTrack::start()
+{
+    <span class="comment">// 上锁。</span>
+    <span class="function">AutoMutex <span class="title">lock</span><span class="params">(mLock)</span></span>;
+    <span class="comment">// 如果当前的audiotrack已经处在激活状态了，那就直接返回非法操作</span>
+    <span class="keyword">if</span> (mState == STATE_ACTIVE) {
+        <span class="keyword">return</span> INVALID_OPERATION;
+    }
+
+    mInUnderrun = <span class="literal">true</span>;
+
+    State previousState = mState;
+    <span class="comment">// 状态STATE_PAUSED_STOPPING是对于offload，一开始已经stop了，然后又调用了pause。</span>
+    <span class="comment">// 对于offload的话，这个时候的start会将它引入stopping的状态。就是说需要调用两次start才会变成</span>
+    <span class="comment">// active</span>
+    <span class="keyword">if</span> (previousState == STATE_PAUSED_STOPPING) {
+        mState = STATE_STOPPING;
+    } <span class="keyword">else</span> {
+        <span class="comment">// 其他情况则进入active</span>
+        mState = STATE_ACTIVE;
+    }
+    <span class="comment">// 更新mPosition和mServer，mPosition为新server的位置 减去 旧server的位置 加上 原来的值</span>
+    (<span class="keyword">void</span>) updateAndGetPosition_l();
+    <span class="keyword">if</span> (previousState == STATE_STOPPED || previousState == STATE_FLUSHED) {
+        <span class="comment">// reset current position as seen by client to 0</span>
+        <span class="comment">// 如果之前的状态是stopped或者是flush的话，那需要将mPosition设置为0</span>
+        mPosition = <span class="number">0</span>;
+        mPreviousTimestampValid = <span class="literal">false</span>;
+        mTimestampStartupGlitchReported = <span class="literal">false</span>;
+        mRetrogradeMotionReported = <span class="literal">false</span>;
+
+        <span class="comment">// For offloaded tracks, we don't know if the hardware counters are really zero here,</span>
+        <span class="comment">// since the flush is asynchronous and stop may not fully drain.</span>
+        <span class="comment">// We save the time when the track is started to later verify whether</span>
+        <span class="comment">// the counters are realistic (i.e. start from zero after this time).</span>
+        mStartUs = getNowUs();
+
+        <span class="comment">// force refresh of remaining frames by processAudioBuffer() as last</span>
+        <span class="comment">// write before stop could be partial.</span>
+        <span class="comment">// 这个会刷新mRemainingFrames的值为notificationFrames，因为stop之前的那次写可能还没写完</span>
+        mRefreshRemaining = <span class="literal">true</span>;
+    }
+    <span class="comment">// 记录下mNewPosition</span>
+    mNewPosition = mPosition + mUpdatePeriod;
+    <span class="keyword">int32_t</span> flags = android_atomic_and(~CBLK_DISABLED, &amp;mCblk-&gt;mFlags);
+
+    sp&lt;AudioTrackThread&gt; t = mAudioTrackThread;
+    <span class="keyword">if</span> (t != <span class="number">0</span>) {
+        <span class="comment">// 还是offload的场景</span>
+        <span class="keyword">if</span> (previousState == STATE_STOPPING) {
+            <span class="comment">// 这个可以帮助发出FUTEX_WAKE</span>
+            mProxy-&gt;interrupt();
+        } <span class="keyword">else</span> {
+            <span class="comment">// 如果不是stopping，那就是别的状态，则会触发thread的resume</span>
+            <span class="comment">// 会去唤醒线程，并且设置mPaused、mPausedInt为false，mIgnoreNextPausedInt为true</span>
+            t-&gt;resume();
+        }
+    } <span class="keyword">else</span> {
+        <span class="comment">// 如果不存在该线程，则获取当前进程的优先级，以及优先级组。然后设置当前线程的优先级为audio。</span>
+        mPreviousPriority = getpriority(PRIO_PROCESS, <span class="number">0</span>);
+        get_sched_policy(<span class="number">0</span>, &amp;mPreviousSchedulingGroup);
+        androidSetThreadPriority(<span class="number">0</span>, ANDROID_PRIORITY_AUDIO);
+    }
+
+    <span class="keyword">status_t</span> status = NO_ERROR;
+    <span class="comment">// 判断当前状态是否异常</span>
+    <span class="keyword">if</span> (!(flags &amp; CBLK_INVALID)) {
+        <span class="comment">// 没有异常 就直接start操作</span>
+        status = mAudioTrack-&gt;start();
+        <span class="comment">// 如果start操作失败了，返回DEAD_OBJECT则将flag添加上CBLK_INVALID</span>
+        <span class="keyword">if</span> (status == DEAD_OBJECT) {
+            flags |= CBLK_INVALID;
+        }
+    }
+    <span class="comment">// 含有CBLK_INVALID标志，会触发restoreTrack_l的操作。</span>
+    <span class="comment">// restore会将mSequence计数+1， 然后重新调用createTrack_l，最后调用start操作</span>
+    <span class="keyword">if</span> (flags &amp; CBLK_INVALID) {
+        status = restoreTrack_l(<span class="string">"start"</span>);
+    }
+    <span class="comment">// 如果依然有异常</span>
+    <span class="keyword">if</span> (status != NO_ERROR) {
+        <span class="comment">// 把当前状态恢复到调用该函数之前</span>
+        mState = previousState;
+        <span class="keyword">if</span> (t != <span class="number">0</span>) {
+            <span class="comment">// 如果线程存在，并且状态不是stopping，让线程进入pause的状态。因为能到这边的话，状态必然</span>
+            <span class="comment">// 是非active的。所以这边只要排除是非offload的状态即可。如果是offload的话就不会进去。</span>
+            <span class="keyword">if</span> (previousState != STATE_STOPPING) {
+                t-&gt;pause();
+            }
+        } <span class="keyword">else</span> {
+            <span class="comment">// 如果线程不存在，则将权限设置回去保存下来的状态。</span>
+            setpriority(PRIO_PROCESS, <span class="number">0</span>, mPreviousPriority);
+            set_sched_policy(<span class="number">0</span>, mPreviousSchedulingGroup);
+        }
+    }
+
+    <span class="keyword">return</span> status;
+}
+</code></pre><p>由于<code>start</code>函数的调用，并不是只调用一次，它可能在你调用了<code>pause</code>或者<code>stop</code>之后还会再次调用。所以它的逻辑里面涵盖了各种状态下面调用<code>start</code>函数的处理。</p>
+<p>该函数主要做了：</p>
+<ol>
+<li>进行状态的转换，一些成员变量的更新，包括位置、标志、状态等</li>
+<li>mAudioTrackThread线程的调度</li>
+<li>IAudioTrack的start</li>
+<li>失败之后状态的回置</li>
+</ol>
+<p>接下来我们要继续分析的是这句<code>mAudioTrack-&gt;start()</code>.</p>
+<pre><code>status_t AudioFlinger<span class="tag">::PlaybackThread</span><span class="tag">::Track</span><span class="tag">::start</span>(AudioSystem<span class="tag">::sync_event_t</span> event __unused,
+                                                    int triggerSession __unused)
+{
+    status_t status = NO_ERR<span class="subst">OR</span>;
+    <span class="comment">// 从Track内部获取到该track所在的output thread。</span>
+    sp&lt;ThreadBase&gt; <span class="keyword">thread</span> = mThread<span class="built_in">.</span>promote();
+    <span class="keyword">if</span> (<span class="keyword">thread</span> != <span class="number">0</span>) {
+        <span class="comment">// 该函数只是简单的判断下trackFlags是否含有OFFLOAD的标志</span>
+        <span class="keyword">if</span> (isOffloaded()) {
+            Mutex<span class="tag">::Autolock</span> _laf(<span class="keyword">thread</span><span class="subst">-&gt;</span>mAudioFlinger<span class="subst">-&gt;</span>mLock);
+            Mutex<span class="tag">::Autolock</span> _lth(<span class="keyword">thread</span><span class="subst">-&gt;</span>mLock);
+            sp&lt;EffectChain&gt; ec = <span class="keyword">thread</span><span class="subst">-&gt;</span>getEffectChain_l(mSessionId);
+            <span class="comment">// 看下效果链里面的效果有没有不支持offload effect的，如果有则判定为异常的track</span>
+            <span class="keyword">if</span> (<span class="keyword">thread</span><span class="subst">-&gt;</span>mAudioFlinger<span class="subst">-&gt;</span>isNonOffloadableGlobalEffectEnabled_l() <span class="subst">||</span>
+                    (ec != <span class="number">0</span> <span class="subst">&amp;&amp;</span> ec<span class="subst">-&gt;</span>isNonOffloadableEnabled())) {
+                invalidate();
+                <span class="keyword">return</span> PERMISSION_DENIED;
+            }
+        }
+        Mutex<span class="tag">::Autolock</span> _lth(<span class="keyword">thread</span><span class="subst">-&gt;</span>mLock);
+        track_state state = mState;
+        <span class="comment">// here the track could be either new, or restarted</span>
+        <span class="comment">// in both cases "unstop" the track</span>
+
+        <span class="comment">// initial state-stopping. next state-pausing.</span>
+        <span class="comment">// What if resume is called ?</span>
+        <span class="comment">// 如果之前的状态为pause的话，根据情况设置state。</span>
+        <span class="keyword">if</span> (state == PAUSED <span class="subst">||</span> state == PAUSING) {
+            <span class="comment">// mResumeToStopping这个变量是针对offload的。stop后pause会将这个开关打开。</span>
+            <span class="keyword">if</span> (mResumeToStopping) {
+                <span class="comment">// happened we need to resume to STOPPING_1</span>
+                mState = TrackBase<span class="tag">::STOPPING_1</span>;
+            } <span class="keyword">else</span> {
+                mState = TrackBase<span class="tag">::RESUMING</span>;
+            }
+        } <span class="keyword">else</span> {
+            <span class="comment">// 如果非pause的话，则设置为active</span>
+            mState = TrackBase<span class="tag">::ACTIVE</span>;
+        }
+
+        PlaybackThread *playbackThread = (PlaybackThread *)<span class="keyword">thread</span><span class="built_in">.</span>get();
+        <span class="keyword">if</span> (isFastTrack()) {
+            <span class="comment">// 在start函数中刷新下fast track的underruns因为这个变量在fast mixer中不会被清除。</span>
+            <span class="comment">// 此外，这个track还有可能被回收，例如 start -&gt; stop这种场景。</span>
+            mObservedUnderruns = playbackThread<span class="subst">-&gt;</span>getFastTrackUnderruns(mFastIndex);
+        }
+        <span class="comment">// 至关重要的一句话，将该track添加到对应的thread中。</span>
+        status = playbackThread<span class="subst">-&gt;</span>addTrack_l(this);
+        <span class="comment">// 判断是否添加成功。</span>
+        <span class="keyword">if</span> (status == INVALID_OPERATION <span class="subst">||</span> status == PERMISSION_DENIED) {
+            triggerEvents(AudioSystem<span class="tag">::SYNC_EVENT_PRESENTATION_COMPLETE</span>);
+            <span class="comment">//  restore previous state if start was rejected by policy manager</span>
+            <span class="keyword">if</span> (status == PERMISSION_DENIED) {
+                mState = state;
+            }
+        }
+        <span class="comment">// status为ALREADY_EXISTS 表示已经存在了，不算失败。</span>
+        <span class="keyword">if</span> (status == ALREADY_EXISTS) {
+            status = NO_ERR<span class="subst">OR</span>;
+        } <span class="keyword">else</span> {
+            <span class="comment">// Acknowledge any pending flush(), so that subsequent new data isn't discarded.</span>
+            <span class="comment">// 在一个binder线程里面访问server proxy是不安全的。但是这边是个例外，我们知道mixer thread</span>
+            <span class="comment">// 还没不知道该track的存在，我们任然持有mixer thread的锁，还有对于fast track，它也还没被放</span>
+            <span class="comment">// 到fast mixer thread的激活队列中。</span>
+            ServerProxy<span class="tag">::Buffer</span> buffer;
+            buffer<span class="built_in">.</span>mFrameCount = <span class="number">1</span>;
+            (<span class="literal">void</span>) mAudioTrackServerProxy<span class="subst">-&gt;</span>obtainBuffer(<span class="subst">&amp;</span>buffer, <span class="literal">true</span> <span class="comment">/*ackFlush*/</span>);
+        }
+    } <span class="keyword">else</span> {
+        status = BAD_VALUE;
+    }
+    <span class="keyword">return</span> status;
+}
+</code></pre><p>这个函数跟audiotrack中的<code>start</code>很相似，也是更新下state，然后将该track添加到thread的active list中。<br>最后还会调用<code>mAudioTrackServerProxy-&gt;obtainBuffer</code>。</p>
+<ol>
+<li>判断该track是否是符合要求的</li>
+<li>进行track的状态转换</li>
+<li>添加track到thread中</li>
+<li>失败的状态回置</li>
+<li>成功的话，server proxy则进行1帧的obtainBuffer操作，带ackFlush的。</li>
+</ol>
+<p>现在我们先看下函数<code>AudioFlinger::PlaybackThread::addTrack_l()</code>的流程。</p>
+<pre><code>status_t AudioFlinger::PlaybackThread::addTrack_l(<span class="keyword">const</span> sp&lt;Track&gt;&amp; track)
+{
+    status_t status = ALREADY_EXISTS;
+
+    <span class="comment">// 缓冲区填充等待多少次循环，默认50次</span>
+    track-&gt;mRetryCount = kMaxTrackStartupRetries;
+    <span class="comment">// 判断这个track是否已经在active track队列中</span>
+    <span class="keyword">if</span> (mActiveTracks.indexOf(track) &lt; <span class="number">0</span>) {
+        <span class="comment">// 这个track是新添加的，确保它在先把自己的缓冲区都填满了之后再开始播放。</span>
+        <span class="comment">// This is to ensure the client will effectively get the latency it requested.</span>
+        <span class="comment">// 不是patch和output类型的track</span>
+        <span class="keyword">if</span> (track-&gt;isExternalTrack()) {
+            TrackBase::track_state state = track-&gt;mState;
+            mLock.unlock();
+            <span class="comment">// 这个lock在上面的函数中被持有了，所以这边要释放锁，因为接下来将进入新的通信。</span>
+            status = AudioSystem::startOutput(mId, track-&gt;streamType(),
+                                              (audio_session_t)track-&gt;sessionId());
+            <span class="comment">// 重新获取该锁</span>
+            mLock.lock();
+            <span class="comment">// 终止该track，如果在我们执行startoutput的过程中，该track被stop或者pause了。</span>
+            <span class="keyword">if</span> (state != track-&gt;mState) {
+                <span class="keyword">if</span> (status == NO_ERROR) {
+                    mLock.unlock();
+                    AudioSystem::stopOutput(mId, track-&gt;streamType(),
+                                            (audio_session_t)track-&gt;sessionId());
+                    mLock.lock();
+                }
+                <span class="keyword">return</span> INVALID_OPERATION;
+            }
+            <span class="comment">// 如果被AudioPolicy给拒绝了，也返回失败</span>
+            <span class="keyword">if</span> (status != NO_ERROR) {
+                <span class="keyword">return</span> PERMISSION_DENIED;
+            }
+<span class="comment">#ifdef ADD_BATTERY_DATA</span>
+            <span class="comment">// 用来跟踪speaker的使用情况</span>
+            addBatteryData(IMediaPlayerService::kBatteryDataAudioFlingerStart);
+<span class="comment">#endif</span>
+        }
+        <span class="comment">// 如果是共享内存的话，则将状态设置Track::FS_FILLED，否则设置为Track::FS_FILLING</span>
+        <span class="comment">// 这个状态是用来保证，在播放之前数据已经将缓冲区全部填满，在还没有进入FS_FILLED之前，</span>
+        <span class="comment">// thread是不会去获取buffer里面的数据的。这个只针对一开始的写。</span>
+        track-&gt;mFillingUpStatus = track-&gt;sharedBuffer() != <span class="number">0</span> ? Track::FS_FILLED : Track::FS_FILLING;
+        track-&gt;mResetDone = <span class="keyword">false</span>;
+        <span class="comment">// 这个变量主要是用在pause和stop之后，要将缓冲区的东西排干用的。</span>
+        track-&gt;mPresentationCompleteFrames = <span class="number">0</span>;
+        <span class="comment">// 一旦已经startoutput之后，就将这个track添加到mActiveTracks中来。</span>
+        mActiveTracks.add(track);
+        mWakeLockUids.add(track-&gt;uid());
+        mActiveTracksGeneration++;
+        mLatestActiveTrack = track;
+        sp&lt;EffectChain&gt; chain = getEffectChain_l(track-&gt;sessionId());
+        <span class="keyword">if</span> (chain != <span class="number">0</span>) {
+            <span class="comment">// 如果效果链不为0，则为该效果链进行计数累加</span>
+            chain-&gt;incActiveTrackCnt();
+        }
+        status = NO_ERROR;
+    }
+    <span class="comment">// 如果子类有实现该方法，会调用到子类的该方法，然后调用PlaybackThread的该方法，所以有时候我们可以在</span>
+    <span class="comment">// 子类的这个函数上做一些实现，比如音量、效果等的一些设置。</span>
+    onAddNewTrack_l();
+    <span class="keyword">return</span> status;
+}
+</code></pre><p>函数逻辑：</p>
+<ol>
+<li>如果这个track不属于active track列表里面的，则继续执行，否则直接返回已经存在的标志</li>
+<li>会通过AudioSystem去进行startouput的流程，这个就是打通路由通路</li>
+<li>如果打开失败的话，则进行stopoutput流程</li>
+<li>如果成功，则进行track的一些状态更新，添加到active track队列来，效果链的引用计数更新。</li>
+</ol>
+<p><code>startoutput</code>和<code>stopoutput</code>我们这边暂且不进行分析了，这个牵扯的东西非常多，现在我们只要明确，这是用来打开路由通路即可。</p>
+<p>那接着我们回到<code>mAudioTrackServerProxy-&gt;obtainBuffer</code>来继续看</p>
+<pre><code><span class="keyword">status_t</span> ServerProxy::obtainBuffer(Buffer* buffer, <span class="keyword">bool</span> ackFlush)
+{
+    LOG_ALWAYS_FATAL_IF(buffer == <span class="literal">NULL</span> || buffer-&gt;mFrameCount == <span class="number">0</span>);
+    <span class="keyword">if</span> (mIsShutdown) {
+        <span class="keyword">goto</span> no_init;
+    }
+    {
+    <span class="comment">// 获取公共的控制块</span>
+    <span class="keyword">audio_track_cblk_t</span>* cblk = mCblk;
+    <span class="comment">// compute number of frames available to write (AudioTrack) or read (AudioRecord),</span>
+    <span class="comment">// or use previous cached value from framesReady(), with added barrier if it omits.</span>
+    <span class="keyword">int32_t</span> front;
+    <span class="keyword">int32_t</span> rear;
+    <span class="comment">// See notes on barriers at ClientProxy::obtainBuffer()</span>
+    <span class="keyword">if</span> (mIsOut) {
+        <span class="comment">// 这个flush的值是又rear的头+flush的尾+二个p2构成的</span>
+        <span class="keyword">int32_t</span> flush = cblk-&gt;u.mStreaming.mFlush;
+        rear = android_atomic_acquire_load(&amp;cblk-&gt;u.mStreaming.mRear);
+        front = cblk-&gt;u.mStreaming.mFront;
+        <span class="comment">// 两个flush的值不一致，说明之前已经start过一次了，并且有执行过flush的操作</span>
+        <span class="keyword">if</span> (flush != mFlush) {
+            <span class="comment">// effectively obtain then release whatever is in the buffer</span>
+            <span class="keyword">const</span> <span class="keyword">size_t</span> overflowBit = mFrameCountP2 &lt;&lt; <span class="number">1</span>;
+            <span class="keyword">const</span> <span class="keyword">size_t</span> mask = overflowBit - <span class="number">1</span>;
+            <span class="comment">// front是0~n*mFrameCountP2，在二进制是很好表示的，取front的头，结合</span>
+            <span class="comment">// flush的部分，flush取的是尾部的。</span>
+            <span class="keyword">int32_t</span> newFront = (front &amp; ~mask) | (flush &amp; mask);
+            <span class="keyword">ssize_t</span> filled = rear - newFront;
+            <span class="keyword">if</span> (filled &gt;= (<span class="keyword">ssize_t</span>)overflowBit) {
+                <span class="comment">// front and rear offsets span the overflow bit of the p2 mask</span>
+                <span class="comment">// so rebasing newFront on the front offset is off by the overflow bit.</span>
+                <span class="comment">// adjust newFront to match rear offset.</span>
+                ALOGV(<span class="string">"flush wrap: filled %zx &gt;= overflowBit %zx"</span>, filled, overflowBit);
+                newFront += overflowBit;
+                filled -= overflowBit;
+            }
+            <span class="comment">// Rather than shutting down on a corrupt flush, just treat it as a full flush</span>
+            <span class="comment">// 对于一个数据污染的flush，我们不是采用停止，而是给一个full flush操作。</span>
+            <span class="keyword">if</span> (!(<span class="number">0</span> &lt;= filled &amp;&amp; (<span class="keyword">size_t</span>) filled &lt;= mFrameCount)) {
+                newFront = rear;
+            }
+            mFlush = flush;
+            <span class="comment">// 更新front的位置，其实就是将flush到之前front这段数据给清掉了。</span>
+            android_atomic_release_store(newFront, &amp;cblk-&gt;u.mStreaming.mFront);
+            <span class="keyword">if</span> (<span class="literal">true</span> <span class="comment">/*front != newFront*/</span>) {
+                <span class="comment">// 有必要的话，去唤醒client进行数据填充。</span>
+                <span class="keyword">int32_t</span> old = android_atomic_or(CBLK_FUTEX_WAKE, &amp;cblk-&gt;mFutex);
+                <span class="keyword">if</span> (!(old &amp; CBLK_FUTEX_WAKE)) {
+                    (<span class="keyword">void</span>) syscall(__NR_futex, &amp;cblk-&gt;mFutex,
+                            mClientInServer ? FUTEX_WAKE_PRIVATE : FUTEX_WAKE, <span class="number">1</span>);
+                }
+            }
+            front = newFront;
+        }
+    } <span class="keyword">else</span> {
+        front = android_atomic_acquire_load(&amp;cblk-&gt;u.mStreaming.mFront);
+        rear = cblk-&gt;u.mStreaming.mRear;
+    }
+    <span class="comment">// 正常获取空间的部分，先省略，后面会write的时候会分析。</span>
+    ...  
+
+    <span class="comment">// After flush(), allow releaseBuffer() on a previously obtained buffer;</span>
+    <span class="comment">// see "Acknowledge any pending flush()" in audioflinger/Tracks.cpp.</span>
+    <span class="comment">// 执行完flush之后，允许调用releaseBuffer来释放之前获取的buffer。</span>
+    <span class="keyword">if</span> (!ackFlush) {
+        mUnreleased = part1;
+    }
+    <span class="keyword">return</span> part1 &gt; <span class="number">0</span> ? NO_ERROR : WOULD_BLOCK;
+    }
+no_init:
+    buffer-&gt;mFrameCount = <span class="number">0</span>;
+    buffer-&gt;mRaw = <span class="literal">NULL</span>;
+    buffer-&gt;mNonContig = <span class="number">0</span>;
+    mUnreleased = <span class="number">0</span>;
+    <span class="keyword">return</span> NO_INIT;
+}
+</code></pre><p>从上面的代码逻辑上看，在<code>start</code>函数中调用获取buffer操作，看似没啥用，其实是为了处理，某个track之前有被stop或者pause，并且被flush的场景。</p>
+<p>从上面的代码上看，flush是将清掉flush到front这区间的数据。不过这个需要取决于flush值是如何计算的，因为如果计算出来filled的空间不在framecount的预期内的话，会将front设置为rear，也就是整个buffer都清空。</p>
+<h3 id="总结图表">总结图表</h3>
+      
+    </div>
+
+    <div>
+      
+        
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Android/" rel="tag">#Android</a>
+          
+            <a href="/tags/AudioTrack/" rel="tag">#AudioTrack</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/03/17/audiotrack_create/" rel="next" title="audiotrack的create流程">
+                <i class="fa fa-chevron-left"></i> audiotrack的create流程
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div class="ds-thread" data-thread-key="2016/03/17/audiotrack_play/"
+           data-title="audiotrack的create流程" data-url="http://thinks.me/2016/03/17/audiotrack_play/">
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.png"
+               alt="LexiMee" />
+          <p class="site-author-name" itemprop="name">LexiMee</p>
+          <p class="site-description motion-element" itemprop="description">leave me alone</p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">9</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">2</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">9</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        <div class="links-of-blogroll motion-element">
+          
+        </div>
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator">
+            <i class="fa fa-angle-double-up"></i>
+          </div>
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#简述"><span class="nav-number">1.</span> <span class="nav-text">简述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#正文"><span class="nav-number">2.</span> <span class="nav-text">正文</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#play函数解析"><span class="nav-number">2.1.</span> <span class="nav-text">play函数解析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#总结图表"><span class="nav-number">2.2.</span> <span class="nav-text">总结图表</span></a></li></ol></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator">
+            <i class="fa fa-angle-double-down"></i>
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2015 - 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">LexiMee</span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="http://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Pisces
+  </a>
+</div>
+
+
+
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+
+  
+
+
+
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=0.5.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=0.5.0"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=0.5.0"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=0.5.0"></script>
+
+
+
+  
+  
+<script type="text/javascript" src="/js/src/scrollspy.js?v=0.5.0"></script>
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 1 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = NexT.utils.escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    NexT.motion.middleWares.sidebar = function () {
+      var $tocContent = $('.post-toc-content');
+
+      if (CONFIG.scheme !== 'Pisces' && (CONFIG.sidebar.display === 'post' || CONFIG.sidebar.display === 'always')) {
+        if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+          NexT.utils.displaySidebar();
+        }
+      }
+    };
+  });
+</script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=0.5.0"></script>
+
+
+
+  
+
+  
+    
+  
+
+  <script type="text/javascript">
+    var duoshuoQuery = {short_name:"thinks"};
+    (function() {
+      var ds = document.createElement('script');
+      ds.type = 'text/javascript';ds.async = true;
+      ds.id = 'duoshuo-script';
+      ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+      ds.charset = 'UTF-8';
+      (document.getElementsByTagName('head')[0]
+      || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+  </script>
+
+  
+    
+  
+
+
+
+
+
+  
+  
+  
+
+  
+
+
+</body>
+</html>
