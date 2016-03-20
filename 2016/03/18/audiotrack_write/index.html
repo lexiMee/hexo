@@ -71,7 +71,7 @@
 读写数据的操作是一个生产者和消费者的逻辑。这边的逻辑是这样的：
 
 生产者写数据，线程消费数据，线程消费了n个数据之后，发现已经完成minbuffersize的消费，会去通知你继续填充数据">
-<meta property="og:updated_time" content="2016-03-19T06:41:41.471Z">
+<meta property="og:updated_time" content="2016-03-20T03:16:05.855Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="audiotrack的write流程">
 <meta name="twitter:description" content="简述到目前为止，我们已经完成了audiotrack创建和设置，它完成了cblk、clientproxy、serverproxy、track、output等的创建和关联，并且打开了音频通路，紧接着就等我们写数据了。
@@ -914,8 +914,6 @@ end:
         <span class="keyword">if</span> ((framesReady &gt;= minFrames) &amp;&amp; track-&gt;isReady() &amp;&amp;
                 !track-&gt;isPaused() &amp;&amp; !track-&gt;isTerminated())
         {
-            ALOGVV(<span class="string">"track %d s=%08x [OK] on thread %p"</span>, name, cblk-&gt;mServer, this);
-
             mixedTracks++;
 
             <span class="comment">// track-&gt;mainBuffer() != mSinkBuffer or mMixerBuffer means</span>
@@ -933,7 +931,6 @@ end:
                 } <span class="keyword">else</span> {
                 }
             }
-
 
             <span class="keyword">int</span> param = AudioMixer::VOLUME;
             <span class="keyword">if</span> (track-&gt;mFillingUpStatus == Track::FS_FILLED) {
@@ -971,11 +968,9 @@ end:
                 vrf = float_from_gain(gain_minifloat_unpack_right(vlr));
                 <span class="comment">// track volumes come from shared memory, so can't be trusted and must be clamped</span>
                 <span class="keyword">if</span> (vlf &gt; GAIN_FLOAT_UNITY) {
-                    ALOGV(<span class="string">"Track left volume out of range: %.3g"</span>, vlf);
                     vlf = GAIN_FLOAT_UNITY;
                 }
                 <span class="keyword">if</span> (vrf &gt; GAIN_FLOAT_UNITY) {
-                    ALOGV(<span class="string">"Track right volume out of range: %.3g"</span>, vrf);
                     vrf = GAIN_FLOAT_UNITY;
                 }
                 <span class="comment">// now apply the master volume and stream type volume</span>
@@ -1103,6 +1098,7 @@ end:
             <span class="comment">// If one track is ready, set the mixer ready if:</span>
             <span class="comment">//  - the mixer was not ready during previous round OR</span>
             <span class="comment">//  - no other track is not ready</span>
+            <span class="comment">// 如果上一次没有ready，这次只要有一个track已经ready，则为ready</span>
             <span class="keyword">if</span> (mMixerStatusIgnoringFastTracks != MIXER_TRACKS_READY ||
                     mixerStatus != MIXER_TRACKS_ENABLED) {
                 mixerStatus = MIXER_TRACKS_READY;
@@ -1133,20 +1129,21 @@ end:
                     tracksToRemove-&gt;add(track);
                 }
             } <span class="keyword">else</span> {
-                <span class="comment">// 如果不是共享内存，并且当前状态不是终止、停止、暂停，就说明肯定就是buffer不够。</span>
-                <span class="comment">// 这个时候会给它50次的机会进行填充，如果还慢满足就移掉active list了。</span>
+                <span class="comment">// 如果不是共享内存，并且当前状态不是终止、停止、暂停，就说明肯定就是数据给的不够。</span>
+                <span class="comment">// 这个时候会给它50次的机会进行填充，如果还不满足就移掉active list了。</span>
                 <span class="keyword">if</span> (--(track-&gt;mRetryCount) &lt;= <span class="number">0</span>) {
                     tracksToRemove-&gt;add(track);
                     <span class="comment">// 告诉app的track由于underrun被disable，如果数据够，会自动调用start()方法</span>
                     android_atomic_or(CBLK_DISABLED, &amp;cblk-&gt;mFlags);
                 <span class="comment">// 只要有一个active track尚未ready，那就标志mixer states为not ready</span>
-                <span class="comment">// 但是这边有个例外的，上一次已经设置为not ready，并且有两个track，一个ready，另外</span>
+                <span class="comment">// 但是这边有个例外的，上一次已经设置为enable，并且有两个track，一个ready，另外</span>
                 <span class="comment">// 一个not ready，则这次的mixer states会被设置为READY</span>
                 } <span class="keyword">else</span> <span class="keyword">if</span> (mMixerStatusIgnoringFastTracks == MIXER_TRACKS_READY ||
                                 mixerStatus != MIXER_TRACKS_READY) {
                     mixerStatus = MIXER_TRACKS_ENABLED;
                 }
             }
+            <span class="comment">// 这边会将AudioMixer disable。</span>
             mAudioMixer-&gt;disable(name);
         }
 
