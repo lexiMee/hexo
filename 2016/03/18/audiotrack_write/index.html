@@ -71,7 +71,7 @@
 读写数据的操作是一个生产者和消费者的逻辑。这边的逻辑是这样的：
 
 生产者写数据，线程消费数据，线程消费了n个数据之后，发现已经完成minbuffersize的消费，会去通知你继续填充数据">
-<meta property="og:updated_time" content="2016-03-20T03:16:05.855Z">
+<meta property="og:updated_time" content="2016-03-20T07:43:30.031Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="audiotrack的write流程">
 <meta name="twitter:description" content="简述到目前为止，我们已经完成了audiotrack创建和设置，它完成了cblk、clientproxy、serverproxy、track、output等的创建和关联，并且打开了音频通路，紧接着就等我们写数据了。
@@ -886,46 +886,47 @@ end:
 
         <span class="comment">// 对于第一次被添加进来的track，我们会等待它把buffer都填充满才来处理的。</span>
         <span class="keyword">int</span> name = track-&gt;name();
-        <span class="comment">// make sure that we have enough frames to mix one full buffer.</span>
-        <span class="comment">// enforce this condition only once to enable draining the buffer in case the client</span>
-        <span class="comment">// app does not call stop() and relies on underrun to stop:</span>
-        <span class="comment">// hence the test on (mMixerStatus == MIXER_TRACKS_READY) meaning the track was mixed</span>
-        <span class="comment">// during last round</span>
+        <span class="comment">// 为了防止用户在结束的时候没有通过调用stop函数来终止播放，而是依赖underrun来结束，添加了变量</span>
+        <span class="comment">// mMixerStatus来记录上一次的track的mix的情况。</span>
+        <span class="comment">// mMixerStatus == MIXER_TRACKS_READY意味着上一次的循环，track已经被mixed过了。</span>
+        <span class="comment">// 也侧面反映了，上一次还是有数据的，如果上一次没有被mixed过的话，那我们就直接采用最小的来帮忙</span>
+        <span class="comment">// 将剩下的数据排空</span>
         size_t desiredFrames;
         <span class="keyword">const</span> uint32_t sampleRate = track-&gt;mAudioTrackServerProxy-&gt;getSampleRate();
         AudioPlaybackRate playbackRate = track-&gt;mAudioTrackServerProxy-&gt;getPlaybackRate();
+        <span class="comment">// 确保有足够的数据来填充满hal层的一个buffer</span>
         <span class="comment">// 计算hal层buffer映射到当前速率，采样率下是多少帧</span>
         desiredFrames = sourceFramesNeededWithTimestretch(
                 sampleRate, mNormalFrameCount, mSampleRate, playbackRate.mSpeed);
-        <span class="comment">// <span class="doctag">TODO:</span> ONLY USED FOR LEGACY RESAMPLERS, remove when they are removed.</span>
-        <span class="comment">// add frames already consumed but not yet released by the resampler</span>
-        <span class="comment">// because mAudioTrackServerProxy-&gt;framesReady() will include these frames</span>
+        <span class="comment">// 数据已经被AudioMixer获取，但是尚未release，所以需要加上这个部分，因为此时client还没呈现</span>
+        <span class="comment">// 出来变化</span>
         desiredFrames += mAudioMixer-&gt;getUnreleasedFrames(track-&gt;name());
 
         uint32_t minFrames = <span class="number">1</span>;
-        <span class="comment">// 如果上一次是已经ready的，则这次才会更新minFrames，否则依然是1</span>
+        <span class="comment">// minFrames需要AudioMixer在上一轮的操作中已经被enable了，并且track的需要满足下面条件</span>
+        <span class="comment">// 才会被设置为desiredFrames，为什么pausing的时候，也不给机会呢，这个时候缓冲区的数据可能</span>
+        <span class="comment">// 没办法完全满足desiredFrames，但是我们依然要制造volume ramp，所以只能这么做了。</span>
         <span class="keyword">if</span> ((track-&gt;sharedBuffer() == <span class="number">0</span>) &amp;&amp; !track-&gt;isStopped() &amp;&amp; !track-&gt;isPausing() &amp;&amp;
                 (mMixerStatusIgnoringFastTracks == MIXER_TRACKS_READY)) {
             minFrames = desiredFrames;
         }
 
         size_t framesReady = track-&gt;framesReady();
-
+        <span class="comment">// 对于pause的场景，是会直接戛然而止，而不会将app写进去尚未消费的数据用掉</span>
+        <span class="comment">// 对于stop的场景， 是会将数据都用光的。</span>
         <span class="keyword">if</span> ((framesReady &gt;= minFrames) &amp;&amp; track-&gt;isReady() &amp;&amp;
                 !track-&gt;isPaused() &amp;&amp; !track-&gt;isTerminated())
         {
             mixedTracks++;
 
-            <span class="comment">// track-&gt;mainBuffer() != mSinkBuffer or mMixerBuffer means</span>
-            <span class="comment">// there is an effect chain connected to the track</span>
             chain.clear();
             <span class="keyword">if</span> (track-&gt;mainBuffer() != mSinkBuffer &amp;&amp;
                     track-&gt;mainBuffer() != mMixerBuffer) {
                 <span class="keyword">if</span> (mEffectBufferEnabled) {
                     mEffectBufferValid = <span class="keyword">true</span>; <span class="comment">// Later can set directly.</span>
                 }
+                <span class="comment">// 能进入到这边，说明这个track关联到了一个效果链中。</span>
                 chain = getEffectChain_l(track-&gt;sessionId());
-                <span class="comment">// Delegate volume control to effect in track effect chain if needed</span>
                 <span class="keyword">if</span> (chain != <span class="number">0</span>) {
                     tracksWithEffect++;
                 } <span class="keyword">else</span> {
@@ -935,22 +936,22 @@ end:
             <span class="keyword">int</span> param = AudioMixer::VOLUME;
             <span class="keyword">if</span> (track-&gt;mFillingUpStatus == Track::FS_FILLED) {
                 <span class="comment">// no ramp for the first volume setting</span>
+                <span class="comment">// 对于第一次的音量设置，不采用ramp volume，一旦进来就被设置为FS_ACTIVE了。</span>
                 track-&gt;mFillingUpStatus = Track::FS_ACTIVE;
+                <span class="comment">// RESUMING只有pausing或者PAUSED才可能触发,比如paused过程中，出现mediaserver挂掉</span>
                 <span class="keyword">if</span> (track-&gt;mState == TrackBase::RESUMING) {
                     track-&gt;mState = TrackBase::ACTIVE;
-                    param = AudioMixer::RAMP_VOLUME;
+                    param = AudioMixer::RAP_MVOLUME;
                 }
                 mAudioMixer-&gt;setParameter(name, AudioMixer::RESAMPLE, AudioMixer::RESET, <span class="keyword">NULL</span>);
-            <span class="comment">// FIXME should not make a decision based on mServer</span>
             } <span class="keyword">else</span> <span class="keyword">if</span> (cblk-&gt;mServer != <span class="number">0</span>) {
-                <span class="comment">// If the track is stopped before the first frame was mixed,</span>
-                <span class="comment">// do not apply ramp</span>
                 param = AudioMixer::RAMP_VOLUME;
             }
 
             <span class="comment">// compute volume for this track</span>
             uint32_t vl, vr;       <span class="comment">// in U8.24 integer format</span>
             <span class="keyword">float</span> vlf, vrf, vaf;   <span class="comment">// in [0.0, 1.0] float format</span>
+            <span class="comment">// 对于pause的场景或者静音，添加一个volume ramp的效果，也增加出pausing的状态。</span>
             <span class="keyword">if</span> (track-&gt;isPausing() || mStreamTypes[track-&gt;streamType()].mute) {
                 vl = vr = <span class="number">0</span>;
                 vlf = vrf = vaf = <span class="number">0.</span>;
@@ -985,18 +986,17 @@ end:
                 uint16_t sendLevel = proxy-&gt;getSendLevel_U4_12();
                 <span class="comment">// send level comes from shared memory and so may be corrupt</span>
                 <span class="keyword">if</span> (sendLevel &gt; MAX_GAIN_INT) {
-                    ALOGV(<span class="string">"Track send level out of range: %04X"</span>, sendLevel);
                     sendLevel = MAX_GAIN_INT;
                 }
                 <span class="comment">// vaf is represented as [0.0, 1.0] float by rescaling sendLevel</span>
                 vaf = v * sendLevel * (<span class="number">1.</span> / MAX_GAIN_INT);
             }
 
-            <span class="comment">// Delegate volume control to effect in track effect chain if needed</span>
+            <span class="comment">// 将音量控制委托给效果链</span>
             <span class="keyword">if</span> (chain != <span class="number">0</span> &amp;&amp; chain-&gt;setVolume_l(&amp;vl, &amp;vr)) {
-                <span class="comment">// Do not ramp volume if volume is controlled by effect</span>
+                <span class="comment">// 如果效果链掌控音量控制，则不要使用ramp volume</span>
                 param = AudioMixer::VOLUME;
-                <span class="comment">// Update remaining floating point volume levels</span>
+                <span class="comment">// 更新下音量值</span>
                 vlf = (<span class="keyword">float</span>)vl / (<span class="number">1</span> &lt;&lt; <span class="number">24</span>);
                 vrf = (<span class="keyword">float</span>)vr / (<span class="number">1</span> &lt;&lt; <span class="number">24</span>);
                 track-&gt;mHasVolumeController = <span class="keyword">true</span>;
@@ -1049,21 +1049,9 @@ end:
                 AudioMixer::PLAYBACK_RATE,
                 &amp;playbackRate);
 
-            <span class="comment">/*
-             * Select the appropriate output buffer for the track.
-             *
-             * Tracks with effects go into their own effects chain buffer
-             * and from there into either mEffectBuffer or mSinkBuffer.
-             *
-             * Other tracks can use mMixerBuffer for higher precision
-             *  .  If this buffer is enabled
-             * (mMixerBufferEnabled true), then selected tracks will accumulate
-             * into it.
-             *
-             */</span>
-            <span class="comment">// 选择合适的output buffer。添加了effect的track将会把数据输出到效果链的buffer中</span>
-            <span class="comment">// 处理完之后会输出到没EffectBuffer或者mSinkBuffer中</span>
-            <span class="comment">// 其他track使用mMixerBuffer，可以用来高精度的累加</span>
+            <span class="comment">// 如果mMixerBufferEnabled并且当前这个track的输出buffer是sinkbuffer或者</span>
+            <span class="comment">// mixerbuffer，则设置输出buffer为mixerbuffer，否则的话都设置为track之前设置的</span>
+            <span class="comment">// buffer。</span>
             <span class="keyword">if</span> (mMixerBufferEnabled
                     &amp;&amp; (track-&gt;mainBuffer() == mSinkBuffer
                             || track-&gt;mainBuffer() == mMixerBuffer)) {
@@ -1075,7 +1063,6 @@ end:
                         name,
                         AudioMixer::TRACK,
                         AudioMixer::MAIN_BUFFER, (void *)mMixerBuffer);
-                <span class="comment">// <span class="doctag">TODO:</span> override track-&gt;mainBuffer()?</span>
                 mMixerBufferValid = <span class="keyword">true</span>;
             } <span class="keyword">else</span> {
                 mAudioMixer-&gt;setParameter(
@@ -1095,9 +1082,6 @@ end:
             <span class="comment">// reset retry count</span>
             track-&gt;mRetryCount = kMaxTrackRetries;
 
-            <span class="comment">// If one track is ready, set the mixer ready if:</span>
-            <span class="comment">//  - the mixer was not ready during previous round OR</span>
-            <span class="comment">//  - no other track is not ready</span>
             <span class="comment">// 如果上一次没有ready，这次只要有一个track已经ready，则为ready</span>
             <span class="keyword">if</span> (mMixerStatusIgnoringFastTracks != MIXER_TRACKS_READY ||
                     mixerStatus != MIXER_TRACKS_ENABLED) {
@@ -1116,16 +1100,15 @@ end:
             <span class="comment">// 如果track是使用共享内存，或者已经终止、停止、暂停，则会进入下面逻辑。 </span>
             <span class="keyword">if</span> ((track-&gt;sharedBuffer() != <span class="number">0</span>) || track-&gt;isTerminated() ||
                     track-&gt;isStopped() || track-&gt;isPaused()) {
-                <span class="comment">// We have consumed all the buffers of this track.</span>
-                <span class="comment">// Remove it from the list of active tracks.</span>
-                <span class="comment">// <span class="doctag">TODO:</span> use actual buffer filling status instead of latency when available from</span>
-                <span class="comment">// audio HAL</span>
+                <span class="comment">// 会在继续填充latency的时间长度的空白数据，这个有优化空间</span>
                 size_t audioHALFrames = (latency_l() * mSampleRate) / <span class="number">1000</span>;
                 size_t framesWritten = mBytesWritten / mFrameSize;
                 <span class="keyword">if</span> (mStandby || track-&gt;presentationComplete(framesWritten, audioHALFrames)) {
+                    <span class="comment">// 如果track是stopped状态，则重置track。</span>
                     <span class="keyword">if</span> (track-&gt;isStopped()) {
                         track-&gt;reset();
                     }
+                    <span class="comment">// 加入到移除队列</span>
                     tracksToRemove-&gt;add(track);
                 }
             } <span class="keyword">else</span> {
@@ -1162,49 +1145,389 @@ track_is_ready: ;
 
     <span class="comment">// remove all the tracks that need to be...</span>
     removeTracks_l(*tracksToRemove);
-
+    <span class="comment">// 如果有全局效果链的话，则设置状态位。</span>
     <span class="keyword">if</span> (getEffectChain_l(AUDIO_SESSION_OUTPUT_MIX) != <span class="number">0</span>) {
         mEffectBufferValid = <span class="keyword">true</span>;
     }
 
     <span class="keyword">if</span> (mEffectBufferValid) {
-        <span class="comment">// as long as there are effects we should clear the effects buffer, to avoid</span>
-        <span class="comment">// passing a non-clean buffer to the effect chain</span>
+        <span class="comment">// 有效果的话，我们需要把effect buffer清空，避免有不干净的数据进入到效果链中</span>
         memset(mEffectBuffer, <span class="number">0</span>, mEffectBufferSize);
     }
-    <span class="comment">// sink or mix buffer must be cleared if all tracks are connected to an</span>
-    <span class="comment">// effect chain as in this case the mixer will not write to the sink or mix buffer</span>
-    <span class="comment">// and track effects will accumulate into it</span>
-    <span class="comment">// Motorola, IKXREL1KK-2809 The mix buffer could be used even not all tracks are</span>
-    <span class="comment">// connected to an effect chain. So remove the check (mixedTracks == tracksWithEffect).</span>
-    <span class="keyword">if</span> ((mBytesRemaining == <span class="number">0</span>) &amp;&amp; ((mixedTracks != <span class="number">0</span>) ||
-    <span class="comment">// END IKXREL1KK-2809</span>
-            (mixedTracks == <span class="number">0</span> &amp;&amp; fastTracks &gt; <span class="number">0</span>))) {
-        <span class="comment">// FIXME as a performance optimization, should remember previous zero status</span>
+    <span class="comment">// 如果所有的track都链接到一个效果链，这种情况下audiomixer将不会写数据到sink或者mixbuffer，</span>
+    <span class="comment">// 并且track的效果将会添加进来，所以我们需要清空sink和mix的buffer。</span>
+    <span class="keyword">if</span> ((mBytesRemaining == <span class="number">0</span>) &amp;&amp; ((mixedTracks != <span class="number">0</span>) &amp;&amp; (mixedTracks == tracksWithEffect) || (mixedTracks == <span class="number">0</span> &amp;&amp; fastTracks &gt; <span class="number">0</span>))) {
         <span class="keyword">if</span> (mMixerBufferValid) {
             memset(mMixerBuffer, <span class="number">0</span>, mMixerBufferSize);
-            <span class="comment">// <span class="doctag">TODO:</span> In testing, mSinkBuffer below need not be cleared because</span>
-            <span class="comment">// the PlaybackThread::threadLoop() copies mMixerBuffer into mSinkBuffer</span>
-            <span class="comment">// after mixing.</span>
-            <span class="comment">//</span>
-            <span class="comment">// To enforce this guarantee:</span>
-            <span class="comment">// ((mixedTracks != 0 &amp;&amp; mixedTracks == tracksWithEffect) ||</span>
-            <span class="comment">// (mixedTracks == 0 &amp;&amp; fastTracks &gt; 0))</span>
-            <span class="comment">// must imply MIXER_TRACKS_READY.</span>
-            <span class="comment">// Later, we may clear buffers regardless, and skip much of this logic.</span>
+            <span class="comment">// mSinkBuffer最后会从MixerBuffer中拷贝数据到SinkBuffer，所以不需要清空</span>
         }
-        <span class="comment">// FIXME as a performance optimization, should remember previous zero status</span>
         memset(mSinkBuffer, <span class="number">0</span>, mNormalFrameCount * mFrameSize);
     }
 
-    <span class="comment">// if any fast tracks, then status is ready</span>
+    <span class="comment">// mMixerStatusIgnoringFastTracks这个是用来对付normal track的，而之前mMixerStatus用来对付全</span>
+    <span class="comment">// 局的</span>
     mMixerStatusIgnoringFastTracks = mixerStatus;
     <span class="keyword">if</span> (fastTracks &gt; <span class="number">0</span>) {
         mixerStatus = MIXER_TRACKS_READY;
     }
     <span class="keyword">return</span> mixerStatus;
 }
-</code></pre>
+</code></pre><p>这个函数其实蛮复杂的，因为它不仅关注了这个thread中的所有track的状态，还需要对缓冲区进行清理等工作。</p>
+<p>我们来一起总结下，先看下只有一个track的情况：</p>
+<ol>
+<li>如果该track被添加到active list，那这边就可以检索到了，fast的先略过，那这个函数会去当前的track的状态，以及是否上次循环已经有mixed过了，来决定它的填充帧数的要求；</li>
+<li>判断是否ready了，第一次的填充需要将app申请缓冲区都填满，之后就会将mFillingUpStatus设置为filled，那之后这边就直接pass了</li>
+<li>判断暂停、停止、终止等状态</li>
+<li>如果以上都pass的话，那就会开始进行audiomixer的设置，包括音量，缓冲区，格式等一系列可能需要在mixer中完成的参数告诉它，因为可能牵扯到downmix、reformat、resampler等等。并且使能audiomixer</li>
+<li>更新下mMixerStatus和mMixerStatusIgnoringFastTracks</li>
+<li>如果有效果的话，则对缓冲区进行相关清理等工作。</li>
+</ol>
+<p>一个track，但是只有play，没有write操作：</p>
+<ol>
+<li>判断是否ready的时候肯定就fail了，所以进入到else的分支中。</li>
+<li>此时的帧数肯定不满足要求的，并且状态不是停止或暂停，所以会告诉client你已经underrun了</li>
+<li>获取效果链，清除输入buffer，开始计数underrun的次数，如果达到50次，将移除该track</li>
+<li>没有达到的话，则更新下mMixerStatus和mMixerStatusIgnoringFastTracks</li>
+<li>disable audiomixer</li>
+<li>将track移除操作</li>
+</ol>
+<p>一个track，paly、write、之后stop，直接从stop开始分析：</p>
+<ol>
+<li>接收到stop之后，minFrames就只会等于1了</li>
+<li>然后会进入enable audiomixer的流程中，将client端写入的数据全部用完</li>
+<li>用完之后，在进入的时候就没办法pass enable的流程，这个时候就会进入到else分支中</li>
+<li>发现是stop的情况，会进行latency时间长度的填充空白数据的流程</li>
+<li>等填充满latency时间长度之后，就将该track remove掉，会reset该track</li>
+</ol>
+<p>一个track，play、write、之后pause，直接从pause开始：</p>
+<ol>
+<li>接收到pause之后，会先进入pausing的过程，这个时候minFrames也是为1的</li>
+<li>然后会进入到enable audiomixer的流程中，这个时候会将pausing转变为paused的状态，并且音量设置为0，实现volume ramp的效果</li>
+<li>下一次就无法进入enable audiomixer的流程，进入到else分支中</li>
+<li>发现是paused的情况，会进行latency时间长度的填充空白数据的流程</li>
+<li>等填充慢lantecy时间长度之后，就将该track remove掉，不会有reset track的流程</li>
+</ol>
+<p>2个track，一个play，write，一个只play，不write：<br>这种情况只是想要分析下mMixerStatus和mMixerStatusIgnoringFastTracks的状态，因为这个状态的更新都有对上一次的循环的mMixerStatusIgnoringFastTracks做判断的。所以它是具有独特性的，这种状态下面mMixerStatusIgnoringFastTracks的状态变化是，ready和enable交替出现的。</p>
+<p>enable的话是不会触发audiomixer的执行流程的，只有ready才会触发该audiomixer的执行。如下面代码</p>
+<pre><code><span class="keyword">if</span> (mMixerStatus == MIXER_TRACKS_READY) {
+    <span class="comment">// threadLoop_mix() sets mCurrentWriteLength</span>
+    threadLoop_mix();
+} <span class="keyword">else</span> <span class="keyword">if</span> ((mMixerStatus != MIXER_DRAIN_TRACK)
+            &amp;&amp; (mMixerStatus != MIXER_DRAIN_ALL)) {
+    <span class="comment">// mSleepTimeUs如果为0表示有数据要马上写到底层，就是触发threadloop_write的逻辑，否则sleep</span>
+    threadLoop_sleepTime();
+    <span class="keyword">if</span> (mSleepTimeUs == <span class="number">0</span>) {
+        mCurrentWriteLength = mSinkBufferSize;
+    }
+}
+</code></pre><p>一次ready一次enable的话，那就是mix一次之后要sleep一次，再mix一次，再sleep一次，第一次是mix的，所以sleeptime在mix的函数中被设置为0了。第二次是enable。</p>
+<pre><code><span class="keyword">void</span> AudioFlinger::MixerThread::threadLoop_sleepTime()
+{
+    <span class="keyword">if</span> (mSleepTimeUs == <span class="number">0</span>) {
+        <span class="keyword">if</span> (mMixerStatus == MIXER_TRACKS_ENABLED) {
+            <span class="comment">// 将时间进行缩减， mActiveSleepTimeUs时间相当于hal buffer排空所需要的时间</span>
+            mSleepTimeUs = mActiveSleepTimeUs &gt;&gt; sleepTimeShift;
+            <span class="comment">// 有个最小的阈值</span>
+            <span class="keyword">if</span> (mSleepTimeUs &lt; kMinThreadSleepTimeUs) {
+                mSleepTimeUs = kMinThreadSleepTimeUs;
+            }
+            <span class="comment">// 我们再不停的缩减sleeptime的时间，就是为了防止app underruns个没玩，导致hal层无法播放</span>
+            <span class="comment">// 断续问题。不能因为其中一个underrun导致，另外一个track的数据供应也出问题，所以时间上</span>
+            <span class="comment">// 是非常讲究的</span>
+            <span class="keyword">if</span> (sleepTimeShift &lt; kMaxThreadSleepTimeShift) {
+                sleepTimeShift++;
+            }
+        } <span class="keyword">else</span> {
+            mSleepTimeUs = mIdleSleepTimeUs;
+        }
+    } <span class="keyword">else</span> <span class="keyword">if</span> (mBytesWritten != <span class="number">0</span> || (mMixerStatus == MIXER_TRACKS_ENABLED)) {
+        <span class="comment">// 需要已经连续两次的mix status不为ready才会进来到这了。基本上表示没有数据了。</span>
+        <span class="comment">// 在效果执行之前，我们根据情况清空对应的buffer</span>
+        <span class="keyword">if</span> (mMixerBufferValid) {
+            <span class="built_in">memset</span>(mMixerBuffer, <span class="number">0</span>, mMixerBufferSize);
+        } <span class="keyword">else</span> {
+            <span class="built_in">memset</span>(mSinkBuffer, <span class="number">0</span>, mSinkBufferSize);
+        }
+        <span class="comment">// 然后将时间又设置为0</span>
+        mSleepTimeUs = <span class="number">0</span>;
+    }
+}
+</code></pre><p>上面函数的逻辑就是怎么计算sleeptime了。一旦出现mixer status状态不为ready我们就需要考虑睡多久的问题，这样将本来需要process的时间跟pass掉，可以起到降低功耗的作用。但是对于那个有write的track来说，本来是一直getbuffer-&gt;mix-&gt;write，现在则是getbuffer-&gt;mix-&gt;write-&gt;sleep-&gt;getbuffer-&gt;mix-&gt;write，而sleep的时间长度虽然是递减的，基本上变成了往底层写一个buffer的大小的数据，然后再等待数据播放完成之后，再写一个buffer的数据。</p>
+<p>sleeptime相关write逻辑：</p>
+<pre><code><span class="comment">// 如果mSleepTimeUs为0并且有mix、effect了一些数据，那就执行写操作，更新下写的数量和剩余的数量</span>
+<span class="keyword">if</span> (mSleepTimeUs == <span class="number">0</span>) {
+    <span class="keyword">ssize_t</span> ret = <span class="number">0</span>;
+    <span class="keyword">if</span> (mBytesRemaining) {
+        ret = threadLoop_write();
+        <span class="keyword">if</span> (ret &lt; <span class="number">0</span>) {
+            mBytesRemaining = <span class="number">0</span>;
+        } <span class="keyword">else</span> {
+            mBytesWritten += ret;
+            mBytesRemaining -= ret;
+        }
+    <span class="comment">// 如果当前mixer的状态为MIXER_DRAIN_TRACK和MIXER_DRAIN_ALL，则进行drain的操作</span>
+    } <span class="keyword">else</span> <span class="keyword">if</span> ((mMixerStatus == MIXER_DRAIN_TRACK) ||
+            (mMixerStatus == MIXER_DRAIN_ALL)) {
+        threadLoop_drain();
+    }
+    <span class="comment">// 这是针对mixer线程的</span>
+    <span class="keyword">if</span> (mType == MIXER &amp;&amp; !mStandby) {
+        <span class="comment">// write blocked detection</span>
+        <span class="keyword">nsecs_t</span> now = systemTime();
+        <span class="comment">// 写数据阻塞用掉的时间</span>
+        <span class="keyword">nsecs_t</span> delta = now - mLastWriteTime;
+        <span class="comment">// 阻塞时间太长的话，进行一些统计等。</span>
+        <span class="keyword">if</span> (delta &gt; maxPeriod) {
+            mNumDelayedWrites++;
+            <span class="keyword">if</span> ((now - lastWarning) &gt; kWarningThrottleNs) {
+                lastWarning = now;
+            }
+        }
+        <span class="comment">// mThreadThrottle默认开启，并且写入一些数据了</span>
+        <span class="keyword">if</span> (mThreadThrottle
+                &amp;&amp; mMixerStatus == MIXER_TRACKS_READY <span class="comment">// we are mixing (active tracks)</span>
+                &amp;&amp; ret &gt; <span class="number">0</span>) {                         <span class="comment">// we wrote something</span>
+            <span class="comment">// 这边是用来限制这个loop跑得太快的。要求是小于2倍的预期的，也就是halfbuffer的长度</span>
+            <span class="comment">// 同时也有助于app那边填充数据。如果这个线程跑太快，app线程慢了的话，就会出现underrun了</span>
+            <span class="comment">// 当然是针对小buffer的场景</span>
+
+            <span class="keyword">const</span> <span class="keyword">int32_t</span> deltaMs = delta / <span class="number">1000000</span>;
+            <span class="comment">// throttleMs这个大于0的话，说明底层数据所剩得不是很多，上层数据给的比较慢，所以我们要</span>
+            <span class="comment">// 等等上层。如果小于0的话，则说明底层数据有点应付不过来了，那我们就不需要等待了。</span>
+            <span class="keyword">const</span> <span class="keyword">int32_t</span> throttleMs = mHalfBufferMs - deltaMs;
+            <span class="comment">// 如果halfbuffer的时间大于等于throttleMs，并且throttleMs大于0，则进行sleep来耗时间</span>
+            <span class="keyword">if</span> ((<span class="keyword">signed</span>)mHalfBufferMs &gt;= throttleMs &amp;&amp; throttleMs &gt; <span class="number">0</span>) {
+                usleep(throttleMs * <span class="number">1000</span>);
+                mThreadThrottleTimeMs += throttleMs;
+            } <span class="keyword">else</span> {
+                <span class="comment">// 这边的代码则是完全为了方便debug。</span>
+                <span class="keyword">uint32_t</span> diff = mThreadThrottleTimeMs - mThreadThrottleEndMs;
+                <span class="keyword">if</span> (diff &gt; <span class="number">0</span>) {
+                    mThreadThrottleEndMs = mThreadThrottleTimeMs;
+                }
+            }
+        }
+    }
+
+} <span class="keyword">else</span> {
+    ATRACE_BEGIN(<span class="string">"sleep"</span>);
+    usleep(mSleepTimeUs);
+    ATRACE_END();
+}
+</code></pre><p>我们之前只是看到<code>prepareTracks_l</code>那边有去判断是否数据准备好了，有去enable audiomixer，那获取数据，消费数据的又是在哪里做的呢？</p>
+<p>其实就在我们audiomixer里面，是通过<code>threadloop_mix</code>进去的。我们直接拿audiomixer里面的代码来看就好了：</p>
+<pre><code>void AudioMixer::process_NoResampleOneTrack(state_t* state, int64_t pts)
+{
+    <span class="comment">// 返回左起第一个‘1’之前0的个数。i表示的是右边算起来第几位</span>
+    <span class="keyword">const</span> <span class="keyword">int</span> i = <span class="number">31</span> - __builtin_clz(state-&gt;enabledTracks);
+    track_t *t = &amp;state-&gt;tracks[i];
+    <span class="keyword">const</span> uint32_t channels = t-&gt;mMixerChannelCount;
+    <span class="comment">// 获取输出的buffer</span>
+    TO* out = reinterpret_cast&lt;TO*&gt;(t-&gt;mainBuffer);
+    TA* aux = reinterpret_cast&lt;TA*&gt;(t-&gt;auxBuffer);
+    <span class="keyword">const</span> <span class="keyword">bool</span> ramp = t-&gt;needsRamp();
+    <span class="comment">// state-&gt;frameCount这个值是创建audiomixer的时候给的。为NormalFrameCount，非fast的话，就是</span>
+    <span class="comment">// hal层的buffer大小了</span>
+    <span class="keyword">for</span> (size_t numFrames = state-&gt;frameCount; numFrames; ) {
+        <span class="comment">// 获取该track的buffer对象</span>
+        AudioBufferProvider::Buffer&amp; b(t-&gt;buffer);
+        <span class="comment">// 组装buffer信息</span>
+        b.frameCount = numFrames;
+        <span class="keyword">const</span> int64_t outputPTS = calculateOutputPTS(*t, pts, state-&gt;frameCount - numFrames);
+        <span class="comment">// 触发track getNextBuffer被调用，该函数也只是简单的封装对象给serverproxy的obtainBuffer</span>
+        <span class="comment">// 然后将输出结果进行封装，返回回来。</span>
+        t-&gt;bufferProvider-&gt;getNextBuffer(&amp;b, outputPTS);
+        <span class="comment">// 获取到的数据的指针位置</span>
+        <span class="keyword">const</span> TI *in = reinterpret_cast&lt;TI*&gt;(b.raw);
+.
+        <span class="comment">// track被flush或者没有数据，为什么&amp;3，因为采样精度是8的倍数</span>
+        <span class="keyword">if</span> (in == <span class="keyword">NULL</span> || (((uintptr_t)in) &amp; <span class="number">3</span>)) {
+            memset(out, <span class="number">0</span>, numFrames
+                    * channels * audio_bytes_per_sample(t-&gt;mMixerFormat));
+            <span class="keyword">return</span>;
+        }
+        <span class="comment">// 获取到的具体的数据量</span>
+        <span class="keyword">const</span> size_t outFrames = b.frameCount;
+        <span class="comment">// 给弄上声音，拷贝到out中</span>
+        volumeMix&lt;MIXTYPE, is_same&lt;TI, <span class="keyword">float</span>&gt;::value, <span class="keyword">false</span>&gt; (
+                out, outFrames, in, aux, ramp, t);
+        <span class="comment">// out索引更新</span>
+        out += outFrames * channels;
+        <span class="keyword">if</span> (aux != <span class="keyword">NULL</span>) {
+            aux += channels;
+        }
+        numFrames -= b.frameCount;
+
+        <span class="comment">// release buffer</span>
+        t-&gt;bufferProvider-&gt;releaseBuffer(&amp;b);
+    }
+    <span class="keyword">if</span> (ramp) {
+        t-&gt;adjustVolumeRamp(aux != <span class="keyword">NULL</span>, is_same&lt;TI, <span class="keyword">float</span>&gt;::value);
+    }
+}
+</code></pre><p>该函数是audiomixer对于一个track并且不需要resampler的处理，其他的resampler或者多个track的会复杂一些，但是获取数据、消费数据是一致的。resampler和多个track等audiomixer的场景，我们后面再来分析重要的函数，看是如何处理buffer这个问题的。</p>
+<p>接下来我们直接来看serverproxy中的<code>obtainBuffer</code>和<code>releaseBuffer</code></p>
+<pre><code><span class="keyword">status_t</span> ServerProxy::obtainBuffer(Buffer* buffer, <span class="keyword">bool</span> ackFlush)
+{
+    LOG_ALWAYS_FATAL_IF(buffer == <span class="literal">NULL</span> || buffer-&gt;mFrameCount == <span class="number">0</span>);
+    <span class="keyword">if</span> (mIsShutdown) {
+        <span class="keyword">goto</span> no_init;
+    }
+    {
+    <span class="keyword">audio_track_cblk_t</span>* cblk = mCblk;
+    <span class="keyword">int32_t</span> front;
+    <span class="keyword">int32_t</span> rear;
+    <span class="keyword">if</span> (mIsOut) {
+        <span class="comment">// 相对于client的实现，多出了flush的部分。其他的算法思路都跟client是一样的。</span>
+        <span class="keyword">int32_t</span> flush = cblk-&gt;u.mStreaming.mFlush;
+        rear = android_atomic_acquire_load(&amp;cblk-&gt;u.mStreaming.mRear);
+        front = cblk-&gt;u.mStreaming.mFront;
+        <span class="keyword">if</span> (flush != mFlush) {
+            <span class="comment">// effectively obtain then release whatever is in the buffer</span>
+            <span class="keyword">const</span> <span class="keyword">size_t</span> overflowBit = mFrameCountP2 &lt;&lt; <span class="number">1</span>;
+            <span class="keyword">const</span> <span class="keyword">size_t</span> mask = overflowBit - <span class="number">1</span>;
+            <span class="keyword">int32_t</span> newFront = (front &amp; ~mask) | (flush &amp; mask);
+            <span class="keyword">ssize_t</span> filled = rear - newFront;
+            <span class="keyword">if</span> (filled &gt;= (<span class="keyword">ssize_t</span>)overflowBit) {
+                <span class="comment">// front and rear offsets span the overflow bit of the p2 mask</span>
+                <span class="comment">// so rebasing newFront on the front offset is off by the overflow bit.</span>
+                <span class="comment">// adjust newFront to match rear offset.</span>
+                ALOGV(<span class="string">"flush wrap: filled %zx &gt;= overflowBit %zx"</span>, filled, overflowBit);
+                newFront += overflowBit;
+                filled -= overflowBit;
+            }
+            <span class="comment">// Rather than shutting down on a corrupt flush, just treat it as a full flush</span>
+            <span class="keyword">if</span> (!(<span class="number">0</span> &lt;= filled &amp;&amp; (<span class="keyword">size_t</span>) filled &lt;= mFrameCount)) {
+                newFront = rear;
+            }
+            mFlush = flush;
+            android_atomic_release_store(newFront, &amp;cblk-&gt;u.mStreaming.mFront);
+            <span class="comment">// There is no danger from a false positive, so err on the side of caution</span>
+            <span class="keyword">if</span> (<span class="literal">true</span> <span class="comment">/*front != newFront*/</span>) {
+                <span class="keyword">int32_t</span> old = android_atomic_or(CBLK_FUTEX_WAKE, &amp;cblk-&gt;mFutex);
+                <span class="keyword">if</span> (!(old &amp; CBLK_FUTEX_WAKE)) {
+                    (<span class="keyword">void</span>) syscall(__NR_futex, &amp;cblk-&gt;mFutex,
+                            mClientInServer ? FUTEX_WAKE_PRIVATE : FUTEX_WAKE, <span class="number">1</span>);
+                }
+            }
+            front = newFront;
+        }
+    } <span class="keyword">else</span> {
+        front = android_atomic_acquire_load(&amp;cblk-&gt;u.mStreaming.mFront);
+        rear = cblk-&gt;u.mStreaming.mRear;
+    }
+    <span class="keyword">ssize_t</span> filled = rear - front;
+    <span class="comment">// pipe should not already be overfull</span>
+    <span class="keyword">if</span> (!(<span class="number">0</span> &lt;= filled &amp;&amp; (<span class="keyword">size_t</span>) filled &lt;= mFrameCount)) {
+        mIsShutdown = <span class="literal">true</span>;
+    }
+    <span class="keyword">if</span> (mIsShutdown) {
+        <span class="keyword">goto</span> no_init;
+    }
+    <span class="comment">// don't allow filling pipe beyond the nominal size</span>
+    <span class="keyword">size_t</span> availToServer;
+    <span class="keyword">if</span> (mIsOut) {
+        availToServer = filled;
+        mAvailToClient = mFrameCount - filled;
+    } <span class="keyword">else</span> {
+        availToServer = mFrameCount - filled;
+        mAvailToClient = filled;
+    }
+    <span class="comment">// 'availToServer' may be non-contiguous, so return only the first contiguous chunk</span>
+    <span class="keyword">size_t</span> part1;
+    <span class="keyword">if</span> (mIsOut) {
+        front &amp;= mFrameCountP2 - <span class="number">1</span>;
+        part1 = mFrameCountP2 - front;
+    } <span class="keyword">else</span> {
+        rear &amp;= mFrameCountP2 - <span class="number">1</span>;
+        part1 = mFrameCountP2 - rear;
+    }
+    <span class="keyword">if</span> (part1 &gt; availToServer) {
+        part1 = availToServer;
+    }
+    <span class="keyword">size_t</span> ask = buffer-&gt;mFrameCount;
+    <span class="keyword">if</span> (part1 &gt; ask) {
+        part1 = ask;
+    }
+    <span class="comment">// is assignment redundant in some cases?</span>
+    buffer-&gt;mFrameCount = part1;
+    buffer-&gt;mRaw = part1 &gt; <span class="number">0</span> ?
+            &amp;((<span class="keyword">char</span> *) mBuffers)[(mIsOut ? front : rear) * mFrameSize] : <span class="literal">NULL</span>;
+    buffer-&gt;mNonContig = availToServer - part1;
+    <span class="comment">// After flush(), allow releaseBuffer() on a previously obtained buffer;</span>
+    <span class="comment">// see "Acknowledge any pending flush()" in audioflinger/Tracks.cpp.</span>
+    <span class="keyword">if</span> (!ackFlush) {
+        mUnreleased = part1;
+    }
+    <span class="keyword">return</span> part1 &gt; <span class="number">0</span> ? NO_ERROR : WOULD_BLOCK;
+    }
+no_init:
+    buffer-&gt;mFrameCount = <span class="number">0</span>;
+    buffer-&gt;mRaw = <span class="literal">NULL</span>;
+    buffer-&gt;mNonContig = <span class="number">0</span>;
+    mUnreleased = <span class="number">0</span>;
+    <span class="keyword">return</span> NO_INIT;
+}
+</code></pre><p>flush的部分现在不想分析，其他的逻辑又跟clientproxy中<code>obtainBuffer</code>的实现没啥区别，就是少了一个等待时间的统计。</p>
+<p>接着看<code>releaseBuffer</code>吧。</p>
+<pre><code><span class="keyword">void</span> ServerProxy::releaseBuffer(Buffer* buffer)
+{
+    LOG_ALWAYS_FATAL_IF(buffer == <span class="literal">NULL</span>);
+    <span class="keyword">size_t</span> stepCount = buffer-&gt;mFrameCount;
+    <span class="keyword">if</span> (stepCount == <span class="number">0</span> || mIsShutdown) {
+        <span class="comment">// prevent accidental re-use of buffer</span>
+        buffer-&gt;mFrameCount = <span class="number">0</span>;
+        buffer-&gt;mRaw = <span class="literal">NULL</span>;
+        buffer-&gt;mNonContig = <span class="number">0</span>;
+        <span class="keyword">return</span>;
+    }
+    <span class="comment">// 更新下有多少个尚未被消费</span>
+    mUnreleased -= stepCount;
+    <span class="keyword">audio_track_cblk_t</span>* cblk = mCblk;
+    <span class="keyword">if</span> (mIsOut) {
+        <span class="comment">// 更新front的位置，这边可以看出front也是无限递增的</span>
+        <span class="keyword">int32_t</span> front = cblk-&gt;u.mStreaming.mFront;
+        android_atomic_release_store(stepCount + front, &amp;cblk-&gt;u.mStreaming.mFront);
+    } <span class="keyword">else</span> {
+        <span class="keyword">int32_t</span> rear = cblk-&gt;u.mStreaming.mRear;
+        android_atomic_release_store(stepCount + rear, &amp;cblk-&gt;u.mStreaming.mRear);
+    }
+    <span class="comment">// server的指针也跟着挺近。</span>
+    cblk-&gt;mServer += stepCount;
+
+    <span class="keyword">size_t</span> half = mFrameCount / <span class="number">2</span>;
+    <span class="keyword">if</span> (half == <span class="number">0</span>) {
+        half = <span class="number">1</span>;
+    }
+    <span class="comment">// 这个是我们一开始createTrack的时候就已经给到的值，意思就是消费了多少就可以唤醒client的意思</span>
+    <span class="keyword">size_t</span> minimum = (<span class="keyword">size_t</span>) cblk-&gt;mMinimum;
+    <span class="keyword">if</span> (minimum == <span class="number">0</span>) {
+        <span class="comment">// 为0的话，我们就使用申请buffer的一半，否则就为1</span>
+        minimum = mIsOut ? half : <span class="number">1</span>;
+    } <span class="keyword">else</span> <span class="keyword">if</span> (minimum &gt; half) {
+        <span class="comment">// 如果大于一半，那我们强制用一半，就是可以早点通知client去生产数据</span>
+        minimum = half;
+    }
+    <span class="keyword">if</span> (!mIsOut || (mAvailToClient + stepCount &gt;= minimum)) {
+        <span class="comment">// 开始唤醒操作</span>
+        <span class="keyword">int32_t</span> old = android_atomic_or(CBLK_FUTEX_WAKE, &amp;cblk-&gt;mFutex);
+        <span class="keyword">if</span> (!(old &amp; CBLK_FUTEX_WAKE)) {
+            (<span class="keyword">void</span>) syscall(__NR_futex, &amp;cblk-&gt;mFutex,
+                    mClientInServer ? FUTEX_WAKE_PRIVATE : FUTEX_WAKE, <span class="number">1</span>);
+        }
+    }
+
+    buffer-&gt;mFrameCount = <span class="number">0</span>;
+    buffer-&gt;mRaw = <span class="literal">NULL</span>;
+    buffer-&gt;mNonContig = <span class="number">0</span>;
+}
+</code></pre><p>该函数主要实现：</p>
+<ol>
+<li>更新mUnreleased、front、server等信息</li>
+<li>确认什么时候唤醒client生产数据，如果达到，就去唤醒。</li>
+</ol>
+<p>到此，我们算完成了生产者消费者模型的分析，一开头就已经总结了整个机制。</p>
+
       
     </div>
 
