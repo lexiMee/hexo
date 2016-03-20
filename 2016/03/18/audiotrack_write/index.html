@@ -71,7 +71,7 @@
 读写数据的操作是一个生产者和消费者的逻辑。这边的逻辑是这样的：
 
 生产者写数据，线程消费数据，线程消费了n个数据之后，发现已经完成minbuffersize的消费，会去通知你继续填充数据">
-<meta property="og:updated_time" content="2016-03-18T15:33:26.815Z">
+<meta property="og:updated_time" content="2016-03-19T06:41:41.471Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="audiotrack的write流程">
 <meta name="twitter:description" content="简述到目前为止，我们已经完成了audiotrack创建和设置，它完成了cblk、clientproxy、serverproxy、track、output等的创建和关联，并且打开了音频通路，紧接着就等我们写数据了。
@@ -843,7 +843,371 @@ end:
         android_atomic_release_store(stepCount + front, <span class="subst">&amp;</span>cblk<span class="subst">-&gt;</span>u<span class="built_in">.</span>mStreaming<span class="built_in">.</span>mFront);
     }
 }
-</code></pre><h3 id="消费者部分">消费者部分</h3>
+</code></pre><h3 id="消费者部分">消费者部分</h3><p>前面我们有提到，消费者是一个线程，这个线程，在我们当前这个场景下是一个普通的mixer thread，其实也是我们前面一直有出现的output thread，这个线程主要就是负责获取数据，mix数据，效果处理等一系列的操作的。每一个普通的mixer thread，它都可能会包含好多个的track，这样的话，它的实现上必然就不能为等待某个track的数据而发生阻塞，只有当所有的track都没数据了，它才会进入休眠状态。<br>当然这边我们讲解的主要场景是获取数据了，获取数据其实是在AudioMixer里面来执行的，但是我们不能只关注获取，我们需要关注的是流程如何控制到获取数据的整个逻辑。所以我们从<code>MixerThread::prepareTracks_l</code>，这边我会先把fast track相关的部分先省略掉，因为我们目前只定位在normal track，其实fast track的逻辑也是差不多的，只是细节实现上更复杂一些。</p>
+<pre><code>AudioFlinger::PlaybackThread::mixer_state AudioFlinger::MixerThread::prepareTracks_l(
+        Vector&lt; sp&lt;Track&gt; &gt; *tracksToRemove)
+{
+
+    mixer_state mixerStatus = MIXER_IDLE;
+    <span class="comment">// 看有多少个track需要被处理的</span>
+    size_t count = mActiveTracks.size();
+    size_t mixedTracks = <span class="number">0</span>;
+    size_t tracksWithEffect = <span class="number">0</span>;
+
+    <span class="keyword">float</span> masterVolume = mMasterVolume;
+    <span class="keyword">bool</span> masterMute = mMasterMute;
+
+    <span class="keyword">if</span> (masterMute) {
+        masterVolume = <span class="number">0</span>;
+    }
+    <span class="comment">// 如果存在全局音效的话，委托全局音效来控制master volume。</span>
+    sp&lt;EffectChain&gt; chain = getEffectChain_l(AUDIO_SESSION_OUTPUT_MIX);
+    <span class="keyword">if</span> (chain != <span class="number">0</span>) {
+        uint32_t v = (uint32_t)(masterVolume * (<span class="number">1</span> &lt;&lt; <span class="number">24</span>));
+        chain-&gt;setVolume_l(&amp;v, &amp;v);
+        masterVolume = (<span class="keyword">float</span>)((v + (<span class="number">1</span> &lt;&lt; <span class="number">23</span>)) &gt;&gt; <span class="number">24</span>);
+        chain.clear();
+    }
+
+    mMixerBufferValid = <span class="keyword">false</span>;  <span class="comment">// 有使用mixerbuffer的tracks被找到并且有数据会被置为true</span>
+    mEffectBufferValid = <span class="keyword">false</span>; <span class="comment">// 有使用mixerbuffer的tracks被找到并且有数据会被置为true</span>
+
+    <span class="keyword">for</span> (size_t i=<span class="number">0</span> ; i&lt;count ; i++) {
+        <span class="keyword">const</span> sp&lt;Track&gt; t = mActiveTracks[i].promote();
+        <span class="keyword">if</span> (t == <span class="number">0</span>) {
+            <span class="keyword">continue</span>;
+        }
+
+        Track* <span class="keyword">const</span> track = t.get();
+
+        {   <span class="comment">// local variable scope to avoid goto warning</span>
+
+        audio_track_cblk_t* cblk = track-&gt;cblk();
+
+        <span class="comment">// 对于第一次被添加进来的track，我们会等待它把buffer都填充满才来处理的。</span>
+        <span class="keyword">int</span> name = track-&gt;name();
+        <span class="comment">// make sure that we have enough frames to mix one full buffer.</span>
+        <span class="comment">// enforce this condition only once to enable draining the buffer in case the client</span>
+        <span class="comment">// app does not call stop() and relies on underrun to stop:</span>
+        <span class="comment">// hence the test on (mMixerStatus == MIXER_TRACKS_READY) meaning the track was mixed</span>
+        <span class="comment">// during last round</span>
+        size_t desiredFrames;
+        <span class="keyword">const</span> uint32_t sampleRate = track-&gt;mAudioTrackServerProxy-&gt;getSampleRate();
+        AudioPlaybackRate playbackRate = track-&gt;mAudioTrackServerProxy-&gt;getPlaybackRate();
+        <span class="comment">// 计算hal层buffer映射到当前速率，采样率下是多少帧</span>
+        desiredFrames = sourceFramesNeededWithTimestretch(
+                sampleRate, mNormalFrameCount, mSampleRate, playbackRate.mSpeed);
+        <span class="comment">// <span class="doctag">TODO:</span> ONLY USED FOR LEGACY RESAMPLERS, remove when they are removed.</span>
+        <span class="comment">// add frames already consumed but not yet released by the resampler</span>
+        <span class="comment">// because mAudioTrackServerProxy-&gt;framesReady() will include these frames</span>
+        desiredFrames += mAudioMixer-&gt;getUnreleasedFrames(track-&gt;name());
+
+        uint32_t minFrames = <span class="number">1</span>;
+        <span class="comment">// 如果上一次是已经ready的，则这次才会更新minFrames，否则依然是1</span>
+        <span class="keyword">if</span> ((track-&gt;sharedBuffer() == <span class="number">0</span>) &amp;&amp; !track-&gt;isStopped() &amp;&amp; !track-&gt;isPausing() &amp;&amp;
+                (mMixerStatusIgnoringFastTracks == MIXER_TRACKS_READY)) {
+            minFrames = desiredFrames;
+        }
+
+        size_t framesReady = track-&gt;framesReady();
+
+        <span class="keyword">if</span> ((framesReady &gt;= minFrames) &amp;&amp; track-&gt;isReady() &amp;&amp;
+                !track-&gt;isPaused() &amp;&amp; !track-&gt;isTerminated())
+        {
+            ALOGVV(<span class="string">"track %d s=%08x [OK] on thread %p"</span>, name, cblk-&gt;mServer, this);
+
+            mixedTracks++;
+
+            <span class="comment">// track-&gt;mainBuffer() != mSinkBuffer or mMixerBuffer means</span>
+            <span class="comment">// there is an effect chain connected to the track</span>
+            chain.clear();
+            <span class="keyword">if</span> (track-&gt;mainBuffer() != mSinkBuffer &amp;&amp;
+                    track-&gt;mainBuffer() != mMixerBuffer) {
+                <span class="keyword">if</span> (mEffectBufferEnabled) {
+                    mEffectBufferValid = <span class="keyword">true</span>; <span class="comment">// Later can set directly.</span>
+                }
+                chain = getEffectChain_l(track-&gt;sessionId());
+                <span class="comment">// Delegate volume control to effect in track effect chain if needed</span>
+                <span class="keyword">if</span> (chain != <span class="number">0</span>) {
+                    tracksWithEffect++;
+                } <span class="keyword">else</span> {
+                }
+            }
+
+
+            <span class="keyword">int</span> param = AudioMixer::VOLUME;
+            <span class="keyword">if</span> (track-&gt;mFillingUpStatus == Track::FS_FILLED) {
+                <span class="comment">// no ramp for the first volume setting</span>
+                track-&gt;mFillingUpStatus = Track::FS_ACTIVE;
+                <span class="keyword">if</span> (track-&gt;mState == TrackBase::RESUMING) {
+                    track-&gt;mState = TrackBase::ACTIVE;
+                    param = AudioMixer::RAMP_VOLUME;
+                }
+                mAudioMixer-&gt;setParameter(name, AudioMixer::RESAMPLE, AudioMixer::RESET, <span class="keyword">NULL</span>);
+            <span class="comment">// FIXME should not make a decision based on mServer</span>
+            } <span class="keyword">else</span> <span class="keyword">if</span> (cblk-&gt;mServer != <span class="number">0</span>) {
+                <span class="comment">// If the track is stopped before the first frame was mixed,</span>
+                <span class="comment">// do not apply ramp</span>
+                param = AudioMixer::RAMP_VOLUME;
+            }
+
+            <span class="comment">// compute volume for this track</span>
+            uint32_t vl, vr;       <span class="comment">// in U8.24 integer format</span>
+            <span class="keyword">float</span> vlf, vrf, vaf;   <span class="comment">// in [0.0, 1.0] float format</span>
+            <span class="keyword">if</span> (track-&gt;isPausing() || mStreamTypes[track-&gt;streamType()].mute) {
+                vl = vr = <span class="number">0</span>;
+                vlf = vrf = vaf = <span class="number">0.</span>;
+                <span class="keyword">if</span> (track-&gt;isPausing()) {
+                    track-&gt;setPaused();
+                }
+            } <span class="keyword">else</span> {
+
+                <span class="comment">// read original volumes with volume control</span>
+                <span class="keyword">float</span> typeVolume = mStreamTypes[track-&gt;streamType()].volume;
+                <span class="keyword">float</span> v = masterVolume * typeVolume;
+                AudioTrackServerProxy *proxy = track-&gt;mAudioTrackServerProxy;
+                gain_minifloat_packed_t vlr = proxy-&gt;getVolumeLR();
+                vlf = float_from_gain(gain_minifloat_unpack_left(vlr));
+                vrf = float_from_gain(gain_minifloat_unpack_right(vlr));
+                <span class="comment">// track volumes come from shared memory, so can't be trusted and must be clamped</span>
+                <span class="keyword">if</span> (vlf &gt; GAIN_FLOAT_UNITY) {
+                    ALOGV(<span class="string">"Track left volume out of range: %.3g"</span>, vlf);
+                    vlf = GAIN_FLOAT_UNITY;
+                }
+                <span class="keyword">if</span> (vrf &gt; GAIN_FLOAT_UNITY) {
+                    ALOGV(<span class="string">"Track right volume out of range: %.3g"</span>, vrf);
+                    vrf = GAIN_FLOAT_UNITY;
+                }
+                <span class="comment">// now apply the master volume and stream type volume</span>
+                vlf *= v;
+                vrf *= v;
+                <span class="comment">// assuming master volume and stream type volume each go up to 1.0,</span>
+                <span class="comment">// then derive vl and vr as U8.24 versions for the effect chain</span>
+                <span class="keyword">const</span> <span class="keyword">float</span> scaleto8_24 = MAX_GAIN_INT * MAX_GAIN_INT;
+                vl = (uint32_t) (scaleto8_24 * vlf);
+                vr = (uint32_t) (scaleto8_24 * vrf);
+                <span class="comment">// vl and vr are now in U8.24 format</span>
+                uint16_t sendLevel = proxy-&gt;getSendLevel_U4_12();
+                <span class="comment">// send level comes from shared memory and so may be corrupt</span>
+                <span class="keyword">if</span> (sendLevel &gt; MAX_GAIN_INT) {
+                    ALOGV(<span class="string">"Track send level out of range: %04X"</span>, sendLevel);
+                    sendLevel = MAX_GAIN_INT;
+                }
+                <span class="comment">// vaf is represented as [0.0, 1.0] float by rescaling sendLevel</span>
+                vaf = v * sendLevel * (<span class="number">1.</span> / MAX_GAIN_INT);
+            }
+
+            <span class="comment">// Delegate volume control to effect in track effect chain if needed</span>
+            <span class="keyword">if</span> (chain != <span class="number">0</span> &amp;&amp; chain-&gt;setVolume_l(&amp;vl, &amp;vr)) {
+                <span class="comment">// Do not ramp volume if volume is controlled by effect</span>
+                param = AudioMixer::VOLUME;
+                <span class="comment">// Update remaining floating point volume levels</span>
+                vlf = (<span class="keyword">float</span>)vl / (<span class="number">1</span> &lt;&lt; <span class="number">24</span>);
+                vrf = (<span class="keyword">float</span>)vr / (<span class="number">1</span> &lt;&lt; <span class="number">24</span>);
+                track-&gt;mHasVolumeController = <span class="keyword">true</span>;
+            } <span class="keyword">else</span> {
+                <span class="comment">// force no volume ramp when volume controller was just disabled or removed</span>
+                <span class="comment">// from effect chain to avoid volume spike</span>
+                <span class="keyword">if</span> (track-&gt;mHasVolumeController) {
+                    param = AudioMixer::VOLUME;
+                }
+                track-&gt;mHasVolumeController = <span class="keyword">false</span>;
+            }
+
+            <span class="comment">// <span class="doctag">XXX:</span> these things DON'T need to be done each time</span>
+            mAudioMixer-&gt;setBufferProvider(name, track);
+            mAudioMixer-&gt;enable(name);
+
+            mAudioMixer-&gt;setParameter(name, param, AudioMixer::VOLUME0, &amp;vlf);
+            mAudioMixer-&gt;setParameter(name, param, AudioMixer::VOLUME1, &amp;vrf);
+            mAudioMixer-&gt;setParameter(name, param, AudioMixer::AUXLEVEL, &amp;vaf);
+            mAudioMixer-&gt;setParameter(
+                name,
+                AudioMixer::TRACK,
+                AudioMixer::FORMAT, (void *)track-&gt;format());
+            mAudioMixer-&gt;setParameter(
+                name,
+                AudioMixer::TRACK,
+                AudioMixer::CHANNEL_MASK, (void *)(uintptr_t)track-&gt;channelMask());
+            mAudioMixer-&gt;setParameter(
+                name,
+                AudioMixer::TRACK,
+                AudioMixer::MIXER_CHANNEL_MASK, (void *)(uintptr_t)mChannelMask);
+            <span class="comment">// limit track sample rate to 2 x output sample rate, which changes at re-configuration</span>
+            uint32_t maxSampleRate = mSampleRate * AUDIO_RESAMPLER_DOWN_RATIO_MAX;
+            uint32_t reqSampleRate = track-&gt;mAudioTrackServerProxy-&gt;getSampleRate();
+            <span class="keyword">if</span> (reqSampleRate == <span class="number">0</span>) {
+                reqSampleRate = mSampleRate;
+            } <span class="keyword">else</span> <span class="keyword">if</span> (reqSampleRate &gt; maxSampleRate) {
+                reqSampleRate = maxSampleRate;
+            }
+            mAudioMixer-&gt;setParameter(
+                name,
+                AudioMixer::RESAMPLE,
+                AudioMixer::SAMPLE_RATE,
+                (void *)(uintptr_t)reqSampleRate);
+
+            AudioPlaybackRate playbackRate = track-&gt;mAudioTrackServerProxy-&gt;getPlaybackRate();
+            mAudioMixer-&gt;setParameter(
+                name,
+                AudioMixer::TIMESTRETCH,
+                AudioMixer::PLAYBACK_RATE,
+                &amp;playbackRate);
+
+            <span class="comment">/*
+             * Select the appropriate output buffer for the track.
+             *
+             * Tracks with effects go into their own effects chain buffer
+             * and from there into either mEffectBuffer or mSinkBuffer.
+             *
+             * Other tracks can use mMixerBuffer for higher precision
+             *  .  If this buffer is enabled
+             * (mMixerBufferEnabled true), then selected tracks will accumulate
+             * into it.
+             *
+             */</span>
+            <span class="comment">// 选择合适的output buffer。添加了effect的track将会把数据输出到效果链的buffer中</span>
+            <span class="comment">// 处理完之后会输出到没EffectBuffer或者mSinkBuffer中</span>
+            <span class="comment">// 其他track使用mMixerBuffer，可以用来高精度的累加</span>
+            <span class="keyword">if</span> (mMixerBufferEnabled
+                    &amp;&amp; (track-&gt;mainBuffer() == mSinkBuffer
+                            || track-&gt;mainBuffer() == mMixerBuffer)) {
+                mAudioMixer-&gt;setParameter(
+                        name,
+                        AudioMixer::TRACK,
+                        AudioMixer::MIXER_FORMAT, (void *)mMixerBufferFormat);
+                mAudioMixer-&gt;setParameter(
+                        name,
+                        AudioMixer::TRACK,
+                        AudioMixer::MAIN_BUFFER, (void *)mMixerBuffer);
+                <span class="comment">// <span class="doctag">TODO:</span> override track-&gt;mainBuffer()?</span>
+                mMixerBufferValid = <span class="keyword">true</span>;
+            } <span class="keyword">else</span> {
+                mAudioMixer-&gt;setParameter(
+                        name,
+                        AudioMixer::TRACK,
+                        AudioMixer::MIXER_FORMAT, (void *)AUDIO_FORMAT_PCM_16_BIT);
+                mAudioMixer-&gt;setParameter(
+                        name,
+                        AudioMixer::TRACK,
+                        AudioMixer::MAIN_BUFFER, (void *)track-&gt;mainBuffer());
+            }
+            mAudioMixer-&gt;setParameter(
+                name,
+                AudioMixer::TRACK,
+                AudioMixer::AUX_BUFFER, (void *)track-&gt;auxBuffer());
+
+            <span class="comment">// reset retry count</span>
+            track-&gt;mRetryCount = kMaxTrackRetries;
+
+            <span class="comment">// If one track is ready, set the mixer ready if:</span>
+            <span class="comment">//  - the mixer was not ready during previous round OR</span>
+            <span class="comment">//  - no other track is not ready</span>
+            <span class="keyword">if</span> (mMixerStatusIgnoringFastTracks != MIXER_TRACKS_READY ||
+                    mixerStatus != MIXER_TRACKS_ENABLED) {
+                mixerStatus = MIXER_TRACKS_READY;
+            }
+        } <span class="keyword">else</span> {
+            <span class="keyword">if</span> (framesReady &lt; desiredFrames &amp;&amp; !track-&gt;isStopped() &amp;&amp; !track-&gt;isPaused()) {
+                track-&gt;mAudioTrackServerProxy-&gt;tallyUnderrunFrames(desiredFrames);
+            }
+            <span class="comment">// clear effect chain input buffer if an active track underruns to avoid sending</span>
+            <span class="comment">// previous audio buffer again to effects</span>
+            chain = getEffectChain_l(track-&gt;sessionId());
+            <span class="keyword">if</span> (chain != <span class="number">0</span>) {
+                chain-&gt;clearInputBuffer();
+            }
+            <span class="comment">// 如果track是使用共享内存，或者已经终止、停止、暂停，则会进入下面逻辑。 </span>
+            <span class="keyword">if</span> ((track-&gt;sharedBuffer() != <span class="number">0</span>) || track-&gt;isTerminated() ||
+                    track-&gt;isStopped() || track-&gt;isPaused()) {
+                <span class="comment">// We have consumed all the buffers of this track.</span>
+                <span class="comment">// Remove it from the list of active tracks.</span>
+                <span class="comment">// <span class="doctag">TODO:</span> use actual buffer filling status instead of latency when available from</span>
+                <span class="comment">// audio HAL</span>
+                size_t audioHALFrames = (latency_l() * mSampleRate) / <span class="number">1000</span>;
+                size_t framesWritten = mBytesWritten / mFrameSize;
+                <span class="keyword">if</span> (mStandby || track-&gt;presentationComplete(framesWritten, audioHALFrames)) {
+                    <span class="keyword">if</span> (track-&gt;isStopped()) {
+                        track-&gt;reset();
+                    }
+                    tracksToRemove-&gt;add(track);
+                }
+            } <span class="keyword">else</span> {
+                <span class="comment">// 如果不是共享内存，并且当前状态不是终止、停止、暂停，就说明肯定就是buffer不够。</span>
+                <span class="comment">// 这个时候会给它50次的机会进行填充，如果还慢满足就移掉active list了。</span>
+                <span class="keyword">if</span> (--(track-&gt;mRetryCount) &lt;= <span class="number">0</span>) {
+                    tracksToRemove-&gt;add(track);
+                    <span class="comment">// 告诉app的track由于underrun被disable，如果数据够，会自动调用start()方法</span>
+                    android_atomic_or(CBLK_DISABLED, &amp;cblk-&gt;mFlags);
+                <span class="comment">// 只要有一个active track尚未ready，那就标志mixer states为not ready</span>
+                <span class="comment">// 但是这边有个例外的，上一次已经设置为not ready，并且有两个track，一个ready，另外</span>
+                <span class="comment">// 一个not ready，则这次的mixer states会被设置为READY</span>
+                } <span class="keyword">else</span> <span class="keyword">if</span> (mMixerStatusIgnoringFastTracks == MIXER_TRACKS_READY ||
+                                mixerStatus != MIXER_TRACKS_READY) {
+                    mixerStatus = MIXER_TRACKS_ENABLED;
+                }
+            }
+            mAudioMixer-&gt;disable(name);
+        }
+
+        }   <span class="comment">// local variable scope to avoid goto warning</span>
+track_is_ready: ;
+
+    }
+
+    <span class="comment">// Push the new FastMixer state if necessary</span>
+    <span class="keyword">bool</span> pauseAudioWatchdog = <span class="keyword">false</span>;
+<span class="comment">#ifdef AUDIO_WATCHDOG</span>
+    <span class="keyword">if</span> (pauseAudioWatchdog &amp;&amp; mAudioWatchdog != <span class="number">0</span>) {
+        mAudioWatchdog-&gt;pause();
+    }
+<span class="comment">#endif</span>
+
+    <span class="comment">// remove all the tracks that need to be...</span>
+    removeTracks_l(*tracksToRemove);
+
+    <span class="keyword">if</span> (getEffectChain_l(AUDIO_SESSION_OUTPUT_MIX) != <span class="number">0</span>) {
+        mEffectBufferValid = <span class="keyword">true</span>;
+    }
+
+    <span class="keyword">if</span> (mEffectBufferValid) {
+        <span class="comment">// as long as there are effects we should clear the effects buffer, to avoid</span>
+        <span class="comment">// passing a non-clean buffer to the effect chain</span>
+        memset(mEffectBuffer, <span class="number">0</span>, mEffectBufferSize);
+    }
+    <span class="comment">// sink or mix buffer must be cleared if all tracks are connected to an</span>
+    <span class="comment">// effect chain as in this case the mixer will not write to the sink or mix buffer</span>
+    <span class="comment">// and track effects will accumulate into it</span>
+    <span class="comment">// Motorola, IKXREL1KK-2809 The mix buffer could be used even not all tracks are</span>
+    <span class="comment">// connected to an effect chain. So remove the check (mixedTracks == tracksWithEffect).</span>
+    <span class="keyword">if</span> ((mBytesRemaining == <span class="number">0</span>) &amp;&amp; ((mixedTracks != <span class="number">0</span>) ||
+    <span class="comment">// END IKXREL1KK-2809</span>
+            (mixedTracks == <span class="number">0</span> &amp;&amp; fastTracks &gt; <span class="number">0</span>))) {
+        <span class="comment">// FIXME as a performance optimization, should remember previous zero status</span>
+        <span class="keyword">if</span> (mMixerBufferValid) {
+            memset(mMixerBuffer, <span class="number">0</span>, mMixerBufferSize);
+            <span class="comment">// <span class="doctag">TODO:</span> In testing, mSinkBuffer below need not be cleared because</span>
+            <span class="comment">// the PlaybackThread::threadLoop() copies mMixerBuffer into mSinkBuffer</span>
+            <span class="comment">// after mixing.</span>
+            <span class="comment">//</span>
+            <span class="comment">// To enforce this guarantee:</span>
+            <span class="comment">// ((mixedTracks != 0 &amp;&amp; mixedTracks == tracksWithEffect) ||</span>
+            <span class="comment">// (mixedTracks == 0 &amp;&amp; fastTracks &gt; 0))</span>
+            <span class="comment">// must imply MIXER_TRACKS_READY.</span>
+            <span class="comment">// Later, we may clear buffers regardless, and skip much of this logic.</span>
+        }
+        <span class="comment">// FIXME as a performance optimization, should remember previous zero status</span>
+        memset(mSinkBuffer, <span class="number">0</span>, mNormalFrameCount * mFrameSize);
+    }
+
+    <span class="comment">// if any fast tracks, then status is ready</span>
+    mMixerStatusIgnoringFastTracks = mixerStatus;
+    <span class="keyword">if</span> (fastTracks &gt; <span class="number">0</span>) {
+        mixerStatus = MIXER_TRACKS_READY;
+    }
+    <span class="keyword">return</span> mixerStatus;
+}
+</code></pre>
       
     </div>
 
