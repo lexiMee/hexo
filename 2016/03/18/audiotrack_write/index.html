@@ -71,7 +71,7 @@
 读写数据的操作是一个生产者和消费者的逻辑。这边的逻辑是这样的：
 
 生产者写数据，线程消费数据，线程消费了n个数据之后，发现已经完成minbuffersize的消费，会去通知你继续填充数据">
-<meta property="og:updated_time" content="2016-03-20T07:43:30.031Z">
+<meta property="og:updated_time" content="2016-03-21T03:19:42.389Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="audiotrack的write流程">
 <meta name="twitter:description" content="简述到目前为止，我们已经完成了audiotrack创建和设置，它完成了cblk、clientproxy、serverproxy、track、output等的创建和关联，并且打开了音频通路，紧接着就等我们写数据了。
@@ -938,7 +938,8 @@ end:
                 <span class="comment">// no ramp for the first volume setting</span>
                 <span class="comment">// 对于第一次的音量设置，不采用ramp volume，一旦进来就被设置为FS_ACTIVE了。</span>
                 track-&gt;mFillingUpStatus = Track::FS_ACTIVE;
-                <span class="comment">// RESUMING只有pausing或者PAUSED才可能触发,比如paused过程中，出现mediaserver挂掉</span>
+                <span class="comment">// RESUMING只有pausing或者PAUSED才可能触发。</span>
+                <span class="comment">// 可以想到的场景就是，start了之后数据尚未满足ready，然后就被pause，然后再被start。</span>
                 <span class="keyword">if</span> (track-&gt;mState == TrackBase::RESUMING) {
                     track-&gt;mState = TrackBase::ACTIVE;
                     param = AudioMixer::RAP_MVOLUME;
