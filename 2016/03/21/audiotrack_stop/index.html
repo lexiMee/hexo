@@ -59,19 +59,16 @@
 
 
 
-<meta name="description" content="简述前面我们已经完成了，从audiotrack的创建、播放，接下来我们要看下暂停和停止，这节我们先来看下pause下面的场景，以及pause之后，发生mediaserver挂掉，然后执行播放的逻辑，主要涉及到client端和server端。
-后面这部分是作为补充了，因为pause本身的东西比较少。">
+<meta name="description" content="简述看完pause我们接下来看下stop的场景。基本上逻辑是一样的，它们的不同点在于，pause的场景是，立马就暂停了，不管buffer中是否有数据，而stop的场景的话，则会将buffer中的数据排空，然后重置状态。">
 <meta property="og:type" content="article">
-<meta property="og:title" content="audiotrack的pause流程">
-<meta property="og:url" content="http://thinks.me/2016/03/21/audiotrack_pause/index.html">
+<meta property="og:title" content="audiotrack的stop流程">
+<meta property="og:url" content="http://thinks.me/2016/03/21/audiotrack_stop/index.html">
 <meta property="og:site_name" content="Thinking">
-<meta property="og:description" content="简述前面我们已经完成了，从audiotrack的创建、播放，接下来我们要看下暂停和停止，这节我们先来看下pause下面的场景，以及pause之后，发生mediaserver挂掉，然后执行播放的逻辑，主要涉及到client端和server端。
-后面这部分是作为补充了，因为pause本身的东西比较少。">
-<meta property="og:updated_time" content="2016-03-21T07:51:42.478Z">
+<meta property="og:description" content="简述看完pause我们接下来看下stop的场景。基本上逻辑是一样的，它们的不同点在于，pause的场景是，立马就暂停了，不管buffer中是否有数据，而stop的场景的话，则会将buffer中的数据排空，然后重置状态。">
+<meta property="og:updated_time" content="2016-03-21T09:14:18.835Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="audiotrack的pause流程">
-<meta name="twitter:description" content="简述前面我们已经完成了，从audiotrack的创建、播放，接下来我们要看下暂停和停止，这节我们先来看下pause下面的场景，以及pause之后，发生mediaserver挂掉，然后执行播放的逻辑，主要涉及到client端和server端。
-后面这部分是作为补充了，因为pause本身的东西比较少。">
+<meta name="twitter:title" content="audiotrack的stop流程">
+<meta name="twitter:description" content="简述看完pause我们接下来看下stop的场景。基本上逻辑是一样的，它们的不同点在于，pause的场景是，立马就暂停了，不管buffer中是否有数据，而stop的场景的话，则会将buffer中的数据排空，然后重置状态。">
 
 
 
@@ -89,7 +86,7 @@
   };
 </script>
 
-  <title> audiotrack的pause流程 | Thinking </title>
+  <title> audiotrack的stop流程 | Thinking </title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -229,7 +226,7 @@
             
             
               
-                audiotrack的pause流程
+                audiotrack的stop流程
               
             
           </h1>
@@ -241,7 +238,7 @@
               <i class="fa fa-calendar-o"></i>
             </span>
             <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2016-03-21T15:51:42+08:00" content="2016-03-21">
+            <time itemprop="dateCreated" datetime="2016-03-21T17:14:18+08:00" content="2016-03-21">
               2016-03-21
             </time>
           </span>
@@ -271,8 +268,8 @@
             
               <span class="post-comments-count">
                 &nbsp; | &nbsp;
-                <a href="/2016/03/21/audiotrack_pause/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/03/21/audiotrack_pause/" itemprop="commentsCount"></span>
+                <a href="/2016/03/21/audiotrack_stop/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/03/21/audiotrack_stop/" itemprop="commentsCount"></span>
                 </a>
               </span>
             
@@ -294,99 +291,99 @@
       
 
       
-        <h2 id="简述">简述</h2><p>前面我们已经完成了，从audiotrack的创建、播放，接下来我们要看下暂停和停止，这节我们先来看下pause下面的场景，以及pause之后，发生mediaserver挂掉，然后执行播放的逻辑，主要涉及到client端和server端。</p>
-<p>后面这部分是作为补充了，因为pause本身的东西比较少。</p>
+        <h2 id="简述">简述</h2><p>看完<code>pause</code>我们接下来看下<code>stop</code>的场景。<br>基本上逻辑是一样的，它们的不同点在于，pause的场景是，立马就暂停了，不管buffer中是否有数据，而stop的场景的话，则会将buffer中的数据排空，然后重置状态。</p>
 <a id="more"></a>
 <h2 id="正文">正文</h2><p>这个依然会牵扯到生产者和消费者。</p>
-<h3 id="生产者这边对于pause的处理">生产者这边对于pause的处理</h3><p>我们直接来看audiotrack的<code>pause</code>函数的实现</p>
-<pre><code><span class="literal">void</span> AudioTrack<span class="tag">::pause</span>()
+<h3 id="生产者这边对于stop的处理">生产者这边对于stop的处理</h3><p>我们直接来看audiotrack的<code>stop</code>函数的实现</p>
+<pre><code><span class="keyword">void</span> AudioTrack::stop()
 {
-    AutoMutex lock(mLock);
-    <span class="comment">// 实现状态切换</span>
-    <span class="keyword">if</span> (mState == STATE_ACTIVE) {
-        mState = STATE_PAUSED;
-    } <span class="keyword">else</span> <span class="keyword">if</span> (mState == STATE_STOPPING) {
-        mState = STATE_PAUSED_STOPPING;
-    } <span class="keyword">else</span> {
+    <span class="function">AutoMutex <span class="title">lock</span><span class="params">(mLock)</span></span>;
+    <span class="comment">// 只接收当前状态为STATE_ACTIVE或者STATE_PAUSED的状态</span>
+    <span class="keyword">if</span> (mState != STATE_ACTIVE &amp;&amp; mState != STATE_PAUSED) {
         <span class="keyword">return</span>;
     }
-    <span class="comment">// 调用proxy的interrupt函数</span>
-    mProxy<span class="subst">-&gt;</span>interrupt();
-    <span class="comment">// 调用audioflinger中track的pause操作</span>
-    mAudioTrack<span class="subst">-&gt;</span>pause();
-    <span class="comment">// Offload的场景，后面找例子学习</span>
+    <span class="comment">// 对于offload的，增加的STATE_STOPPING的状态，其他的则采用STATE_STOPPED</span>
     <span class="keyword">if</span> (isOffloaded_l()) {
-        <span class="keyword">if</span> (mOutput != AUDIO_IO_HANDLE_NONE) {
-            <span class="comment">// OffloadThread发送hal pause是在threadloop中，时间保存在这边比较合适</span>
+        mState = STATE_STOPPING;
+    } <span class="keyword">else</span> {
+        <span class="comment">// 调用stop的话，会将mReleased置成0</span>
+        mState = STATE_STOPPED;
+        mReleased = <span class="number">0</span>;
+    }
+    <span class="comment">// 这个函数我们在pause中已经见识过了</span>
+    mProxy-&gt;interrupt();
+    mAudioTrack-&gt;stop();
+    <span class="comment">// 播放的头位置已经重置回0了，所以如果有marker被设置，我们需要重新激活</span>
+    mMarkerReached = <span class="literal">false</span>;
 
-            <span class="comment">// 一个offload output可以被两个相同配置audiotrack复用。</span>
-            <span class="comment">// 如果去查询一个paused track的时间，另外一个track一直在跑，可能会返回一个不正确的时间</span>
-            <span class="comment">// 鉴于此，我们就在paused的时候保存时间，resume的时候，返回这个值。</span>
+    <span class="keyword">if</span> (mSharedBuffer != <span class="number">0</span>) {
+        <span class="comment">// clear buffer position and loop count.</span>
+        mStaticProxy-&gt;setBufferPositionAndLoop(<span class="number">0</span> <span class="comment">/* position */</span>,
+                <span class="number">0</span> <span class="comment">/* loopStart */</span>, <span class="number">0</span> <span class="comment">/* loopEnd */</span>, <span class="number">0</span> <span class="comment">/* loopCount */</span>);
+    }
 
-            uint32_t halFrames;
-            AudioSystem<span class="tag">::getRenderPosition</span>(mOutput, <span class="subst">&amp;</span>halFrames, <span class="subst">&amp;</span>mPausedPosition);
+    sp&lt;AudioTrackThread&gt; t = mAudioTrackThread;
+    <span class="keyword">if</span> (t != <span class="number">0</span>) {
+        <span class="comment">// 不是offload的，我们将其暂停。如果是offload的话，则不进行处理。</span>
+        <span class="keyword">if</span> (!isOffloaded_l()) {
+            t-&gt;pause();
         }
+    } <span class="keyword">else</span> {
+        setpriority(PRIO_PROCESS, <span class="number">0</span>, mPreviousPriority);
+        set_sched_policy(<span class="number">0</span>, mPreviousSchedulingGroup);
     }
 }
-
-<span class="literal">void</span> ClientProxy<span class="tag">::interrupt</span>()
-{
-    audio_track_cblk_t* cblk = mCblk;
-    <span class="comment">// 如果之前flags中不存在CBLK_INTERRUPT，则去唤醒proxy等待获取buffer的操作，告诉client不用再填</span>
-    <span class="comment">// 充数据了</span>
-    <span class="keyword">if</span> (<span class="subst">!</span>(android_atomic_<span class="subst">or</span>(CBLK_INTERRUPT, <span class="subst">&amp;</span>cblk<span class="subst">-&gt;</span>mFlags) <span class="subst">&amp;</span> CBLK_INTERRUPT)) {
-        android_atomic_<span class="subst">or</span>(CBLK_FUTEX_WAKE, <span class="subst">&amp;</span>cblk<span class="subst">-&gt;</span>mFutex);
-        (<span class="literal">void</span>) syscall(__NR_futex, <span class="subst">&amp;</span>cblk<span class="subst">-&gt;</span>mFutex, mClientInServer ? FUTEX_WAKE_PRIVATE : FUTEX_WAKE,
-                <span class="number">1</span>);
-    }
-}
-</code></pre><p>上面的逻辑较为简单：</p>
-<ol>
-<li>改下audiotrack的内部状态，pause要生效，必须要求状态为STATE_ACTIVE或者STATE_STOPPING，否则直接返回</li>
-<li>告诉proxy可以终止问server端要数据了</li>
-<li>告诉audioflinger，这个track进入到pause状态了。</li>
+</code></pre><ol>
+<li>判断当前状态是否符合stop的场景，不符合直接返回</li>
+<li>修改状态</li>
+<li>中断obtainBuffer</li>
+<li>调用IAudioTrack的stop操作</li>
+<li>相关参数重置，mReleased和mMarkerReached等</li>
+<li>有线程的话，不是offlaod的话进行pause操作，不是offlaod的则不管。</li>
 </ol>
-<p>1和2都在上面，3我们来看下：</p>
-<pre><code><span class="typename">void</span> <span class="string">AudioFlinger:</span>:<span class="string">PlaybackThread:</span>:<span class="string">Track:</span>:pause()
+<p>接下来我们看下IAudioTrack的<code>stop</code>函数</p>
+<pre><code>void AudioFlinger::PlaybackThread::Track::stop()
 {
-    sp&lt;ThreadBase&gt; thread = mThread.promote();
-    <span class="keyword">if</span> (thread != <span class="number">0</span>) {
-<span class="label">        Mutex:</span>:Autolock _l(thread-&gt;mLock);
-        PlaybackThread *playbackThread = (PlaybackThread *)thread.get();
-        <span class="keyword">switch</span> (mState) {
-        <span class="keyword">case</span> <span class="string">STOPPING_1:</span>
-        <span class="keyword">case</span> <span class="string">STOPPING_2:</span>
-            <span class="keyword">if</span> (!isOffloaded()) {
-                <span class="comment">// STOPPING_1和STOPPING_2是针对offload的场景</span>
-                <span class="keyword">break</span>;
+    sp<span class="variable">&lt;ThreadBase&gt;</span> thread = mThread.promote();
+    if (thread != <span class="number">0</span>) {
+        Mutex::Autolock _l(thread-&gt;mLock);
+        track_state <span class="keyword">state</span> = mState;
+        if (<span class="keyword">state</span> == RESUMING || <span class="keyword">state</span> == ACTIVE || <span class="keyword">state</span> == PAUSING || <span class="keyword">state</span> == PAUSED) {
+            PlaybackThread *playbackThread = (PlaybackThread *)thread.get();
+            // 这个是针对pause之后再stop的场景，因为正常stop会在排空数据之后执行reset，而pause不会
+            // 有该操作，所以pause之后再stop的话，没办法利用thread中去reset，所以我们在这边reset。
+            if (playbackThread-&gt;mActiveTracks.indexOf(this) <span class="variable">&lt; 0) {
+                reset();
+                mState = STOPPED;
+            } else if (!isFastTrack() &amp;&amp; !isOffloaded() &amp;&amp; !isDirect()) {
+                mState = STOPPED;
+            } else {
+                // 这个状态是为fast track和offload track存在的。
+                // 对于fast track，只有进入到STOPPING_2才表示完成stop了
+                // 对于offload track，STOPPING_1表示开始排数据，当排空之后会切换到STOPPING_2
+                // 然后是STOPPED，这部分我们学习offload和fast track再进一步分析吧。
+                mState = STOPPING_1;
             }
-            <span class="comment">// Offloaded track正在排数据，在resume的时候我们需要继续排</span>
-            mResumeToStopping = <span class="literal">true</span>;
-            <span class="comment">// fall through...</span>
-        <span class="keyword">case</span> <span class="string">ACTIVE:</span>
-        <span class="keyword">case</span> <span class="string">RESUMING:</span>
-            <span class="comment">// 状态被改成了pausing了。</span>
-            mState = PAUSING;
-            playbackThread-&gt;broadcast_l();
-            <span class="keyword">break</span>;
-<span class="label">
-        default:</span>
-            <span class="keyword">break</span>;
+            // 发送唤醒
+            playbackThread-&gt;</span>broadcast_l();
         }
     }
 }
-</code></pre><p>上面的逻辑更简单，只是将mState设置为了PAUSING，然后就往对应的线程里面发送广播了。</p>
-<p>接下来，我们进入到消费者端来看针对pause场景，它是如何处理的。</p>
-<h3 id="消费者对于pause的处理">消费者对于pause的处理</h3><p>上面提到了往线程里面发送广播，它的实现如下:</p>
-<pre><code><span class="keyword">void</span> AudioFlinger::PlaybackThread::broadcast_l()
+</code></pre><p>上面函数补充了对于pause到stop场景，对于track的reset操作。之后也真是简单的切换状态，然后就去唤醒server端的线程了。</p>
+<p>接下来，我们进入到消费者端来看针对stop场景，它是如何处理的。</p>
+<h3 id="消费者对于stop的处理">消费者对于stop的处理</h3><p>发广播在pause中已经见过了，就不在涉及。我们直接来看<code>prepareTracks_l</code>是如何应付这个<code>stop</code>事件的,这次截取部分代码，因为完整的之前也一起看过了。</p>
+<pre><code><span class="comment">// 当前state处于stop，如果buffer中还有一些数据的话，这边的逻辑是可以直接进入的。isReady会放行</span>
+<span class="comment">// STOPPED\PAUSING\PAUSED以及mFillingUpStatus != FS_FILLING，这边的minFrames为1</span>
+<span class="comment">// 所以下面的逻辑会一直跑到framesReady中的数据完</span>
+<span class="comment">// 这样就会有个问题，就是app调用了stop，但是还是一直填充数据的话，但是是已病态的形式在输出的</span>
+<span class="comment">// 记得我们在讲解write函数的时候，在获取缓冲区的时候，如果发现当前是stoped或者paused的话，获取缓冲区</span>
+<span class="comment">// 就会变成 non blocking，如果client写得够快的话，那就会丢掉非常多的数据</span>
+<span class="keyword">if</span> ((framesReady &gt;= minFrames) &amp;&amp; track-&gt;isReady() &amp;&amp;
+        !track-&gt;isPaused() &amp;&amp; !track-&gt;isTerminated())
 {
-    <span class="comment">// 线程可能被阻塞等待异步信号来让它及时的操作状态的变化</span>
-    <span class="comment">// 为了防止我们当前触发一次唤醒，但是它可能会没被处理到，我们添加了mSignalPending来防止这种情况</span>
-    mSignalPending = <span class="literal">true</span>;
-    mWaitWorkCV.broadcast();
-}
-</code></pre><p>接下来，我们来看下<code>prepareTracks_l</code>是如何应付这个<code>pause</code>事件的,这次截取部分代码，因为完整的之前也一起看过了。<br>    // 当前state还是处于pausing，所以这边是可以进来的，此刻的minFrames为1<br>    if ((framesReady &gt;= minFrames) &amp;&amp; track-&gt;isReady() &amp;&amp;<br>            !track-&gt;isPaused() &amp;&amp; !track-&gt;isTerminated())<br>    {<br>        mixedTracks++;</p>
-<pre><code>    <span class="keyword">int</span> param = AudioMixer::VOLUME;
+    mixedTracks++;
+
+    <span class="keyword">int</span> param = AudioMixer::VOLUME;
     <span class="comment">// mFillingUpStatus为FS_ACTIVE</span>
     <span class="keyword">if</span> (track-&gt;mFillingUpStatus == Track::FS_FILLED) {
         <span class="comment">// no ramp for the first volume setting</span>
@@ -403,7 +400,6 @@
     <span class="comment">// compute volume for this track</span>
     uint32_t vl, vr;       <span class="comment">// in U8.24 integer format</span>
     <span class="keyword">float</span> vlf, vrf, vaf;   <span class="comment">// in [0.0, 1.0] float format</span>
-    <span class="comment">// 触发这边的逻辑，会将音量调整为0，可以实现ramp效果</span>
     <span class="keyword">if</span> (track-&gt;isPausing() || mStreamTypes[track-&gt;streamType()].mute) {
         vl = vr = <span class="number">0</span>;
         vlf = vrf = vaf = <span class="number">0.</span>;
@@ -423,8 +419,7 @@
         mixerStatus = MIXER_TRACKS_READY;
     }
 } <span class="keyword">else</span> {
-    <span class="comment">// 第二次循环，此时state为paused了。</span>
-    <span class="comment">// 会进入到下面的逻辑中</span>
+    <span class="comment">// 等数据输出完成了之后，就进入这边了</span>
     <span class="keyword">if</span> ((track-&gt;sharedBuffer() != <span class="number">0</span>) || track-&gt;isTerminated() ||
             track-&gt;isStopped() || track-&gt;isPaused()) {
         <span class="comment">// 会在继续填充latency的时间长度的空白数据，这个有优化空间</span>
@@ -445,94 +440,61 @@
     }
     mAudioMixer-&gt;disable(name);
 }
-</code></pre><p>从上面的代码来梳理：</p>
+</code></pre><p>好吧上面的逻辑其实没啥好说的。跟pause基本上一致，只是他们对待数据的方式不一样罢了。</p>
+<p>我们再梳理一遍吧：</p>
 <ol>
-<li>paused是有两个状态的，一个是pausing一个是paused</li>
-<li>当设置paused的时候，都会先跑pausing的流程，这个是为了辅助实现volume ramp的，但是也同时意味着会多消耗小于等于framecount的缓冲区的数据。</li>
-<li>完全进入到paused状态之后，该track并没有第一时间被移除active track list，而是还要排latency时间长度的数据。</li>
+<li>如果是stopped状态，minFrames将为1，接下来会一直进入到enable audiomixer</li>
+<li>直到将数据排空了之后，就会进入排空latency的周期</li>
+<li>当排空latency时间长度的时间之后，我们如果发现是stopped的话，我们会对它进行reset操作</li>
+<li>移除active track。</li>
 </ol>
-<p>到这边pause的流程就讲完了。</p>
-<h3 id="对于pause后mediaserver挂掉逻辑">对于pause后mediaserver挂掉逻辑</h3><p>我们在创建audiotrack的时候，函数<code>createTrack_l()</code>有如下几行代码：</p>
-<pre><code>mDeathNotifier = <span class="keyword">new</span> DeathNotifier(<span class="keyword">this</span>);
-<span class="attribute">IInterface</span>::asBinder<span class="function"><span class="params">(mAudioTrack)</span>-&gt;</span>linkToDeath(mDeathNotifier, <span class="keyword">this</span>);
-</code></pre><p>当mediaserver挂掉的话，会触发<code>DeathNotifier::binderDied</code>函数的调用：</p>
-<pre><code><span class="keyword">void</span> AudioTrack::DeathNotifier::binderDied(<span class="keyword">const</span> wp&lt;IBinder&gt;&amp; who __unused)
+<p>我们来看下<code>reset</code>函数都干嘛了</p>
+<pre><code><span class="literal">void</span> AudioFlinger<span class="tag">::PlaybackThread</span><span class="tag">::Track</span><span class="tag">::reset</span>()
 {
-    sp&lt;AudioTrack&gt; audioTrack = mAudioTrack.promote();
-    <span class="keyword">if</span> (audioTrack != <span class="number">0</span>) {
-        <span class="function">AutoMutex <span class="title">lock</span><span class="params">(audioTrack-&gt;mLock)</span></span>;
-        audioTrack-&gt;mProxy-&gt;binderDied();
-    }
-}
-</code></pre><p>可以看到主要的逻辑就是调用<code>ClientProxy::binderDied()</code></p>
-<pre><code><span class="literal">void</span> ClientProxy<span class="tag">::binderDied</span>()
-{
-    audio_track_cblk_t* cblk = mCblk;
-    <span class="comment">// 如果之前没有CBLK_INVALID，则去唤醒obtainBuffer，同时设置cblk-&gt;mFlags添加CBLK_INVALID</span>
-    <span class="keyword">if</span> (<span class="subst">!</span>(android_atomic_<span class="subst">or</span>(CBLK_INVALID, <span class="subst">&amp;</span>cblk<span class="subst">-&gt;</span>mFlags) <span class="subst">&amp;</span> CBLK_INVALID)) {
-        android_atomic_<span class="subst">or</span>(CBLK_FUTEX_WAKE, <span class="subst">&amp;</span>cblk<span class="subst">-&gt;</span>mFutex);
-        (<span class="literal">void</span>) syscall(__NR_futex, <span class="subst">&amp;</span>cblk<span class="subst">-&gt;</span>mFutex, mClientInServer ? FUTEX_WAKE_PRIVATE : FUTEX_WAKE, <span class="number">1</span>);
-    }
-}
-</code></pre><p>如果此时clientProxy正阻塞在那，那我们让它醒过来，然后处理下CBLK_INVALID事件，其实就是直接让obtainBuffer返回了。</p>
-<p>其实到这边，audiotrack的事情就已经干完了，只是flag中多添加了一个CBLK_INVALID标志，而且如果之前有在尝试获取server端的空间的话，则停止。</p>
-<p>那接下来我们就重新回到mediaserver起来了，并且我们调用了start的逻辑。start的逻辑我们在第二节的时候就已经分析过了，我们可以直接来看其中对于flag的处理，如果发现带有CBLK_INVALID，则会触发<code>AudioTrack::restoreTrack_l</code>函数：</p>
-<pre><code>status_t <span class="type">AudioTrack</span>::restoreTrack_l(<span class="keyword">const</span> <span class="type">char</span> *<span class="keyword">from</span>)
-{
-    ++mSequence;// 这个值就跟track的restore相关的，记录restore的次数
-
-    // 出现这种情况基本上是server端挂了，这个时候output的信息是有可能发生变化的，所以我们需要将
-    // 存储在<span class="type">AudioSystem</span>中的一些cache清空，重新获取
-    <span class="type">AudioSystem</span>::clearAudioConfigCache();
-
-    // 对于offload或者一开始设置不去重连的，直接返回即可
-    <span class="keyword">if</span> (isOffloadedOrDirect_l() || mDoNotReconnect) {
-        <span class="keyword">return</span> <span class="type">DEAD_OBJECT</span>;
-    }
-
-    // save the old <span class="keyword">static</span> buffer position
-    size_t bufferPosition = <span class="number">0</span>;
-    <span class="type">int</span> loopCount = <span class="number">0</span>;
-    <span class="keyword">if</span> (mStaticProxy != <span class="number">0</span>) {
-        mStaticProxy-&gt;getBufferPositionAndLoopCount(&amp;bufferPosition, &amp;loopCount);
-    }
-
-    // 如果<span class="type">IAudioTrack</span>被成功创建的话，createTrack_l()将会修改变量，mAudioTrack, mCblkMemory <span class="keyword">and</span> 
-    // mCblk.之前的强引用将会被删掉，如果创建失败的话，之前的对象也将被遗弃。
-    status_t <span class="literal">result</span> = createTrack_l();
-
-    <span class="keyword">if</span> (<span class="literal">result</span> == <span class="type">NO_ERROR</span>) {
-        // mReleased表示的是client往buffer中已经填充了多少数据，这个数据也不是很准确，因为server端
-        // 消费了多少，无人能知。
-        <span class="keyword">if</span> (mStaticProxy == <span class="number">0</span>) {
-            mPosition = mReleased;
+    <span class="comment">// 只能reset一次。目的为何，后面看flush的时候再回头思考这个吧。。。</span>
+    <span class="comment">// Do not reset twice to avoid discarding data written just after a flush and before</span>
+    <span class="comment">// the audioflinger thread detects the track is stopped.</span>
+    <span class="keyword">if</span> (<span class="subst">!</span>mResetDone) {
+        <span class="comment">// Force underrun condition to avoid false underrun callback until first data is</span>
+        <span class="comment">// written to buffer</span>
+        android_atomic_<span class="subst">and</span>(~CBLK_FORCEREADY, <span class="subst">&amp;</span>mCblk<span class="subst">-&gt;</span>mFlags);
+        <span class="comment">// 填充状态被设置回去了。</span>
+        mFillingUpStatus = FS_FILLING;
+        mResetDone = <span class="literal">true</span>;
+        <span class="comment">// 如果是flush这个状态会被设置为IDLE。</span>
+        <span class="keyword">if</span> (mState == FLUSHED) {
+            mState = IDLE;
         }
-        // 继续播放上一次所知道的位置，和重置loop，对于mStaticProxy
-        <span class="keyword">if</span> (mStaticProxy != <span class="number">0</span>) {
-            <span class="keyword">if</span> (loopCount != <span class="number">0</span>) {
-                mStaticProxy-&gt;setBufferPositionAndLoop(bufferPosition,
-                        mLoopStart, mLoopEnd, loopCount);
-            } <span class="keyword">else</span> {
-                mStaticProxy-&gt;setBufferPosition(bufferPosition);
-                <span class="keyword">if</span> (bufferPosition == mFrameCount) {
-                    <span class="type">ALOGD</span>(<span class="string">"restoring track at end of static buffer"</span>);
-                }
+    }
+}
+</code></pre><p>这边可能需要关注的是mFillingUpStatus状态的重置。其他有关flush的，我们flush那边再分析。<br>CBLK_FORCEREADY 这个标志主要是使用在<code>prepareTracks_l</code>中判断track isReady的时候会用到，如果是第一次进入的话，数据没能完全填充满申请的空间的话，如果有这个标志位，那也可以切换mFillingUpStatus。但是目前是不采用的，我们还是先把buffer给灌满，才去修改mFillingUpStatus的状态的。</p>
+<p>我们来看下<code>PlaybackThread::removeTracks_l</code>的逻辑</p>
+<pre><code><span class="keyword">void</span> AudioFlinger::PlaybackThread::removeTracks_l(<span class="keyword">const</span> Vector&lt; sp&lt;Track&gt; &gt;&amp; tracksToRemove)
+{
+    <span class="keyword">size_t</span> count = tracksToRemove.size();
+    <span class="keyword">if</span> (count &gt; <span class="number">0</span>) {
+        <span class="keyword">for</span> (<span class="keyword">size_t</span> i=<span class="number">0</span> ; i&lt;count ; i++) {
+            <span class="keyword">const</span> sp&lt;Track&gt;&amp; track = tracksToRemove.itemAt(i);
+            <span class="comment">// 先从active track list中移掉该track</span>
+            mActiveTracks.remove(track);
+            <span class="comment">// 占有wake lock 可以释放了。</span>
+            mWakeLockUids.remove(track-&gt;uid());
+            mActiveTracksGeneration++;
+            <span class="comment">// 如果有效果链， 则引用计数更新</span>
+            sp&lt;EffectChain&gt; chain = getEffectChain_l(track-&gt;sessionId());
+            <span class="keyword">if</span> (chain != <span class="number">0</span>) {
+                chain-&gt;decActiveTrackCnt();
+            }
+            <span class="comment">// terminate只针对outputTrack和PatchTrack</span>
+            <span class="keyword">if</span> (track-&gt;isTerminated()) {
+                removeTrack_l(track);
             }
         }
-        // 由于我们触发restore是从start开始，这个时候状态已经为<span class="type">STATE_ACTIVE</span>，所以开始跑start流程
-        <span class="keyword">if</span> (mState == <span class="type">STATE_ACTIVE</span>) {
-            <span class="literal">result</span> = mAudioTrack-&gt;start();
-        }
-    }
-    // 如果创建失败的话，则将状态设置为stopped。mReleased设置为<span class="number">0</span>
-    <span class="keyword">if</span> (<span class="literal">result</span> != <span class="type">NO_ERROR</span>) {
-        mState = <span class="type">STATE_STOPPED</span>;
-        mReleased = <span class="number">0</span>;
     }
 
-    <span class="keyword">return</span> <span class="literal">result</span>;
 }
-</code></pre><p>到这边我们就完成了pause后mediaserver挂掉，然后继续播放的逻辑了。</p>
+</code></pre><p>干的事情非常有限，就是移除active track list，然后一些引用计数的更新。</p>
+<p>对于希望stop的时候，不会去排空buffer中的数据，我们从代码中知道，可以先pause完之后，在调用stop。</p>
 
       
     </div>
@@ -558,17 +520,13 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2016/03/18/audiotrack_write/" rel="next" title="audiotrack的write流程">
-                <i class="fa fa-chevron-left"></i> audiotrack的write流程
+              <a href="/2016/03/21/audiotrack_pause/" rel="next" title="audiotrack的pause流程">
+                <i class="fa fa-chevron-left"></i> audiotrack的pause流程
               </a>
             
           </div>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2016/03/21/audiotrack_stop/" rel="prev" title="audiotrack的stop流程">
-                audiotrack的stop流程 <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -594,8 +552,8 @@
           
   <div class="comments" id="comments">
     
-      <div class="ds-thread" data-thread-key="2016/03/21/audiotrack_pause/"
-           data-title="audiotrack的pause流程" data-url="http://thinks.me/2016/03/21/audiotrack_pause/">
+      <div class="ds-thread" data-thread-key="2016/03/21/audiotrack_stop/"
+           data-title="audiotrack的stop流程" data-url="http://thinks.me/2016/03/21/audiotrack_stop/">
       </div>
     
   </div>
@@ -698,7 +656,7 @@
               
             
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#简述"><span class="nav-number">1.</span> <span class="nav-text">简述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#正文"><span class="nav-number">2.</span> <span class="nav-text">正文</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#生产者这边对于pause的处理"><span class="nav-number">2.1.</span> <span class="nav-text">生产者这边对于pause的处理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#消费者对于pause的处理"><span class="nav-number">2.2.</span> <span class="nav-text">消费者对于pause的处理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#对于pause后mediaserver挂掉逻辑"><span class="nav-number">2.3.</span> <span class="nav-text">对于pause后mediaserver挂掉逻辑</span></a></li></ol></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#简述"><span class="nav-number">1.</span> <span class="nav-text">简述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#正文"><span class="nav-number">2.</span> <span class="nav-text">正文</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#生产者这边对于stop的处理"><span class="nav-number">2.1.</span> <span class="nav-text">生产者这边对于stop的处理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#消费者对于stop的处理"><span class="nav-number">2.2.</span> <span class="nav-text">消费者对于stop的处理</span></a></li></ol></li></ol></div>
             
           </div>
           <div class="post-toc-indicator-bottom post-toc-indicator">
