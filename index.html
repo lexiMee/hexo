@@ -228,8 +228,8 @@
             
               
                 
-                <a class="post-title-link" href="/2016/03/21/audiotrack_pause/" itemprop="url">
-                  audiotrack的pause流程
+                <a class="post-title-link" href="/2016/03/21/audiotrack_pause_stop/" itemprop="url">
+                  audiotrack的pause\stop流程
                 </a>
               
             
@@ -272,8 +272,8 @@
             
               <span class="post-comments-count">
                 &nbsp; | &nbsp;
-                <a href="/2016/03/21/audiotrack_pause/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/03/21/audiotrack_pause/" itemprop="commentsCount"></span>
+                <a href="/2016/03/21/audiotrack_pause_stop/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/03/21/audiotrack_pause_stop/" itemprop="commentsCount"></span>
                 </a>
               </span>
             
@@ -296,127 +296,9 @@
 
       
         
-          <h2 id="简述">简述</h2><p>前面我们已经完成了，从audiotrack的创建、播放，接下来我们要看下暂停和停止，这节我们先来看下pause下面的场景，以及pause之后，发生mediaserver挂掉，然后执行播放的逻辑，主要涉及到client端和server端。</p>
-<p>后面这部分是作为补充了，因为pause本身的东西比较少。</p>
+          <h2 id="简述">简述</h2><p>前面我们已经完成了，从audiotrack的创建、播放，接下来我们要看下暂停和停止。<br>pause和stop逻辑基本上是一样的，它们的不同点在于，pause的场景是，立马就暂停了，不管buffer中是否有数据，而stop的场景的话，则会将buffer中的数据排空，然后重置状态。</p>
           <div class="post-more-link text-center">
-            <a class="btn" href="/2016/03/21/audiotrack_pause/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
-      
-
-  
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/2016/03/21/audiotrack_stop/" itemprop="url">
-                  audiotrack的stop流程
-                </a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            <span class="post-meta-item-icon">
-              <i class="fa fa-calendar-o"></i>
-            </span>
-            <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2016-03-21T11:22:08+08:00" content="2016-03-21">
-              2016-03-21
-            </time>
-          </span>
-
-          
-            <span class="post-category" >
-              &nbsp; | &nbsp;
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-              
-                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
-                  <a href="/categories/android开发/" itemprop="url" rel="index">
-                    <span itemprop="name">android开发</span>
-                  </a>
-                </span>
-
-                
-                
-
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                &nbsp; | &nbsp;
-                <a href="/2016/03/21/audiotrack_stop/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/03/21/audiotrack_stop/" itemprop="commentsCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-
-          
-          
-
-        </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <h2 id="简述">简述</h2><p>看完<code>pause</code>我们接下来看下<code>stop</code>的场景。<br>基本上逻辑是一样的，它们的不同点在于，pause的场景是，立马就暂停了，不管buffer中是否有数据，而stop的场景的话，则会将buffer中的数据排空，然后重置状态。</p>
-          <div class="post-more-link text-center">
-            <a class="btn" href="/2016/03/21/audiotrack_stop/#more" rel="contents">
+            <a class="btn" href="/2016/03/21/audiotrack_pause_stop/#more" rel="contents">
               阅读全文 &raquo;
             </a>
           </div>
@@ -805,6 +687,123 @@
 
 
     
+      
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                
+                <a class="post-title-link" href="/2015/12/19/audioflinger_buffer/" itemprop="url">
+                  AudioFlinger Thread中的几个buffer
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2015-12-19T23:46:31+08:00" content="2015-12-19">
+              2015-12-19
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/android开发/" itemprop="url" rel="index">
+                    <span itemprop="name">android开发</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2015/12/19/audioflinger_buffer/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2015/12/19/audioflinger_buffer/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <h3 id="简述">简述</h3><p>AudioFlinger是实现上层跟Hal层进行交互的重要的一层，它主要就是通过Thread进行沟通，不管是数据流还是控制流都是需要经由AudioFlinger Thread往下分发的。这两天有空梳理了一下Thread中几个重要的buffer，在这边做个总结，东西很浅，留作备忘。<br>
+          <div class="post-more-link text-center">
+            <a class="btn" href="/2015/12/19/audioflinger_buffer/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
   </section>
 
   
@@ -850,7 +849,7 @@
         <nav class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">12</span>
+              <span class="site-state-item-count">11</span>
               <span class="site-state-item-name">日志</span>
             </a>
           </div>
