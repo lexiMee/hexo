@@ -67,7 +67,7 @@
 <meta property="og:site_name" content="Thinking">
 <meta property="og:description" content="简述前面我们已经完成了，从audiotrack的创建、播放，接下来我们要看下暂停和停止，这节我们先来看下pause下面的场景，以及pause之后，发生mediaserver挂掉，audiotrack这边的逻辑。
 后面这部分是作为补充了，因为pause本身的东西比较少。">
-<meta property="og:updated_time" content="2016-03-21T05:14:49.910Z">
+<meta property="og:updated_time" content="2016-03-21T06:57:42.845Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="audiotrack的pause流程">
 <meta name="twitter:description" content="简述前面我们已经完成了，从audiotrack的创建、播放，接下来我们要看下暂停和停止，这节我们先来看下pause下面的场景，以及pause之后，发生mediaserver挂掉，audiotrack这边的逻辑。
@@ -241,7 +241,7 @@
               <i class="fa fa-calendar-o"></i>
             </span>
             <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2016-03-21T13:14:49+08:00" content="2016-03-21">
+            <time itemprop="dateCreated" datetime="2016-03-21T14:57:42+08:00" content="2016-03-21">
               2016-03-21
             </time>
           </span>
@@ -452,7 +452,88 @@
 <li>完全进入到paused状态之后，该track并没有第一时间被移除active track list，而是还要排latency时间长度的数据。</li>
 </ol>
 <p>到这边pause的流程就讲完了。</p>
-<h3 id="对于pause后mediaserver挂掉逻辑">对于pause后mediaserver挂掉逻辑</h3>
+<h3 id="对于pause后mediaserver挂掉逻辑">对于pause后mediaserver挂掉逻辑</h3><p>我们在创建audiotrack的时候，函数<code>createTrack_l()</code>有如下几行代码：</p>
+<pre><code>mDeathNotifier = <span class="keyword">new</span> DeathNotifier(<span class="keyword">this</span>);
+<span class="attribute">IInterface</span>::asBinder<span class="function"><span class="params">(mAudioTrack)</span>-&gt;</span>linkToDeath(mDeathNotifier, <span class="keyword">this</span>);
+</code></pre><p>当mediaserver挂掉的话，会触发<code>DeathNotifier::binderDied</code>函数的调用：</p>
+<pre><code><span class="keyword">void</span> AudioTrack::DeathNotifier::binderDied(<span class="keyword">const</span> wp&lt;IBinder&gt;&amp; who __unused)
+{
+    sp&lt;AudioTrack&gt; audioTrack = mAudioTrack.promote();
+    <span class="keyword">if</span> (audioTrack != <span class="number">0</span>) {
+        <span class="function">AutoMutex <span class="title">lock</span><span class="params">(audioTrack-&gt;mLock)</span></span>;
+        audioTrack-&gt;mProxy-&gt;binderDied();
+    }
+}
+</code></pre><p>可以看到主要的逻辑就是调用<code>ClientProxy::binderDied()</code></p>
+<pre><code><span class="literal">void</span> ClientProxy<span class="tag">::binderDied</span>()
+{
+    audio_track_cblk_t* cblk = mCblk;
+    <span class="comment">// 如果之前没有CBLK_INVALID，则去唤醒obtainBuffer，同时设置cblk-&gt;mFlags添加CBLK_INVALID</span>
+    <span class="keyword">if</span> (<span class="subst">!</span>(android_atomic_<span class="subst">or</span>(CBLK_INVALID, <span class="subst">&amp;</span>cblk<span class="subst">-&gt;</span>mFlags) <span class="subst">&amp;</span> CBLK_INVALID)) {
+        android_atomic_<span class="subst">or</span>(CBLK_FUTEX_WAKE, <span class="subst">&amp;</span>cblk<span class="subst">-&gt;</span>mFutex);
+        (<span class="literal">void</span>) syscall(__NR_futex, <span class="subst">&amp;</span>cblk<span class="subst">-&gt;</span>mFutex, mClientInServer ? FUTEX_WAKE_PRIVATE : FUTEX_WAKE, <span class="number">1</span>);
+    }
+}
+</code></pre><p>如果此时clientProxy正阻塞在那，那我们让它醒过来，然后处理下CBLK_INVALID事件，其实就是直接让obtainBuffer返回了。</p>
+<p>其实到这边，audiotrack的事情就已经干完了，只是flag中多添加了一个CBLK_INVALID标志，而且如果之前有在尝试获取server端的空间的话，则停止。</p>
+<p>那接下来我们就重新回到mediaserver起来了，并且我们调用了start的逻辑。start的逻辑我们在第二节的时候就已经分析过了，我们可以直接来看其中对于flag的处理，如果发现带有CBLK_INVALID，则会触发<code>AudioTrack::restoreTrack_l</code>函数：</p>
+<pre><code>status_t <span class="type">AudioTrack</span>::restoreTrack_l(<span class="keyword">const</span> <span class="type">char</span> *<span class="keyword">from</span>)
+{
+    ++mSequence;// 这个值就跟track的restore相关的，记录restore的次数
+
+    // 出现这种情况基本上是server端挂了，这个时候output的信息是有可能发生变化的，所以我们需要将
+    // 存储在<span class="type">AudioSystem</span>中的一些cache清空，重新获取
+    <span class="type">AudioSystem</span>::clearAudioConfigCache();
+
+    // 对于offload或者一开始设置不去重连的，直接返回即可
+    <span class="keyword">if</span> (isOffloadedOrDirect_l() || mDoNotReconnect) {
+        <span class="keyword">return</span> <span class="type">DEAD_OBJECT</span>;
+    }
+
+    // save the old <span class="keyword">static</span> buffer position
+    size_t bufferPosition = <span class="number">0</span>;
+    <span class="type">int</span> loopCount = <span class="number">0</span>;
+    <span class="keyword">if</span> (mStaticProxy != <span class="number">0</span>) {
+        mStaticProxy-&gt;getBufferPositionAndLoopCount(&amp;bufferPosition, &amp;loopCount);
+    }
+
+    // 如果<span class="type">IAudioTrack</span>被成功创建的话，createTrack_l()将会修改变量，mAudioTrack, mCblkMemory <span class="keyword">and</span> 
+    // mCblk.之前的强引用将会被删掉，如果创建失败的话，之前的对象也将被遗弃。
+    status_t <span class="literal">result</span> = createTrack_l();
+
+    <span class="keyword">if</span> (<span class="literal">result</span> == <span class="type">NO_ERROR</span>) {
+        // mReleased表示的是client往buffer中已经填充了多少数据，这个数据也不是很准确，因为server端
+        // 消费了多少，无人能知。
+        <span class="keyword">if</span> (mStaticProxy == <span class="number">0</span>) {
+            mPosition = mReleased;
+        }
+        // 继续播放上一次所知道的位置，和重置loop，对于mStaticProxy
+        <span class="keyword">if</span> (mStaticProxy != <span class="number">0</span>) {
+            <span class="keyword">if</span> (loopCount != <span class="number">0</span>) {
+                mStaticProxy-&gt;setBufferPositionAndLoop(bufferPosition,
+                        mLoopStart, mLoopEnd, loopCount);
+            } <span class="keyword">else</span> {
+                mStaticProxy-&gt;setBufferPosition(bufferPosition);
+                <span class="keyword">if</span> (bufferPosition == mFrameCount) {
+                    <span class="type">ALOGD</span>(<span class="string">"restoring track at end of static buffer"</span>);
+                }
+            }
+        }
+        // 由于我们触发restore是从start开始，这个时候状态已经为<span class="type">STATE_ACTIVE</span>，所以开始跑start流程
+        <span class="keyword">if</span> (mState == <span class="type">STATE_ACTIVE</span>) {
+            <span class="literal">result</span> = mAudioTrack-&gt;start();
+        }
+    }
+    // 如果创建失败的话，则将状态设置为stopped。mReleased设置为<span class="number">0</span>
+    <span class="keyword">if</span> (<span class="literal">result</span> != <span class="type">NO_ERROR</span>) {
+        mState = <span class="type">STATE_STOPPED</span>;
+        mReleased = <span class="number">0</span>;
+    }
+
+    <span class="keyword">return</span> <span class="literal">result</span>;
+}
+</code></pre><p>到这边我们就完成了pause后mediaserver挂掉，然后继续播放的逻辑了。</p>
+
       
     </div>
 
