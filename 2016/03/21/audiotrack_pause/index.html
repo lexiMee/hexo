@@ -41,7 +41,7 @@
 <link href="/css/main.css?v=0.5.0" rel="stylesheet" type="text/css" />
 
 
-  <meta name="keywords" content="TTS,学习笔记," />
+  <meta name="keywords" content="Android,AudioTrack," />
 
 
 
@@ -59,17 +59,19 @@
 
 
 
-<meta name="description" content="简述TTS是Text To Speech的简称，就是将字符串转换成语音。Talkback是用来给帮助盲人朋友使用手机的apk，是android辅助功能的插件，安装完之后可以到辅助功能里面使能它，之后只要你触摸到android系统中的任何控件，都会将控件中的信息转变成语音的形式播放出来。">
+<meta name="description" content="简述前面我们已经完成了，从audiotrack的创建、播放，接下来我们要看下暂停和停止，这节我们先来看下pause下面的场景，以及pause之后，发生mediaserver挂掉，audiotrack这边的逻辑。
+后面这部分是作为补充了，因为pause本身的东西比较少。">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Android TTS学习">
-<meta property="og:url" content="http://thinks.me/2015/12/13/android_tts/index.html">
+<meta property="og:title" content="audiotrack的pause流程">
+<meta property="og:url" content="http://thinks.me/2016/03/21/audiotrack_pause/index.html">
 <meta property="og:site_name" content="Thinking">
-<meta property="og:description" content="简述TTS是Text To Speech的简称，就是将字符串转换成语音。Talkback是用来给帮助盲人朋友使用手机的apk，是android辅助功能的插件，安装完之后可以到辅助功能里面使能它，之后只要你触摸到android系统中的任何控件，都会将控件中的信息转变成语音的形式播放出来。">
-<meta property="og:image" content="http://thinks.me/image/tts2.jpg">
-<meta property="og:updated_time" content="2015-12-13T13:59:35.000Z">
+<meta property="og:description" content="简述前面我们已经完成了，从audiotrack的创建、播放，接下来我们要看下暂停和停止，这节我们先来看下pause下面的场景，以及pause之后，发生mediaserver挂掉，audiotrack这边的逻辑。
+后面这部分是作为补充了，因为pause本身的东西比较少。">
+<meta property="og:updated_time" content="2016-03-21T05:14:49.910Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Android TTS学习">
-<meta name="twitter:description" content="简述TTS是Text To Speech的简称，就是将字符串转换成语音。Talkback是用来给帮助盲人朋友使用手机的apk，是android辅助功能的插件，安装完之后可以到辅助功能里面使能它，之后只要你触摸到android系统中的任何控件，都会将控件中的信息转变成语音的形式播放出来。">
+<meta name="twitter:title" content="audiotrack的pause流程">
+<meta name="twitter:description" content="简述前面我们已经完成了，从audiotrack的创建、播放，接下来我们要看下暂停和停止，这节我们先来看下pause下面的场景，以及pause之后，发生mediaserver挂掉，audiotrack这边的逻辑。
+后面这部分是作为补充了，因为pause本身的东西比较少。">
 
 
 
@@ -87,7 +89,7 @@
   };
 </script>
 
-  <title> Android TTS学习 | Thinking </title>
+  <title> audiotrack的pause流程 | Thinking </title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -227,7 +229,7 @@
             
             
               
-                Android TTS学习
+                audiotrack的pause流程
               
             
           </h1>
@@ -239,8 +241,8 @@
               <i class="fa fa-calendar-o"></i>
             </span>
             <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2015-12-13T21:59:29+08:00" content="2015-12-13">
-              2015-12-13
+            <time itemprop="dateCreated" datetime="2016-03-21T13:14:49+08:00" content="2016-03-21">
+              2016-03-21
             </time>
           </span>
 
@@ -269,8 +271,8 @@
             
               <span class="post-comments-count">
                 &nbsp; | &nbsp;
-                <a href="/2015/12/13/android_tts/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2015/12/13/android_tts/" itemprop="commentsCount"></span>
+                <a href="/2016/03/21/audiotrack_pause/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/03/21/audiotrack_pause/" itemprop="commentsCount"></span>
                 </a>
               </span>
             
@@ -292,30 +294,165 @@
       
 
       
-        <h3 id="简述">简述</h3><p>TTS是Text To Speech的简称，就是将字符串转换成语音。Talkback是用来给帮助盲人朋友使用手机的apk，是android辅助功能的插件，安装完之后可以到辅助功能里面使能它，之后只要你触摸到android系统中的任何控件，都会将控件中的信息转变成语音的形式播放出来。<br><a id="more"></a></p>
-<h3 id="内容">内容</h3><p>TTS的语音是可以自由选择第三方或者是官方默认语音包，默认是pico，可以在源码external/svox这个文件夹找到对应的源码和语音包。我们去看源码的时候也会发现它必须继承并且实现android Framework中提供的TextToSpeechService，并且实现里面指定的一些抽象方法，这个是至关重要的。</p>
-<p>最近工作遇到了一个跟TTS相关的bug，于是就有了这个总结。只是简单的对主要流程进行梳理，先看图，然后再结合下面的文字来理解吧。</p>
-<p><img src="image/tts2.jpg" alt="流程图"></p>
-<p>先假设下场景：我们使能了Talkback，并且点击了settings的某个控件，这个时候控件会给AccessiblityService那边发送事件，然后AccessiblityService会给Talkback转发事件，Talkback接收到事件根据事件类型来决定最后的处理，假设这个时候有个文本信息需要转成语音信息，则会调用TextToSpeech的speak接口，我们从这边开始往下讲。</p>
-<p>TextToSpeech这个类是Framework实现给第三方应用使用的，是图中椭圆形的TTS，它主要是封装了对TextToSpeechService的binder，这样第三方应用就无需再去获取该service，而可以直接使用TextToSpeech里面的方法跟service进行交互。</p>
-<p>接着Talkback调用到TextToSpeech的speak的接口</p>
-<ol>
-<li>在Service这边构件一个<code>SynthesisSpeechItemV1</code>，然后将这个item投入到MainLoop中，而这个MainLoop的处理handler是<code>SynthHandler</code>，会从MainLoop中获取item，然后进行执行，即图中的第二点，每种类型的item几乎都实现了自己的playimpl方法，这样当SynthHandler调用到自己的时候就走到自己的流程了，对于SynthesisSpeechItemV1，它的源码流程是这样的：</li>
-</ol>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//1.创建一个PlaybackSynthesisCallback的回调实现</span></span><br><span class="line">synthesisCallback = <span class="keyword">new</span> PlaybackSynthesisCallback(getAudioParams(),mAudioPlaybackHandler, <span class="keyword">this</span>, getCallerIdentity(), mEventLogger, <span class="keyword">false</span>);</span><br><span class="line"><span class="comment">//2.调用serivce中的onSynthesizeText，将回调和请求传递给该函数的实现者，其实就是第三方语音包，如pico</span></span><br><span class="line">TextToSpeechService.<span class="keyword">this</span>.onSynthesizeText(mSynthesisRequest, synthesisCallback);</span><br></pre></td></tr></table></figure>
-<p>上面源码中想必你也注意到了<code>mSynthesisRequest</code>, 这个就是一开始构件SynthesisSpeechItemV1的时候创建的对象，里面封装了需要播放的文本，速度，语言，国家等一系列的信息。</p>
-<ol>
-<li>pico拿到数据和回调实例之后，就会开始准备自己的环境，当环境准备好之后它就会利用回调实例发送start的指令，该指令的实现主要是下面几个过程：</li>
-</ol>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//1.创建SynthesisPlaybackQueueItem</span></span><br><span class="line">SynthesisPlaybackQueueItem item = <span class="keyword">new</span> SynthesisPlaybackQueueItem(</span><br><span class="line">                    mAudioParams, sampleRateInHz, audioFormat, channelCount,</span><br><span class="line">                    mDispatcher, mCallerIdentity, mLogger);</span><br><span class="line"><span class="comment">//2.将该item投入到PlayAudioHandler的信箱中。</span></span><br><span class="line">mAudioTrackHandler.enqueue(item);</span><br></pre></td></tr></table></figure>
-<p>非常简单，只是创建了另外一个item，然后将这个item丢给另外一个loop，让另外一个loop去处理播放事件。<br>需要注意的是<code>SynthesisPlaybackQueueItem</code>是属于回调实例的成员，而生产者和接收者的大部分实现则是在这里面。</p>
-<ol>
-<li>之后pico如果有产生数据则会调用回调实例的<code>audioAvailable</code>来将数据递给<code>SynthesisPlaybackQueueItem</code>，而<code>mAudioTrackHandler</code>如果正在处理该item的时候，并且发现有数据则会进行读取，并通过audiotrack进行播放（其实也只是单纯的调用了<code>SynthesisPlaybackQueueItem</code>中的<code>run</code>函数罢了）.</li>
-</ol>
-<p>这样基本完成了播放的流程了。</p>
-<p>到这边基本上完成了本文要讲的大部分内容了。不过还有一点需要注意一下的就是TextToSpeechService中函数<code>onSynthesizeText</code>是一个阻塞函数。会一直等待到pico返回的。</p>
-<p>感觉这边的代码对于写音视频类的app应该是有借鉴作用的，这部分代码我只想说可以利用！！这边讲得很粗糙并且不够深入，代码里面有更多的实现细节，只能后面用到的时候再进一步归纳，总结了。。。</p>
+        <h2 id="简述">简述</h2><p>前面我们已经完成了，从audiotrack的创建、播放，接下来我们要看下暂停和停止，这节我们先来看下pause下面的场景，以及pause之后，发生mediaserver挂掉，audiotrack这边的逻辑。</p>
+<p>后面这部分是作为补充了，因为pause本身的东西比较少。</p>
+<a id="more"></a>
+<h2 id="正文">正文</h2><p>这个依然会牵扯到生产者和消费者。</p>
+<h3 id="生产者这边对于pause的处理">生产者这边对于pause的处理</h3><p>我们直接来看audiotrack的<code>pause</code>函数的实现</p>
+<pre><code><span class="literal">void</span> AudioTrack<span class="tag">::pause</span>()
+{
+    AutoMutex lock(mLock);
+    <span class="comment">// 实现状态切换</span>
+    <span class="keyword">if</span> (mState == STATE_ACTIVE) {
+        mState = STATE_PAUSED;
+    } <span class="keyword">else</span> <span class="keyword">if</span> (mState == STATE_STOPPING) {
+        mState = STATE_PAUSED_STOPPING;
+    } <span class="keyword">else</span> {
+        <span class="keyword">return</span>;
+    }
+    <span class="comment">// 调用proxy的interrupt函数</span>
+    mProxy<span class="subst">-&gt;</span>interrupt();
+    <span class="comment">// 调用audioflinger中track的pause操作</span>
+    mAudioTrack<span class="subst">-&gt;</span>pause();
+    <span class="comment">// Offload的场景，后面找例子学习</span>
+    <span class="keyword">if</span> (isOffloaded_l()) {
+        <span class="keyword">if</span> (mOutput != AUDIO_IO_HANDLE_NONE) {
+            <span class="comment">// OffloadThread发送hal pause是在threadloop中，时间保存在这边比较合适</span>
 
+            <span class="comment">// 一个offload output可以被两个相同配置audiotrack复用。</span>
+            <span class="comment">// 如果去查询一个paused track的时间，另外一个track一直在跑，可能会返回一个不正确的时间</span>
+            <span class="comment">// 鉴于此，我们就在paused的时候保存时间，resume的时候，返回这个值。</span>
+
+            uint32_t halFrames;
+            AudioSystem<span class="tag">::getRenderPosition</span>(mOutput, <span class="subst">&amp;</span>halFrames, <span class="subst">&amp;</span>mPausedPosition);
+        }
+    }
+}
+
+<span class="literal">void</span> ClientProxy<span class="tag">::interrupt</span>()
+{
+    audio_track_cblk_t* cblk = mCblk;
+    <span class="comment">// 如果之前flags中不存在CBLK_INTERRUPT，则去唤醒proxy等待获取buffer的操作，告诉client不用再填</span>
+    <span class="comment">// 充数据了</span>
+    <span class="keyword">if</span> (<span class="subst">!</span>(android_atomic_<span class="subst">or</span>(CBLK_INTERRUPT, <span class="subst">&amp;</span>cblk<span class="subst">-&gt;</span>mFlags) <span class="subst">&amp;</span> CBLK_INTERRUPT)) {
+        android_atomic_<span class="subst">or</span>(CBLK_FUTEX_WAKE, <span class="subst">&amp;</span>cblk<span class="subst">-&gt;</span>mFutex);
+        (<span class="literal">void</span>) syscall(__NR_futex, <span class="subst">&amp;</span>cblk<span class="subst">-&gt;</span>mFutex, mClientInServer ? FUTEX_WAKE_PRIVATE : FUTEX_WAKE,
+                <span class="number">1</span>);
+    }
+}
+</code></pre><p>上面的逻辑较为简单：</p>
+<ol>
+<li>改下audiotrack的内部状态</li>
+<li>告诉proxy可以终止问server端要数据了</li>
+<li>告诉audioflinger，这个track进入到pause状态了。</li>
+</ol>
+<p>1和2都在上面，3我们来看下：</p>
+<pre><code><span class="typename">void</span> <span class="string">AudioFlinger:</span>:<span class="string">PlaybackThread:</span>:<span class="string">Track:</span>:pause()
+{
+    sp&lt;ThreadBase&gt; thread = mThread.promote();
+    <span class="keyword">if</span> (thread != <span class="number">0</span>) {
+<span class="label">        Mutex:</span>:Autolock _l(thread-&gt;mLock);
+        PlaybackThread *playbackThread = (PlaybackThread *)thread.get();
+        <span class="keyword">switch</span> (mState) {
+        <span class="keyword">case</span> <span class="string">STOPPING_1:</span>
+        <span class="keyword">case</span> <span class="string">STOPPING_2:</span>
+            <span class="keyword">if</span> (!isOffloaded()) {
+                <span class="comment">// STOPPING_1和STOPPING_2是针对offload的场景</span>
+                <span class="keyword">break</span>;
+            }
+            <span class="comment">// Offloaded track正在排数据，在resume的时候我们需要继续排</span>
+            mResumeToStopping = <span class="literal">true</span>;
+            <span class="comment">// fall through...</span>
+        <span class="keyword">case</span> <span class="string">ACTIVE:</span>
+        <span class="keyword">case</span> <span class="string">RESUMING:</span>
+            <span class="comment">// 状态被改成了pausing了。</span>
+            mState = PAUSING;
+            playbackThread-&gt;broadcast_l();
+            <span class="keyword">break</span>;
+<span class="label">
+        default:</span>
+            <span class="keyword">break</span>;
+        }
+    }
+}
+</code></pre><p>上面的逻辑更简单，只是将mState设置为了PAUSING，然后就往对应的线程里面发送广播了。</p>
+<p>接下来，我们进入到消费者端来看针对pause场景，它是如何处理的。</p>
+<h3 id="消费者对于pause的处理">消费者对于pause的处理</h3><p>上面提到了往线程里面发送广播，它的实现如下:</p>
+<pre><code><span class="keyword">void</span> AudioFlinger::PlaybackThread::broadcast_l()
+{
+    <span class="comment">// 线程可能被阻塞等待异步信号来让它及时的操作状态的变化</span>
+    <span class="comment">// 为了防止我们当前触发一次唤醒，但是它可能会没被处理到，我们添加了mSignalPending来防止这种情况</span>
+    mSignalPending = <span class="literal">true</span>;
+    mWaitWorkCV.broadcast();
+}
+</code></pre><p>接下来，我们来看下<code>prepareTracks_l</code>是如何应付这个<code>pause</code>事件的,这次截取部分代码，因为完整的之前也一起看过了。<br>    // 当前state还是处于pausing，所以这边是可以进来的，此刻的minFrames为1<br>    if ((framesReady &gt;= minFrames) &amp;&amp; track-&gt;isReady() &amp;&amp;<br>            !track-&gt;isPaused() &amp;&amp; !track-&gt;isTerminated())<br>    {<br>        mixedTracks++;</p>
+<pre><code>    <span class="keyword">int</span> param = AudioMixer::VOLUME;
+    <span class="comment">// mFillingUpStatus为FS_ACTIVE</span>
+    <span class="keyword">if</span> (track-&gt;mFillingUpStatus == Track::FS_FILLED) {
+        <span class="comment">// no ramp for the first volume setting</span>
+        track-&gt;mFillingUpStatus = Track::FS_ACTIVE;
+        <span class="keyword">if</span> (track-&gt;mState == TrackBase::RESUMING) {
+            track-&gt;mState = TrackBase::ACTIVE;
+            param = AudioMixer::RAMP_VOLUME;
+        }
+        mAudioMixer-&gt;setParameter(name, AudioMixer::RESAMPLE, AudioMixer::RESET, <span class="keyword">NULL</span>);
+    } <span class="keyword">else</span> <span class="keyword">if</span> (cblk-&gt;mServer != <span class="number">0</span>) {
+        param = AudioMixer::RAMP_VOLUME;
+    }
+
+    <span class="comment">// compute volume for this track</span>
+    uint32_t vl, vr;       <span class="comment">// in U8.24 integer format</span>
+    <span class="keyword">float</span> vlf, vrf, vaf;   <span class="comment">// in [0.0, 1.0] float format</span>
+    <span class="comment">// 触发这边的逻辑，会将音量调整为0，可以实现ramp效果</span>
+    <span class="keyword">if</span> (track-&gt;isPausing() || mStreamTypes[track-&gt;streamType()].mute) {
+        vl = vr = <span class="number">0</span>;
+        vlf = vrf = vaf = <span class="number">0.</span>;
+        <span class="comment">// 将pausing设置为paused了，那下次，enable audiomixer的逻辑就没办法进入了。</span>
+        <span class="keyword">if</span> (track-&gt;isPausing()) {
+            track-&gt;setPaused();
+        }
+    } <span class="keyword">else</span> {
+    ...
+    }
+
+    <span class="comment">// reset retry count</span>
+    track-&gt;mRetryCount = kMaxTrackRetries;
+
+    <span class="keyword">if</span> (mMixerStatusIgnoringFastTracks != MIXER_TRACKS_READY ||
+            mixerStatus != MIXER_TRACKS_ENABLED) {
+        mixerStatus = MIXER_TRACKS_READY;
+    }
+} <span class="keyword">else</span> {
+    <span class="comment">// 第二次循环，此时state为paused了。</span>
+    <span class="comment">// 会进入到下面的逻辑中</span>
+    <span class="keyword">if</span> ((track-&gt;sharedBuffer() != <span class="number">0</span>) || track-&gt;isTerminated() ||
+            track-&gt;isStopped() || track-&gt;isPaused()) {
+        <span class="comment">// 会在继续填充latency的时间长度的空白数据，这个有优化空间</span>
+        size_t audioHALFrames = (latency_l() * mSampleRate) / <span class="number">1000</span>;
+        size_t framesWritten = mBytesWritten / mFrameSize;
+        <span class="comment">// 进入下面这个流程需要花点时间来排空latency的。</span>
+        <span class="keyword">if</span> (mStandby || track-&gt;presentationComplete(framesWritten, audioHALFrames)) {
+            <span class="comment">// 如果状态是stopped的话，我们会对这个track进行reset操作。</span>
+            <span class="keyword">if</span> (track-&gt;isStopped()) {
+                track-&gt;reset();
+            }
+            <span class="comment">// 移除active track list</span>
+            tracksToRemove-&gt;add(track);
+        }
+    } <span class="keyword">else</span> {
+        <span class="comment">// 这边的逻辑是对于underrun了。前面有看过了。</span>
+        ...
+    }
+    mAudioMixer-&gt;disable(name);
+}
+</code></pre><p>从上面的代码来梳理：</p>
+<ol>
+<li>paused是有两个状态的，一个是pausing一个是paused</li>
+<li>当设置paused的时候，都会先跑pausing的流程，这个是为了辅助实现volume ramp的，但是也同时意味着会多消耗小于等于framecount的缓冲区的数据。</li>
+<li>完全进入到paused状态之后，该track并没有第一时间被移除active track list，而是还要排latency时间长度的数据。</li>
+</ol>
+<p>到这边pause的流程就讲完了。</p>
+<h3 id="对于pause后mediaserver挂掉逻辑">对于pause后mediaserver挂掉逻辑</h3>
       
     </div>
 
@@ -329,9 +466,9 @@
       
         <div class="post-tags">
           
-            <a href="/tags/TTS/" rel="tag">#TTS</a>
+            <a href="/tags/Android/" rel="tag">#Android</a>
           
-            <a href="/tags/学习笔记/" rel="tag">#学习笔记</a>
+            <a href="/tags/AudioTrack/" rel="tag">#AudioTrack</a>
           
         </div>
       
@@ -340,17 +477,13 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2015/11/22/dagger2_second/" rel="next" title="Dagger 2 SubComponent">
-                <i class="fa fa-chevron-left"></i> Dagger 2 SubComponent
+              <a href="/2016/03/18/audiotrack_write/" rel="next" title="audiotrack的write流程">
+                <i class="fa fa-chevron-left"></i> audiotrack的write流程
               </a>
             
           </div>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2015/12/19/audioflinger_buffer/" rel="prev" title="AudioFlinger Thread中的几个buffer">
-                AudioFlinger Thread中的几个buffer <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -376,8 +509,8 @@
           
   <div class="comments" id="comments">
     
-      <div class="ds-thread" data-thread-key="2015/12/13/android_tts/"
-           data-title="Android TTS学习" data-url="http://thinks.me/2015/12/13/android_tts/">
+      <div class="ds-thread" data-thread-key="2016/03/21/audiotrack_pause/"
+           data-title="audiotrack的pause流程" data-url="http://thinks.me/2016/03/21/audiotrack_pause/">
       </div>
     
   </div>
@@ -480,7 +613,7 @@
               
             
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#简述"><span class="nav-number">1.</span> <span class="nav-text">简述</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#内容"><span class="nav-number">2.</span> <span class="nav-text">内容</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#简述"><span class="nav-number">1.</span> <span class="nav-text">简述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#正文"><span class="nav-number">2.</span> <span class="nav-text">正文</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#生产者这边对于pause的处理"><span class="nav-number">2.1.</span> <span class="nav-text">生产者这边对于pause的处理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#消费者对于pause的处理"><span class="nav-number">2.2.</span> <span class="nav-text">消费者对于pause的处理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#对于pause后mediaserver挂掉逻辑"><span class="nav-number">2.3.</span> <span class="nav-text">对于pause后mediaserver挂掉逻辑</span></a></li></ol></li></ol></div>
             
           </div>
           <div class="post-toc-indicator-bottom post-toc-indicator">
