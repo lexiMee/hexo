@@ -59,18 +59,18 @@
 
 
 
-<meta name="description" content="简述前面我们已经完成了，从audiotrack的创建、播放，接下来我们要看下暂停和停止，这节我们先来看下pause下面的场景，以及pause之后，发生mediaserver挂掉，audiotrack这边的逻辑。
+<meta name="description" content="简述前面我们已经完成了，从audiotrack的创建、播放，接下来我们要看下暂停和停止，这节我们先来看下pause下面的场景，以及pause之后，发生mediaserver挂掉，然后执行播放的逻辑，主要涉及到client端和server端。
 后面这部分是作为补充了，因为pause本身的东西比较少。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="audiotrack的pause流程">
 <meta property="og:url" content="http://thinks.me/2016/03/21/audiotrack_pause/index.html">
 <meta property="og:site_name" content="Thinking">
-<meta property="og:description" content="简述前面我们已经完成了，从audiotrack的创建、播放，接下来我们要看下暂停和停止，这节我们先来看下pause下面的场景，以及pause之后，发生mediaserver挂掉，audiotrack这边的逻辑。
+<meta property="og:description" content="简述前面我们已经完成了，从audiotrack的创建、播放，接下来我们要看下暂停和停止，这节我们先来看下pause下面的场景，以及pause之后，发生mediaserver挂掉，然后执行播放的逻辑，主要涉及到client端和server端。
 后面这部分是作为补充了，因为pause本身的东西比较少。">
-<meta property="og:updated_time" content="2016-03-21T06:57:42.845Z">
+<meta property="og:updated_time" content="2016-03-21T07:34:21.845Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="audiotrack的pause流程">
-<meta name="twitter:description" content="简述前面我们已经完成了，从audiotrack的创建、播放，接下来我们要看下暂停和停止，这节我们先来看下pause下面的场景，以及pause之后，发生mediaserver挂掉，audiotrack这边的逻辑。
+<meta name="twitter:description" content="简述前面我们已经完成了，从audiotrack的创建、播放，接下来我们要看下暂停和停止，这节我们先来看下pause下面的场景，以及pause之后，发生mediaserver挂掉，然后执行播放的逻辑，主要涉及到client端和server端。
 后面这部分是作为补充了，因为pause本身的东西比较少。">
 
 
@@ -241,7 +241,7 @@
               <i class="fa fa-calendar-o"></i>
             </span>
             <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2016-03-21T14:57:42+08:00" content="2016-03-21">
+            <time itemprop="dateCreated" datetime="2016-03-21T15:34:21+08:00" content="2016-03-21">
               2016-03-21
             </time>
           </span>
@@ -294,7 +294,7 @@
       
 
       
-        <h2 id="简述">简述</h2><p>前面我们已经完成了，从audiotrack的创建、播放，接下来我们要看下暂停和停止，这节我们先来看下pause下面的场景，以及pause之后，发生mediaserver挂掉，audiotrack这边的逻辑。</p>
+        <h2 id="简述">简述</h2><p>前面我们已经完成了，从audiotrack的创建、播放，接下来我们要看下暂停和停止，这节我们先来看下pause下面的场景，以及pause之后，发生mediaserver挂掉，然后执行播放的逻辑，主要涉及到client端和server端。</p>
 <p>后面这部分是作为补充了，因为pause本身的东西比较少。</p>
 <a id="more"></a>
 <h2 id="正文">正文</h2><p>这个依然会牵扯到生产者和消费者。</p>
