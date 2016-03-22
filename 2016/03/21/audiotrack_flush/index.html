@@ -1,0 +1,1178 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css"/>
+
+
+
+
+  <link href="//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=0.5.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Android,AudioTrack," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="Thinking" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=0.5.0" />
+
+
+
+
+
+
+<meta name="description" content="简述">
+<meta property="og:type" content="article">
+<meta property="og:title" content="audiotrack的Marker/PeriodPosition/flush流程">
+<meta property="og:url" content="http://thinks.me/2016/03/21/audiotrack_flush/index.html">
+<meta property="og:site_name" content="Thinking">
+<meta property="og:description" content="简述">
+<meta property="og:updated_time" content="2016-03-22T07:39:53.127Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="audiotrack的Marker/PeriodPosition/flush流程">
+<meta name="twitter:description" content="简述">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Pisces',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 0,
+      author: '博主'
+    }
+  };
+</script>
+
+  <title> audiotrack的Marker/PeriodPosition/flush流程 | Thinking </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?1a17ff812788f97b5ec90bee6eba907f";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Thinking</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle"></p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-home fa-fw"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-th fa-fw"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-archive fa-fw"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-tags fa-fw"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                audiotrack的Marker/PeriodPosition/flush流程
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2016-03-21T17:40:16+08:00" content="2016-03-21">
+              2016-03-21
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/android开发/" itemprop="url" rel="index">
+                    <span itemprop="name">android开发</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2016/03/21/audiotrack_flush/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/03/21/audiotrack_flush/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="简述">简述</h2><a id="more"></a>
+<h2 id="正文">正文</h2><p>代码中的一些变量的存在甚至线程的存在，它们都是有其存在的意义的，为了能够弄清楚这些变量，我们有必要来研究各个函数的实现。</p>
+<p>markerPosition是只会触发一次回调的位置<br>periodposition是周期性的触发回调，这个位置值就是每次需要累加的周期值。</p>
+<h3 id="markerPosition/PeriodPosition">markerPosition/PeriodPosition</h3><p>markerPosition只通知你一次，PeriodPosition是隔指定帧数通知。<br>但是这个通知是不太准确的，因为这个跟底层一次性消费的数量有一定关系的<br>对于PeriodPosition，如果你给100，但是底层一次获取300，那你会一次性收到三次的回调，而且每次回调去获取position都是300.<br>对于markerPosition，也是存在一样的情况，只是它只会通知一次。</p>
+<h4 id="用例代码">用例代码</h4><p>java层的代码</p>
+<pre><code>mAudioTrack.setNotificationMarkerPosition(<span class="number">500</span>);
+mAudioTrack.setPositionNotificationPeriod(<span class="number">200</span>);
+mAudioTrack.setPlaybackPositionUpdateListener(mPositionUpdate);
+AudioTrack.OnPlaybackPositionUpdateListener mPositionUpdate = <span class="keyword">new</span> AudioTrack.OnPlaybackPositionUpdateListener() {
+
+    <span class="annotation">@Override</span>
+    <span class="keyword">public</span> <span class="function"><span class="keyword">void</span> <span class="title">onMarkerReached</span><span class="params">(AudioTrack track)</span> </span>{
+        Log.d(TAG, <span class="string">"onMarkerReached "</span> + track.getPlaybackHeadPosition());
+    }
+
+    <span class="annotation">@Override</span>
+    <span class="keyword">public</span> <span class="function"><span class="keyword">void</span> <span class="title">onPeriodicNotification</span><span class="params">(AudioTrack track)</span> </span>{
+        Log.d(TAG, <span class="string">"onPeriodicNotification "</span> + track.getPlaybackHeadPosition());
+    }
+};
+</code></pre><p>上面是用例代码，就是创建监听器，然后注册到audiotrack中。</p>
+<h4 id="AudioTrackThread相关部分分析">AudioTrackThread相关部分分析</h4><p>要看这两个Position的实现之前，我们先来看下AudioTrackThread的部分代码。<br>前面我们在看audiotrack的创建、play的流程中就有看到这个Thread是会被跑起来了。<br>play中是通过调用<code>resume</code>来让Thread跑起来的</p>
+<pre><code><span class="keyword">void</span> AudioTrack::AudioTrackThread::resume()
+{
+    <span class="function">AutoMutex <span class="title">_l</span><span class="params">(mMyLock)</span></span>;
+    <span class="comment">// 先确定要绕过内部pause</span>
+    mIgnoreNextPausedInt = <span class="keyword">true</span>;
+    <span class="keyword">if</span> (mPaused || mPausedInt) {
+        <span class="comment">// 取消pause状态</span>
+        mPaused = <span class="keyword">false</span>;
+        mPausedInt = <span class="keyword">false</span>;
+        <span class="comment">// 唤醒等待的线程</span>
+        mMyCond.signal();
+    }
+}
+</code></pre><p>上面简单的完成了唤醒线程的操作，但是前提必须是线程的状态处于pause或者是内部的pause状态<br>上面的几个变量我们在线程的<code>threadLoop</code>中再讲解：</p>
+<pre><code><span class="keyword">bool</span> AudioTrack::AudioTrackThread::threadLoop()
+{
+    {
+        AutoMutex _l(mMyLock);
+        <span class="comment">// 线程刚创建的时候，mPaused是为true的，所以会阻塞在这，等resume的时候，会被设置为false，</span>
+        <span class="comment">// 并且唤醒wait。mPaused这个变量表示的是外部pause，就是通过api来控制的</span>
+        <span class="keyword">if</span> (mPaused) {
+            mMyCond.wait(mMyLock);
+            <span class="comment">// 直接返回了。调用该函数的地方会去检测exitPending()</span>
+            <span class="keyword">return</span> <span class="literal">true</span>;
+        }
+        <span class="comment">// mIgnoreNextPausedInt这个变量存在的意义是为了绕过内部的pause</span>
+        <span class="keyword">if</span> (mIgnoreNextPausedInt) {
+            mIgnoreNextPausedInt = <span class="literal">false</span>;
+            mPausedInt = <span class="literal">false</span>;
+        }
+        <span class="comment">// mPausedInt这个变量相对于上面的mPaused，它是线程内部的控制等待还是继续的。</span>
+        <span class="comment">// 因为某些场景我们是不需要该线程一直在轮训的。</span>
+        <span class="keyword">if</span> (mPausedInt) {
+            <span class="keyword">if</span> (mPausedNs &gt; <span class="number">0</span>) {
+                (<span class="keyword">void</span>) mMyCond.waitRelative(mMyLock, mPausedNs);
+            } <span class="keyword">else</span> {
+                mMyCond.wait(mMyLock);
+            }
+            mPausedInt = <span class="literal">false</span>;
+            <span class="comment">// 唤醒之后，也是立即返回</span>
+            <span class="keyword">return</span> <span class="literal">true</span>;
+        }
+    }
+    <span class="keyword">if</span> (exitPending()) {
+        <span class="keyword">return</span> <span class="literal">false</span>;
+    }
+    <span class="comment">// 这个函数后面详解</span>
+    <span class="keyword">nsecs_t</span> ns = mReceiver.processAudioBuffer();
+    <span class="keyword">switch</span> (ns) {
+    <span class="keyword">case</span> <span class="number">0</span>:
+        <span class="keyword">return</span> <span class="literal">true</span>;
+    <span class="comment">// 如果检测到当前track不处在ACTIVE，则进入内部pause，pauseInternal函数只是设置变量和时间</span>
+    <span class="comment">// 会在开头的地方发生waiting</span>
+    <span class="keyword">case</span> NS_INACTIVE:
+        pauseInternal();
+        <span class="keyword">return</span> <span class="literal">true</span>;
+    <span class="comment">// 这个线程就算over了。</span>
+    <span class="keyword">case</span> NS_NEVER:
+        <span class="keyword">return</span> <span class="literal">false</span>;
+    <span class="comment">// 时间上没有强制，那就随便给一个最大的，然后进入内部pause了。</span>
+    <span class="keyword">case</span> NS_WHENEVER:
+        <span class="comment">// Event driven: call wake() when callback notifications conditions change.</span>
+        ns = INT64_MAX;
+        <span class="comment">// fall through</span>
+    <span class="keyword">default</span>:
+        pauseInternal(ns);
+        <span class="keyword">return</span> <span class="literal">true</span>;
+    }
+}
+</code></pre><p>从这个函数中,我们知道了循环的逻辑:</p>
+<ol>
+<li>当前是否pause,是的话waiting,被唤醒之后直接返回,进入下一次循环</li>
+<li>获取数据,同时返回一个时间</li>
+<li>根据时间信息来确定是退出线程还是内部pause,或者直接进行下一次的循环</li>
+</ol>
+<p>pause有分内部pause和外部pause，内部pause的话，主要是根据目前内部状态来确定是否需要进行pause，而外部pause的话，则是别人调用audiotrack的api来触发的。</p>
+<p>接下来我们来看函数<code>processAudioBuffer</code>，我们去掉了很多跟这次分析无关的部分</p>
+<pre><code><span class="keyword">nsecs_t</span> AudioTrack::processAudioBuffer()
+{
+    <span class="keyword">if</span> (mCblk == <span class="literal">NULL</span>) {
+        <span class="keyword">return</span> NS_NEVER;
+    }
+
+    mLock.lock();
+
+    <span class="comment">// Can only reference mCblk while locked</span>
+    <span class="keyword">int32_t</span> flags = android_atomic_and(
+        ~(CBLK_UNDERRUN | CBLK_LOOP_CYCLE | CBLK_LOOP_FINAL | CBLK_BUFFER_END), &amp;mCblk-&gt;mFlags);
+
+    <span class="keyword">if</span> (flags &amp; CBLK_INVALID) {
+        <span class="comment">// 对于offloaded tracks函数restoreTrack_l只是更新sequence和请缓存。这边我们不做退出，而是</span>
+        <span class="comment">// 通知上层去recreate这个track</span>
+        <span class="keyword">if</span> (!isOffloadedOrDirect_l() || (mSequence == mObservedSequence)) {
+            <span class="keyword">status_t</span> status __unused = restoreTrack_l(<span class="string">"processAudioBuffer"</span>);
+        }
+    }
+    <span class="comment">// waitStreamEnd这个变量的存在就是为STATE_STOPPING存在的</span>
+    <span class="keyword">bool</span> waitStreamEnd = mState == STATE_STOPPING;
+    <span class="comment">// 当前是否处于ACTIVE状态。</span>
+    <span class="keyword">bool</span> active = mState == STATE_ACTIVE;
+
+    <span class="comment">// Manage underrun callback, must be done under lock to avoid race with releaseBuffer()</span>
+    <span class="keyword">bool</span> newUnderrun = <span class="literal">false</span>;
+    <span class="keyword">if</span> (flags &amp; CBLK_UNDERRUN) {
+        <span class="keyword">if</span> (!mInUnderrun) {
+            mInUnderrun = <span class="literal">true</span>;
+            newUnderrun = <span class="literal">true</span>;
+        }
+    }
+
+    <span class="comment">// 获取当前的server的位置</span>
+    <span class="keyword">size_t</span> position = updateAndGetPosition_l();
+
+    <span class="comment">// marker callback的管理</span>
+    <span class="keyword">bool</span> markerReached = <span class="literal">false</span>;
+    <span class="keyword">size_t</span> markerPosition = mMarkerPosition;
+    <span class="comment">// 从这边就可以看出marker只会触发一次回调，一旦触发mMarkerReached将被设置为true。</span>
+    <span class="keyword">if</span> (!mMarkerReached &amp;&amp; (markerPosition &gt; <span class="number">0</span>) &amp;&amp; (position &gt;= markerPosition)) {
+        mMarkerReached = markerReached = <span class="literal">true</span>;
+    }
+
+    <span class="comment">// 计算需要触发多少次的callback</span>
+    <span class="keyword">size_t</span> newPosCount = <span class="number">0</span>;
+    <span class="keyword">size_t</span> newPosition = mNewPosition;
+    <span class="keyword">size_t</span> updatePeriod = mUpdatePeriod;
+    <span class="keyword">if</span> (updatePeriod &gt; <span class="number">0</span> &amp;&amp; position &gt;= newPosition) {
+        newPosCount = ((position - newPosition) / updatePeriod) + <span class="number">1</span>;
+        mNewPosition += updatePeriod * newPosCount;
+    }
+
+    <span class="keyword">uint32_t</span> sampleRate = mSampleRate;
+    <span class="keyword">float</span> speed = mPlaybackRate.mSpeed;
+    <span class="keyword">const</span> <span class="keyword">uint32_t</span> notificationFrames = mNotificationFramesAct;
+    <span class="keyword">if</span> (mRefreshRemaining) {
+        mRefreshRemaining = <span class="literal">false</span>;
+        mRemainingFrames = notificationFrames;
+        mRetryOnPartialBuffer = <span class="literal">false</span>;
+    }
+    <span class="keyword">size_t</span> misalignment = mProxy-&gt;getMisalignment();
+    <span class="keyword">uint32_t</span> sequence = mSequence;
+    sp&lt;AudioTrackClientProxy&gt; proxy = mProxy;
+
+    mLock.unlock();
+
+    <span class="comment">// get anchor time to account for callbacks.</span>
+    <span class="keyword">const</span> <span class="keyword">nsecs_t</span> timeBeforeCallbacks = systemTime();
+
+    <span class="comment">// 开始触发各种类型的回调了</span>
+    <span class="keyword">if</span> (newUnderrun) {
+        mCbf(EVENT_UNDERRUN, mUserData, <span class="literal">NULL</span>);
+    }
+    <span class="keyword">while</span> (loopCountNotifications &gt; <span class="number">0</span>) {
+        mCbf(EVENT_LOOP_END, mUserData, <span class="literal">NULL</span>);
+        --loopCountNotifications;
+    }
+    <span class="keyword">if</span> (flags &amp; CBLK_BUFFER_END) {
+        mCbf(EVENT_BUFFER_END, mUserData, <span class="literal">NULL</span>);
+    }
+    <span class="comment">// 我们关注的~</span>
+    <span class="keyword">if</span> (markerReached) {
+        mCbf(EVENT_MARKER, mUserData, &amp;markerPosition);
+    }
+    <span class="comment">// 我们关注的~</span>
+    <span class="keyword">while</span> (newPosCount &gt; <span class="number">0</span>) {
+        <span class="keyword">size_t</span> temp = newPosition;
+        mCbf(EVENT_NEW_POS, mUserData, &amp;temp);
+        newPosition += updatePeriod;
+        newPosCount--;
+    }
+    <span class="keyword">if</span> (mObservedSequence != sequence) {
+        mObservedSequence = sequence;
+        mCbf(EVENT_NEW_IAUDIOTRACK, mUserData, <span class="literal">NULL</span>);
+        <span class="comment">// for offloaded tracks, 我们需要等待上层来创建</span>
+        <span class="keyword">if</span> (isOffloadedOrDirect()) {
+            <span class="keyword">return</span> NS_INACTIVE;
+        }
+    }
+
+    <span class="comment">// 如果当前state不为active，需要等待到别人再触发该线程唤醒</span>
+    <span class="keyword">if</span> (!active) {
+        <span class="keyword">return</span> NS_INACTIVE;
+    }
+
+    <span class="comment">// 通过帧的位置来计算需要休眠的时间长度。从下面的计算中，我们就可以知道，这个也是个估值。</span>
+    <span class="keyword">uint32_t</span> minFrames = ~<span class="number">0</span>;
+    <span class="keyword">if</span> (!markerReached &amp;&amp; position &lt; markerPosition) {
+        minFrames = markerPosition - position;
+    }
+    <span class="keyword">if</span> (loopPeriod &gt; <span class="number">0</span> &amp;&amp; loopPeriod &lt; minFrames) {
+        <span class="comment">// loopPeriod is already adjusted for actual position.</span>
+        minFrames = loopPeriod;
+    }
+    <span class="keyword">if</span> (updatePeriod &gt; <span class="number">0</span>) {
+        minFrames = min(minFrames, <span class="keyword">uint32_t</span>(newPosition - position));
+    }
+
+    <span class="comment">// If &gt; 0, poll periodically to recover from a stuck server.  A good value is 2.</span>
+    <span class="keyword">static</span> <span class="keyword">const</span> <span class="keyword">uint32_t</span> kPoll = <span class="number">0</span>;
+    <span class="keyword">if</span> (kPoll &gt; <span class="number">0</span> &amp;&amp; mTransfer == TRANSFER_CALLBACK &amp;&amp; kPoll * notificationFrames &lt; minFrames) {
+        minFrames = kPoll * notificationFrames;
+    }
+
+    <span class="comment">// This "fudge factor" avoids soaking CPU, and compensates for late progress by server</span>
+    <span class="keyword">static</span> <span class="keyword">const</span> <span class="keyword">nsecs_t</span> kWaitPeriodNs = WAIT_PERIOD_MS * <span class="number">1000000L</span>L;
+    <span class="keyword">const</span> <span class="keyword">nsecs_t</span> timeAfterCallbacks = systemTime();
+
+    <span class="comment">// Convert frame units to time units</span>
+    <span class="keyword">nsecs_t</span> ns = NS_WHENEVER;
+    <span class="comment">// 如果minFrames没被修改过的话，那ns就为NS_WHENEVER，如果被修改过就发生改变</span>
+    <span class="keyword">if</span> (minFrames != (<span class="keyword">uint32_t</span>) ~<span class="number">0</span>) {
+        ns = framesToNanoseconds(minFrames, sampleRate, speed) + kWaitPeriodNs;
+        ns -= (timeAfterCallbacks - timeBeforeCallbacks);  <span class="comment">// account for callback time</span>
+        <span class="keyword">if</span> (ns &lt; <span class="number">0</span>) ns = <span class="number">0</span>;
+    }
+
+    <span class="comment">// If not supplying data by EVENT_MORE_DATA, then we're done</span>
+    <span class="comment">// 如果不是采用TRANSFER_CALLBACK，就在这边返回了。对于我们java下面的stream的track就到这边了。</span>
+    <span class="keyword">if</span> (mTransfer != TRANSFER_CALLBACK) {
+        <span class="keyword">return</span> ns;
+    }
+    ...
+}
+</code></pre><p>对于该函数我们需要关注的：</p>
+<ol>
+<li>更新了server position之后，就开始进行markerposition和periodposition的判断和计算</li>
+<li>然后触发回调</li>
+<li>计算下次触发markerposition或者periodposition所需要的时间</li>
+<li>如果transfer不为callback类型，我们就直接返回这个时间。那在这个时间段内，线程就可以安心的去休息了</li>
+</ol>
+<p>接下来我们来看<code>setPositionUpdatePeriod</code>和<code>setMarkerPosition</code></p>
+<pre><code><span class="keyword">status_t</span> AudioTrack::setPositionUpdatePeriod(<span class="keyword">uint32_t</span> updatePeriod)
+{
+    <span class="comment">// 不可用于offload和direct</span>
+    <span class="keyword">if</span> (mCbf == <span class="literal">NULL</span> || isOffloadedOrDirect()) {
+        <span class="keyword">return</span> INVALID_OPERATION;
+    }
+
+    <span class="function">AutoMutex <span class="title">lock</span><span class="params">(mLock)</span></span>;
+    <span class="comment">// 计算下一次的位置和更新变量mUpdatePeriod</span>
+    mNewPosition = updateAndGetPosition_l() + updatePeriod;
+    mUpdatePeriod = updatePeriod;
+
+    sp&lt;AudioTrackThread&gt; t = mAudioTrackThread;
+    <span class="keyword">if</span> (t != <span class="number">0</span>) {
+        <span class="comment">// 如果线程在休眠，那我们就唤醒它。让它也赶紧更新确认下。</span>
+        t-&gt;wake();
+    }
+    <span class="keyword">return</span> NO_ERROR;
+}
+
+<span class="keyword">status_t</span> AudioTrack::setMarkerPosition(<span class="keyword">uint32_t</span> marker)
+{
+    <span class="keyword">if</span> (mCbf == <span class="literal">NULL</span> || isOffloadedOrDirect()) {
+        <span class="keyword">return</span> INVALID_OPERATION;
+    }
+
+    <span class="function">AutoMutex <span class="title">lock</span><span class="params">(mLock)</span></span>;
+    <span class="comment">// 更新marker的位置和mMarkerReached设置为false</span>
+    mMarkerPosition = marker;
+    mMarkerReached = <span class="literal">false</span>;
+
+    sp&lt;AudioTrackThread&gt; t = mAudioTrackThread;
+    <span class="keyword">if</span> (t != <span class="number">0</span>) {
+        <span class="comment">// 如果线程在休眠，那我们就唤醒它。让它也赶紧更新确认下。</span>
+        t-&gt;wake();
+    }
+    <span class="keyword">return</span> NO_ERROR;
+}
+</code></pre><p>上面两函数的逻辑基本一致，只是重置下相关变量，然后唤醒线程。<br>我们来看下<code>wake</code>的实现</p>
+<pre><code><span class="keyword">void</span> AudioTrack::AudioTrackThread::wake()
+{
+    AutoMutex _l(mMyLock);
+    <span class="comment">// 当前必须不能为pause</span>
+    <span class="keyword">if</span> (!mPaused) {
+        mIgnoreNextPausedInt = <span class="literal">true</span>;
+        <span class="comment">// 必须是处在内部pause的场景，并且时间是大于0的</span>
+        <span class="keyword">if</span> (mPausedInt &amp;&amp; mPausedNs &gt; <span class="number">0</span>) {
+            <span class="comment">// 更新内部pause状态，然后唤醒线程</span>
+            mPausedInt = <span class="literal">false</span>;
+            mMyCond.signal();
+        }
+    }
+}
+</code></pre><p><code>wake</code>触发生效的前提是，当前Thread不能为pause，而是处于内部pause并且必须保证休眠的时间大于0，这个时候才会去唤醒Thread。</p>
+<p>我们这边在总结下AudioTrackThread的逻辑：</p>
+<p>在尚未设置markerPosition和periodposition之前，AudioTrackThread一直处在running的状态，只是休眠的时间比较长，当设置了markerPosition或者periodposition之后，线程就会被从休眠中唤醒，然后去计算下一次唤醒的时间，一旦时间到了，就会触发回调。</p>
+<p>这个就是在transfer不为callback场景下，使用到AudioTrackThread的地方了。</p>
+<h3 id="flush">flush</h3><p>可以直接从native这边开始看：</p>
+<pre><code><span class="keyword">void</span> AudioTrack::flush()
+{
+    <span class="comment">// 不适用与share memory</span>
+    <span class="keyword">if</span> (mSharedBuffer != <span class="number">0</span>) {
+        <span class="keyword">return</span>;
+    }
+    <span class="function">AutoMutex <span class="title">lock</span><span class="params">(mLock)</span></span>;
+    <span class="comment">// 该track不能是STATE_ACTIVE或者STATE_FLUSHED。其实就是要PAUSE或者STOP的场景</span>
+    <span class="keyword">if</span> (mState == STATE_ACTIVE || mState == STATE_FLUSHED) {
+        <span class="keyword">return</span>;
+    }
+    flush_l();
+}
+
+<span class="keyword">void</span> AudioTrack::flush_l()
+{
+    ALOG_ASSERT(mState != STATE_ACTIVE);
+
+    <span class="comment">// clear playback marker and periodic update counter</span>
+    <span class="comment">// 将marker和periodposition都设置为清空</span>
+    mMarkerPosition = <span class="number">0</span>;
+    mMarkerReached = <span class="literal">false</span>;
+    mUpdatePeriod = <span class="number">0</span>;
+    mRefreshRemaining = <span class="literal">true</span>;
+    <span class="comment">// 状态更新为STATE_FLUSHED</span>
+    mState = STATE_FLUSHED;
+    mReleased = <span class="number">0</span>;
+    <span class="comment">// 如果是offload的话，去中断obtainBuffer的操作</span>
+    <span class="keyword">if</span> (isOffloaded_l()) {
+        mProxy-&gt;interrupt();
+    }
+    <span class="comment">// 代理去flush，IAudioTrack去flush</span>
+    mProxy-&gt;flush();
+    mAudioTrack-&gt;flush();
+}
+
+<span class="keyword">void</span> AudioTrackClientProxy::flush()
+{
+    <span class="comment">// This works for mFrameCountP2 &lt;= 2^30</span>
+    <span class="comment">// 两倍的P2帧大小</span>
+    <span class="keyword">size_t</span> increment = mFrameCountP2 &lt;&lt; <span class="number">1</span>;
+    <span class="keyword">size_t</span> mask = increment - <span class="number">1</span>;
+    <span class="keyword">audio_track_cblk_t</span>* cblk = mCblk;
+    <span class="comment">// mFlush is 32 bits concatenated as [ flush_counter ] [ newfront_offset ]</span>
+    <span class="comment">// Should newFlush = cblk-&gt;u.mStreaming.mRear?  Only problem is</span>
+    <span class="comment">// if you want to flush twice to the same rear location after a 32 bit wrap.</span>
+    <span class="comment">// mFlush是由flush_counter 和 newfront_offset拼接起来的</span>
+    ((cblk-&gt;u.mStreaming.mFlush &amp; ~mask) + increment) 这个计算出来就相当于几倍的p2+<span class="number">1</span>。
+    <span class="keyword">int32_t</span> newFlush = (cblk-&gt;u.mStreaming.mRear &amp; mask) |
+                        ((cblk-&gt;u.mStreaming.mFlush &amp; ~mask) + increment);
+    android_atomic_release_store(newFlush, &amp;cblk-&gt;u.mStreaming.mFlush);
+}
+
+
+<span class="keyword">void</span> AudioFlinger::PlaybackThread::Track::flush()
+{
+    ALOGV(<span class="string">"flush(%d)"</span>, mName);
+    sp&lt;ThreadBase&gt; thread = mThread.promote();
+    <span class="keyword">if</span> (thread != <span class="number">0</span>) {
+        Mutex::Autolock _l(thread-&gt;mLock);
+        PlaybackThread *playbackThread = (PlaybackThread *)thread.get();
+
+        <span class="keyword">if</span> (isOffloaded()) {
+            <span class="comment">// If offloaded we allow flush during any state except terminated</span>
+            <span class="comment">// and keep the track active to avoid problems if user is seeking</span>
+            <span class="comment">// rapidly and underlying hardware has a significant delay handling</span>
+            <span class="comment">// a pause</span>
+            <span class="keyword">if</span> (isTerminated()) {
+                <span class="keyword">return</span>;
+            }
+
+            ALOGV(<span class="string">"flush: offload flush"</span>);
+            reset();
+
+            <span class="keyword">if</span> (mState == STOPPING_1 || mState == STOPPING_2) {
+                ALOGV(<span class="string">"flushed in STOPPING_1 or 2 state, change state to ACTIVE"</span>);
+                mState = ACTIVE;
+            }
+
+            <span class="keyword">if</span> (mState == ACTIVE) {
+                ALOGV(<span class="string">"flush called in active state, resetting buffer time out retry count"</span>);
+                mRetryCount = PlaybackThread::kMaxTrackRetriesOffload;
+            }
+
+            mFlushHwPending = <span class="literal">true</span>;
+            mResumeToStopping = <span class="literal">false</span>;
+        } <span class="keyword">else</span> {
+            <span class="keyword">if</span> (mState != STOPPING_1 &amp;&amp; mState != STOPPING_2 &amp;&amp; mState != STOPPED &amp;&amp;
+                    mState != PAUSED &amp;&amp; mState != PAUSING &amp;&amp; mState != IDLE &amp;&amp; mState != FLUSHED) {
+                <span class="keyword">return</span>;
+            }
+            <span class="comment">// No point remaining in PAUSED state after a flush =&gt; go to</span>
+            <span class="comment">// FLUSHED state</span>
+            mState = FLUSHED;
+            <span class="comment">// do not reset the track if it is still in the process of being stopped or paused.</span>
+            <span class="comment">// this will be done by prepareTracks_l() when the track is stopped.</span>
+            <span class="comment">// prepareTracks_l() will see mState == FLUSHED, then</span>
+            <span class="comment">// remove from active track list, reset(), and trigger presentation complete</span>
+            <span class="keyword">if</span> (isDirect()) {
+                mFlushHwPending = <span class="literal">true</span>;
+            }
+            <span class="keyword">if</span> (playbackThread-&gt;mActiveTracks.indexOf(<span class="keyword">this</span>) &lt; <span class="number">0</span>) {
+                reset();
+            }
+        }
+        <span class="comment">// Prevent flush being lost if the track is flushed and then resumed</span>
+        <span class="comment">// before mixer thread can run. This is important when offloading</span>
+        <span class="comment">// because the hardware buffer could hold a large amount of audio</span>
+        playbackThread-&gt;broadcast_l();
+    }
+}
+</code></pre>
+      
+    </div>
+
+    <div>
+      
+        
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Android/" rel="tag">#Android</a>
+          
+            <a href="/tags/AudioTrack/" rel="tag">#AudioTrack</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/03/21/audiotrack_pause_stop/" rel="next" title="audiotrack的pause\stop流程">
+                <i class="fa fa-chevron-left"></i> audiotrack的pause\stop流程
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div class="ds-thread" data-thread-key="2016/03/21/audiotrack_flush/"
+           data-title="audiotrack的Marker/PeriodPosition/flush流程" data-url="http://thinks.me/2016/03/21/audiotrack_flush/">
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.png"
+               alt="LexiMee" />
+          <p class="site-author-name" itemprop="name">LexiMee</p>
+          <p class="site-description motion-element" itemprop="description">leave me alone</p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">12</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">2</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">9</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        <div class="links-of-blogroll motion-element">
+          
+        </div>
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator">
+            <i class="fa fa-angle-double-up"></i>
+          </div>
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#简述"><span class="nav-number">1.</span> <span class="nav-text">简述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#正文"><span class="nav-number">2.</span> <span class="nav-text">正文</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#markerPosition/PeriodPosition"><span class="nav-number">2.1.</span> <span class="nav-text">markerPosition/PeriodPosition</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#用例代码"><span class="nav-number">2.1.1.</span> <span class="nav-text">用例代码</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#AudioTrackThread相关部分分析"><span class="nav-number">2.1.2.</span> <span class="nav-text">AudioTrackThread相关部分分析</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#flush"><span class="nav-number">2.2.</span> <span class="nav-text">flush</span></a></li></ol></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator">
+            <i class="fa fa-angle-double-down"></i>
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2015 - 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">LexiMee</span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="http://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Pisces
+  </a>
+</div>
+
+
+
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+
+  
+
+
+
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=0.5.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=0.5.0"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=0.5.0"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=0.5.0"></script>
+
+
+
+  
+  
+<script type="text/javascript" src="/js/src/scrollspy.js?v=0.5.0"></script>
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 1 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = NexT.utils.escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    NexT.motion.middleWares.sidebar = function () {
+      var $tocContent = $('.post-toc-content');
+
+      if (CONFIG.scheme !== 'Pisces' && (CONFIG.sidebar.display === 'post' || CONFIG.sidebar.display === 'always')) {
+        if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+          NexT.utils.displaySidebar();
+        }
+      }
+    };
+  });
+</script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=0.5.0"></script>
+
+
+
+  
+
+  
+    
+  
+
+  <script type="text/javascript">
+    var duoshuoQuery = {short_name:"thinks"};
+    (function() {
+      var ds = document.createElement('script');
+      ds.type = 'text/javascript';ds.async = true;
+      ds.id = 'duoshuo-script';
+      ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+      ds.charset = 'UTF-8';
+      (document.getElementsByTagName('head')[0]
+      || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+  </script>
+
+  
+    
+  
+
+
+
+
+
+  
+  
+  
+
+  
+
+
+</body>
+</html>
