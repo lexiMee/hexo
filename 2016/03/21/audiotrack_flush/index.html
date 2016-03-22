@@ -59,16 +59,16 @@
 
 
 
-<meta name="description" content="简述">
+<meta name="description" content="简述之前我们看到代码中有一些marker、period、flush等相关的，但是还没搞清楚它们的作用，这篇文章，我们一起来看下吧。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="audiotrack的Marker/PeriodPosition/flush流程">
 <meta property="og:url" content="http://thinks.me/2016/03/21/audiotrack_flush/index.html">
 <meta property="og:site_name" content="Thinking">
-<meta property="og:description" content="简述">
+<meta property="og:description" content="简述之前我们看到代码中有一些marker、period、flush等相关的，但是还没搞清楚它们的作用，这篇文章，我们一起来看下吧。">
 <meta property="og:updated_time" content="2016-03-22T07:39:57.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="audiotrack的Marker/PeriodPosition/flush流程">
-<meta name="twitter:description" content="简述">
+<meta name="twitter:description" content="简述之前我们看到代码中有一些marker、period、flush等相关的，但是还没搞清楚它们的作用，这篇文章，我们一起来看下吧。">
 
 
 
@@ -291,7 +291,8 @@
       
 
       
-        <h2 id="简述">简述</h2><a id="more"></a>
+        <h2 id="简述">简述</h2><p>之前我们看到代码中有一些marker、period、flush等相关的，但是还没搞清楚它们的作用，这篇文章，我们一起来看下吧。</p>
+<a id="more"></a>
 <h2 id="正文">正文</h2><p>代码中的一些变量的存在甚至线程的存在，它们都是有其存在的意义的，为了能够弄清楚这些变量，我们有必要来研究各个函数的实现。</p>
 <p>markerPosition是只会触发一次回调的位置<br>periodposition是周期性的触发回调，这个位置值就是每次需要累加的周期值。</p>
 <h3 id="markerPosition/PeriodPosition">markerPosition/PeriodPosition</h3><p>markerPosition只通知你一次，PeriodPosition是隔指定帧数通知。<br>但是这个通知是不太准确的，因为这个跟底层一次性消费的数量有一定关系的<br>对于PeriodPosition，如果你给100，但是底层一次获取300，那你会一次性收到三次的回调，而且每次回调去获取position都是300.<br>对于markerPosition，也是存在一样的情况，只是它只会通知一次。</p>
@@ -600,7 +601,9 @@ AudioTrack.OnPlaybackPositionUpdateListener mPositionUpdate = <span class="keywo
 <p>我们这边在总结下AudioTrackThread的逻辑：</p>
 <p>在尚未设置markerPosition和periodposition之前，AudioTrackThread一直处在running的状态，只是休眠的时间比较长，当设置了markerPosition或者periodposition之后，线程就会被从休眠中唤醒，然后去计算下一次唤醒的时间，一旦时间到了，就会触发回调。</p>
 <p>这个就是在transfer不为callback场景下，使用到AudioTrackThread的地方了。</p>
-<h3 id="flush">flush</h3><p>可以直接从native这边开始看：</p>
+<h3 id="flush">flush</h3><p>flush的目的是将已经写到mcblk buffer中的数据进行清空，其实就是重置下front到rear。</p>
+<p>但是实现上还是有一些搞不是很清楚。</p>
+<p>可以直接从native这边开始看：</p>
 <pre><code><span class="keyword">void</span> AudioTrack::flush()
 {
     <span class="comment">// 不适用与share memory</span>
@@ -614,8 +617,8 @@ AudioTrack.OnPlaybackPositionUpdateListener mPositionUpdate = <span class="keywo
     }
     flush_l();
 }
-
-<span class="keyword">void</span> AudioTrack::flush_l()
+</code></pre><p>这个函数就是过滤一些状态，从这边看出来，flush生效必须state不为active和flush。</p>
+<pre><code><span class="keyword">void</span> AudioTrack::flush_l()
 {
     ALOG_ASSERT(mState != STATE_ACTIVE);
 
@@ -636,83 +639,127 @@ AudioTrack.OnPlaybackPositionUpdateListener mPositionUpdate = <span class="keywo
     mProxy-&gt;flush();
     mAudioTrack-&gt;flush();
 }
-
-<span class="keyword">void</span> AudioTrackClientProxy::flush()
-{
-    <span class="comment">// This works for mFrameCountP2 &lt;= 2^30</span>
-    <span class="comment">// 两倍的P2帧大小</span>
-    <span class="keyword">size_t</span> increment = mFrameCountP2 &lt;&lt; <span class="number">1</span>;
-    <span class="keyword">size_t</span> mask = increment - <span class="number">1</span>;
-    <span class="keyword">audio_track_cblk_t</span>* cblk = mCblk;
-    <span class="comment">// mFlush is 32 bits concatenated as [ flush_counter ] [ newfront_offset ]</span>
-    <span class="comment">// Should newFlush = cblk-&gt;u.mStreaming.mRear?  Only problem is</span>
-    <span class="comment">// if you want to flush twice to the same rear location after a 32 bit wrap.</span>
-    <span class="comment">// mFlush是由flush_counter 和 newfront_offset拼接起来的</span>
-    ((cblk-&gt;u.mStreaming.mFlush &amp; ~mask) + increment) 这个计算出来就相当于几倍的p2+<span class="number">1</span>。
-    <span class="keyword">int32_t</span> newFlush = (cblk-&gt;u.mStreaming.mRear &amp; mask) |
-                        ((cblk-&gt;u.mStreaming.mFlush &amp; ~mask) + increment);
-    android_atomic_release_store(newFlush, &amp;cblk-&gt;u.mStreaming.mFlush);
-}
-
-
-<span class="keyword">void</span> AudioFlinger::PlaybackThread::Track::flush()
+</code></pre><ol>
+<li>会对marker和periodposition进行重置，这个需要注意下，目前也不确定其用意。这样上层得重新再设置值。</li>
+<li>重置下state为flush</li>
+<li><p>调用代理的flush和IAudioTrack的flush</p>
+<p> void AudioTrackClientProxy::flush()<br> {</p>
+<pre><code><span class="comment">// This works for mFrameCountP2 &lt;= 2^30</span>
+<span class="comment">// 两倍的P2帧大小</span>
+<span class="keyword">size_t</span> increment = mFrameCountP2 &lt;&lt; <span class="number">1</span>;
+<span class="keyword">size_t</span> mask = increment - <span class="number">1</span>;
+<span class="keyword">audio_track_cblk_t</span>* cblk = mCblk;
+<span class="comment">// mFlush is 32 bits concatenated as [ flush_counter ] [ newfront_offset ]</span>
+<span class="comment">// Should newFlush = cblk-&gt;u.mStreaming.mRear?  Only problem is</span>
+<span class="comment">// if you want to flush twice to the same rear location after a 32 bit wrap.</span>
+<span class="keyword">int32_t</span> newFlush = (cblk-&gt;u.mStreaming.mRear &amp; mask) |
+                    ((cblk-&gt;u.mStreaming.mFlush &amp; ~mask) + increment);
+android_atomic_release_store(newFlush, &amp;cblk-&gt;u.mStreaming.mFlush);
+</code></pre><p> }</p>
+</li>
+</ol>
+<p>上面是clientProxy的flush函数，主要是为了拼接出flush的值。<br>逻辑：</p>
+<ol>
+<li>P2的两倍 P2是2的整次幂，如2^3 = 8 左移就是 2^4 = 16</li>
+<li>mask两倍p2的mask， 如果P2为2^3 那这个值为0111</li>
+<li>flush的拼接是 rear &amp; 0111 | ((flush &amp; 1000) + 2^4) ，不是很明白为什么这么处理，为什么不直接拿mRear来给flush就好了呢？</li>
+</ol>
+<p>下面是IAudioTrack端实现的flush</p>
+<pre><code><span class="literal">void</span> AudioFlinger<span class="tag">::PlaybackThread</span><span class="tag">::Track</span><span class="tag">::flush</span>()
 {
     ALOGV(<span class="string">"flush(%d)"</span>, mName);
-    sp&lt;ThreadBase&gt; thread = mThread.promote();
-    <span class="keyword">if</span> (thread != <span class="number">0</span>) {
-        Mutex::Autolock _l(thread-&gt;mLock);
-        PlaybackThread *playbackThread = (PlaybackThread *)thread.get();
+    sp&lt;ThreadBase&gt; <span class="keyword">thread</span> = mThread<span class="built_in">.</span>promote();
+    <span class="keyword">if</span> (<span class="keyword">thread</span> != <span class="number">0</span>) {
+        Mutex<span class="tag">::Autolock</span> _l(<span class="keyword">thread</span><span class="subst">-&gt;</span>mLock);
+        PlaybackThread *playbackThread = (PlaybackThread *)<span class="keyword">thread</span><span class="built_in">.</span>get();
 
         <span class="keyword">if</span> (isOffloaded()) {
-            <span class="comment">// If offloaded we allow flush during any state except terminated</span>
-            <span class="comment">// and keep the track active to avoid problems if user is seeking</span>
-            <span class="comment">// rapidly and underlying hardware has a significant delay handling</span>
-            <span class="comment">// a pause</span>
-            <span class="keyword">if</span> (isTerminated()) {
-                <span class="keyword">return</span>;
-            }
-
-            ALOGV(<span class="string">"flush: offload flush"</span>);
-            reset();
-
-            <span class="keyword">if</span> (mState == STOPPING_1 || mState == STOPPING_2) {
-                ALOGV(<span class="string">"flushed in STOPPING_1 or 2 state, change state to ACTIVE"</span>);
-                mState = ACTIVE;
-            }
-
-            <span class="keyword">if</span> (mState == ACTIVE) {
-                ALOGV(<span class="string">"flush called in active state, resetting buffer time out retry count"</span>);
-                mRetryCount = PlaybackThread::kMaxTrackRetriesOffload;
-            }
-
-            mFlushHwPending = <span class="literal">true</span>;
-            mResumeToStopping = <span class="literal">false</span>;
+            <span class="attribute">...</span>
         } <span class="keyword">else</span> {
-            <span class="keyword">if</span> (mState != STOPPING_1 &amp;&amp; mState != STOPPING_2 &amp;&amp; mState != STOPPED &amp;&amp;
-                    mState != PAUSED &amp;&amp; mState != PAUSING &amp;&amp; mState != IDLE &amp;&amp; mState != FLUSHED) {
+            <span class="comment">// 对状态再做一次过滤</span>
+            <span class="keyword">if</span> (mState != STOPPING_1 <span class="subst">&amp;&amp;</span> mState != STOPPING_2 <span class="subst">&amp;&amp;</span> mState != STOPPED <span class="subst">&amp;&amp;</span>
+                    mState != PAUSED <span class="subst">&amp;&amp;</span> mState != PAUSING <span class="subst">&amp;&amp;</span> mState != IDLE <span class="subst">&amp;&amp;</span> mState != FLUSHED) {
                 <span class="keyword">return</span>;
             }
-            <span class="comment">// No point remaining in PAUSED state after a flush =&gt; go to</span>
-            <span class="comment">// FLUSHED state</span>
+            <span class="comment">// 做状态切换</span>
             mState = FLUSHED;
-            <span class="comment">// do not reset the track if it is still in the process of being stopped or paused.</span>
-            <span class="comment">// this will be done by prepareTracks_l() when the track is stopped.</span>
-            <span class="comment">// prepareTracks_l() will see mState == FLUSHED, then</span>
-            <span class="comment">// remove from active track list, reset(), and trigger presentation complete</span>
+            <span class="comment">// 如果当前track正在stop或者pause，则不要进行reset。如果是stop的场景，reset将会在</span>
+            <span class="comment">// prepareTracks_l中被调用</span>
             <span class="keyword">if</span> (isDirect()) {
                 mFlushHwPending = <span class="literal">true</span>;
             }
-            <span class="keyword">if</span> (playbackThread-&gt;mActiveTracks.indexOf(<span class="keyword">this</span>) &lt; <span class="number">0</span>) {
+            <span class="comment">// 如果已经被移除active list，则进行reset操作。reset函数我们在之前有讨论过</span>
+            <span class="comment">// pause之后调用这个flush，会触发reset的操作。</span>
+            <span class="keyword">if</span> (playbackThread<span class="subst">-&gt;</span>mActiveTracks<span class="built_in">.</span>indexOf(this) &lt; <span class="number">0</span>) {
                 reset();
             }
         }
-        <span class="comment">// Prevent flush being lost if the track is flushed and then resumed</span>
-        <span class="comment">// before mixer thread can run. This is important when offloading</span>
-        <span class="comment">// because the hardware buffer could hold a large amount of audio</span>
-        playbackThread-&gt;broadcast_l();
+        <span class="comment">// 避免flush丢失 如果某个track被flush之后在mixer thread运行之前它就resume了。</span>
+        <span class="comment">// 这个对于offload非常重要，因为硬件buffer可能持有大量的音频数据</span>
+        playbackThread<span class="subst">-&gt;</span>broadcast_l();
     }
 }
-</code></pre>
+</code></pre><p>上面函数主要是做了：</p>
+<ol>
+<li>在对状态做一遍过滤</li>
+<li>设置状态为flush</li>
+<li>如果track已经不属于active track，那就将该track进行reset</li>
+<li>发送广播</li>
+</ol>
+<p>对于flush，我们想要看到效果的话，就得等继续播放才会体现出来，所以我们来看下serverproxy获取数据的代码：</p>
+<pre><code><span class="keyword">status_t</span> ServerProxy::obtainBuffer(Buffer* buffer, <span class="keyword">bool</span> ackFlush)
+{
+    {
+    <span class="keyword">audio_track_cblk_t</span>* cblk = mCblk;
+    <span class="keyword">int32_t</span> front;
+    <span class="keyword">int32_t</span> rear;
+    <span class="keyword">if</span> (mIsOut) {
+        <span class="keyword">int32_t</span> flush = cblk-&gt;u.mStreaming.mFlush;
+        rear = android_atomic_acquire_load(&amp;cblk-&gt;u.mStreaming.mRear);
+        front = cblk-&gt;u.mStreaming.mFront;
+        <span class="keyword">if</span> (flush != mFlush) {
+            <span class="comment">// effectively obtain then release whatever is in the buffer</span>
+            <span class="keyword">const</span> <span class="keyword">size_t</span> overflowBit = mFrameCountP2 &lt;&lt; <span class="number">1</span>;
+            <span class="keyword">const</span> <span class="keyword">size_t</span> mask = overflowBit - <span class="number">1</span>;
+            <span class="comment">// newFront 是取front的头+flush的尾</span>
+            <span class="comment">// flush    是取flush的头+rear的尾</span>
+            <span class="comment">// 所以正常情况下，rear和newFront是相等的。</span>
+            <span class="keyword">int32_t</span> newFront = (front &amp; ~mask) | (flush &amp; mask);
+            <span class="keyword">ssize_t</span> filled = rear - newFront;
+            <span class="keyword">if</span> (filled &gt;= (<span class="keyword">ssize_t</span>)overflowBit) {
+                <span class="comment">// front and rear offsets span the overflow bit of the p2 mask</span>
+                <span class="comment">// so rebasing newFront on the front offset is off by the overflow bit.</span>
+                <span class="comment">// adjust newFront to match rear offset.</span>
+                newFront += overflowBit;
+                filled -= overflowBit;
+            }
+            <span class="comment">// Rather than shutting down on a corrupt flush, just treat it as a full flush</span>
+            <span class="keyword">if</span> (!(<span class="number">0</span> &lt;= filled &amp;&amp; (<span class="keyword">size_t</span>) filled &lt;= mFrameCount)) {
+                newFront = rear;
+            }
+            mFlush = flush;
+            <span class="comment">// 将front进行重新赋值</span>
+            android_atomic_release_store(newFront, &amp;cblk-&gt;u.mStreaming.mFront);
+            <span class="comment">// There is no danger from a false positive, so err on the side of caution</span>
+            <span class="comment">// 马上去唤醒客户端填充数据</span>
+            <span class="keyword">if</span> (<span class="literal">true</span> <span class="comment">/*front != newFront*/</span>) {
+                <span class="keyword">int32_t</span> old = android_atomic_or(CBLK_FUTEX_WAKE, &amp;cblk-&gt;mFutex);
+                <span class="keyword">if</span> (!(old &amp; CBLK_FUTEX_WAKE)) {
+                    (<span class="keyword">void</span>) syscall(__NR_futex, &amp;cblk-&gt;mFutex,
+                            mClientInServer ? FUTEX_WAKE_PRIVATE : FUTEX_WAKE, <span class="number">1</span>);
+                }
+            }
+            front = newFront;
+        }
+    } <span class="keyword">else</span> {
+        front = android_atomic_acquire_load(&amp;cblk-&gt;u.mStreaming.mFront);
+        rear = cblk-&gt;u.mStreaming.mRear;
+    }
+    ...
+    <span class="keyword">return</span> NO_INIT;
+}
+</code></pre><p>从上面代码看出来，就是重新获取到newFront，然后将其重新赋值给mFront。<br>然后唤醒client去填充数据。<br>从上面的几个对于filled空间大小的判断，感觉newFront并不一定总是等于mRear。。<br>这个部分目前还没能完全理清。。</p>
+
       
     </div>
 

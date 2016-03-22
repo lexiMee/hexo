@@ -689,7 +689,7 @@
 <p>我们来看下<code>reset</code>函数都干嘛了</p>
 <pre><code><span class="literal">void</span> AudioFlinger<span class="tag">::PlaybackThread</span><span class="tag">::Track</span><span class="tag">::reset</span>()
 {
-    <span class="comment">// 只能reset一次。目的为何，后面看flush的时候再回头思考这个吧。。。</span>
+    <span class="comment">// mResetDone会被addTrack的时候进行重置为false。</span>
     <span class="comment">// Do not reset twice to avoid discarding data written just after a flush and before</span>
     <span class="comment">// the audioflinger thread detects the track is stopped.</span>
     <span class="keyword">if</span> (<span class="subst">!</span>mResetDone) {
