@@ -759,6 +759,7 @@ android_atomic_release_store(newFlush, &amp;cblk-&gt;u.mStreaming.mFlush);
     <span class="keyword">return</span> NO_INIT;
 }
 </code></pre><p>从上面代码看出来，就是重新获取到newFront，然后将其重新赋值给mFront。<br>然后唤醒client去填充数据。<br>从上面的几个对于filled空间大小的判断，感觉newFront并不一定总是等于mRear。。<br>这个部分目前还没能完全理清。。</p>
+<p>flush的使用场景：<br>由于我们stop的过程会把mcblk buffer中的数据全都播放完，如果想直接当场结束的话，那可以采用先pause然后flush来取代stop的操作。</p>
 
       
     </div>
