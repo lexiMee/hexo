@@ -71,7 +71,7 @@
 读写数据的操作是一个生产者和消费者的逻辑。这边的逻辑是这样的：
 
 生产者写数据，线程消费数据，线程消费了n个数据之后，发现已经完成minbuffersize的消费，会去通知你继续填充数据">
-<meta property="og:updated_time" content="2016-03-21T03:19:42.389Z">
+<meta property="og:updated_time" content="2016-03-23T02:01:27.178Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="audiotrack的write流程">
 <meta name="twitter:description" content="简述到目前为止，我们已经完成了audiotrack创建和设置，它完成了cblk、clientproxy、serverproxy、track、output等的创建和关联，并且打开了音频通路，紧接着就等我们写数据了。
@@ -428,7 +428,7 @@
 
     <span class="keyword">size_t</span> written = <span class="number">0</span>;
     Buffer audioBuffer;
-    <span class="comment">// 进入循环写，知道userSize写完</span>
+    <span class="comment">// 进入循环写，直到userSize写完</span>
     <span class="keyword">while</span> (userSize &gt;= mFrameSize) {
         <span class="comment">// 计算下用户写入的数据 含有多少帧</span>
         audioBuffer.frameCount = userSize / mFrameSize;
