@@ -228,8 +228,125 @@
             
               
                 
+                <a class="post-title-link" href="/2016/03/24/audiotrack_static_loop/" itemprop="url">
+                  mode_static audiotrack流程和setLoop学习
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2016-03-24T10:49:43+08:00" content="2016-03-24">
+              2016-03-24
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/android开发/" itemprop="url" rel="index">
+                    <span itemprop="name">android开发</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2016/03/24/audiotrack_static_loop/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/03/24/audiotrack_static_loop/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <h2 id="简述">简述</h2><p>由于前面已经学习了mode_stream的场景，所以我们这次不需要完全重新来一遍，我们只列出其中不一样的地方，所以这篇文章我们应该就可以完成全部，因为server端的逻辑是一样，所以我们主要集中在client端部分以及setLoop函数的实现。</p>
+          <div class="post-more-link text-center">
+            <a class="btn" href="/2016/03/24/audiotrack_static_loop/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                
                 <a class="post-title-link" href="/2016/03/21/audiotrack_flush/" itemprop="url">
-                  audiotrack的Marker/PeriodPosition/flush流程
+                  audiotrack的Marker/PeriodPosition/flush流程(mode_stream)
                 </a>
               
             
@@ -346,7 +463,7 @@
               
                 
                 <a class="post-title-link" href="/2016/03/21/audiotrack_pause_stop/" itemprop="url">
-                  audiotrack的pause\stop流程
+                  audiotrack的pause\stop流程(mode_stream)
                 </a>
               
             
@@ -463,7 +580,7 @@
               
                 
                 <a class="post-title-link" href="/2016/03/18/audiotrack_write/" itemprop="url">
-                  audiotrack的write流程
+                  audiotrack的write流程(mode_stream)
                 </a>
               
             
@@ -590,7 +707,7 @@
               
                 
                 <a class="post-title-link" href="/2016/03/18/audiotrack_play/" itemprop="url">
-                  audiotrack的play流程
+                  audiotrack的play流程(mode_stream)
                 </a>
               
             
@@ -687,123 +804,6 @@
 
 
     
-      
-
-  
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/2016/03/17/audiotrack_create/" itemprop="url">
-                  audiotrack的create流程
-                </a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            <span class="post-meta-item-icon">
-              <i class="fa fa-calendar-o"></i>
-            </span>
-            <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2016-03-17T12:47:56+08:00" content="2016-03-17">
-              2016-03-17
-            </time>
-          </span>
-
-          
-            <span class="post-category" >
-              &nbsp; | &nbsp;
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-              
-                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
-                  <a href="/categories/android开发/" itemprop="url" rel="index">
-                    <span itemprop="name">android开发</span>
-                  </a>
-                </span>
-
-                
-                
-
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                &nbsp; | &nbsp;
-                <a href="/2016/03/17/audiotrack_create/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/03/17/audiotrack_create/" itemprop="commentsCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-
-          
-          
-
-        </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <h2 id="简述">简述</h2><p>这部分，我们主要讲解两个函数<code>getMinBufferSize</code>和<code>AudioTrack</code>。</p>
-          <div class="post-more-link text-center">
-            <a class="btn" href="/2016/03/17/audiotrack_create/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
   </section>
 
   
@@ -849,7 +849,7 @@
         <nav class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">12</span>
+              <span class="site-state-item-count">13</span>
               <span class="site-state-item-name">日志</span>
             </a>
           </div>

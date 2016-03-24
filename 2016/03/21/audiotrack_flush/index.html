@@ -61,13 +61,13 @@
 
 <meta name="description" content="简述之前我们看到代码中有一些marker、period、flush等相关的，但是还没搞清楚它们的作用，这篇文章，我们一起来看下吧。">
 <meta property="og:type" content="article">
-<meta property="og:title" content="audiotrack的Marker/PeriodPosition/flush流程">
+<meta property="og:title" content="audiotrack的Marker/PeriodPosition/flush流程(mode_stream)">
 <meta property="og:url" content="http://thinks.me/2016/03/21/audiotrack_flush/index.html">
 <meta property="og:site_name" content="Thinking">
 <meta property="og:description" content="简述之前我们看到代码中有一些marker、period、flush等相关的，但是还没搞清楚它们的作用，这篇文章，我们一起来看下吧。">
 <meta property="og:updated_time" content="2016-03-22T07:39:57.000Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="audiotrack的Marker/PeriodPosition/flush流程">
+<meta name="twitter:title" content="audiotrack的Marker/PeriodPosition/flush流程(mode_stream)">
 <meta name="twitter:description" content="简述之前我们看到代码中有一些marker、period、flush等相关的，但是还没搞清楚它们的作用，这篇文章，我们一起来看下吧。">
 
 
@@ -86,7 +86,7 @@
   };
 </script>
 
-  <title> audiotrack的Marker/PeriodPosition/flush流程 | Thinking </title>
+  <title> audiotrack的Marker/PeriodPosition/flush流程(mode_stream) | Thinking </title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -226,7 +226,7 @@
             
             
               
-                audiotrack的Marker/PeriodPosition/flush流程
+                audiotrack的Marker/PeriodPosition/flush流程(mode_stream)
               
             
           </h1>
@@ -785,13 +785,17 @@ android_atomic_release_store(newFlush, &amp;cblk-&gt;u.mStreaming.mFlush);
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2016/03/21/audiotrack_pause_stop/" rel="next" title="audiotrack的pause\stop流程">
-                <i class="fa fa-chevron-left"></i> audiotrack的pause\stop流程
+              <a href="/2016/03/21/audiotrack_pause_stop/" rel="next" title="audiotrack的pause\stop流程(mode_stream)">
+                <i class="fa fa-chevron-left"></i> audiotrack的pause\stop流程(mode_stream)
               </a>
             
           </div>
 
           <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2016/03/24/audiotrack_static_loop/" rel="prev" title="mode_static audiotrack流程和setLoop学习">
+                mode_static audiotrack流程和setLoop学习 <i class="fa fa-chevron-right"></i>
+              </a>
             
           </div>
         </div>
@@ -818,7 +822,7 @@ android_atomic_release_store(newFlush, &amp;cblk-&gt;u.mStreaming.mFlush);
   <div class="comments" id="comments">
     
       <div class="ds-thread" data-thread-key="2016/03/21/audiotrack_flush/"
-           data-title="audiotrack的Marker/PeriodPosition/flush流程" data-url="http://thinks.me/2016/03/21/audiotrack_flush/">
+           data-title="audiotrack的Marker/PeriodPosition/flush流程(mode_stream)" data-url="http://thinks.me/2016/03/21/audiotrack_flush/">
       </div>
     
   </div>
@@ -863,7 +867,7 @@ android_atomic_release_store(newFlush, &amp;cblk-&gt;u.mStreaming.mFlush);
         <nav class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">12</span>
+              <span class="site-state-item-count">13</span>
               <span class="site-state-item-name">日志</span>
             </a>
           </div>

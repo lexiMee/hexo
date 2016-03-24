@@ -61,13 +61,13 @@
 
 <meta name="description" content="简述前面我们已经完成了，从audiotrack的创建、播放，接下来我们要看下暂停和停止。pause和stop逻辑基本上是一样的，它们的不同点在于，pause的场景是，立马就暂停了，不管buffer中是否有数据，而stop的场景的话，则会将buffer中的数据排空，然后重置状态。">
 <meta property="og:type" content="article">
-<meta property="og:title" content="audiotrack的pause\stop流程">
+<meta property="og:title" content="audiotrack的pause\stop流程(mode_stream)">
 <meta property="og:url" content="http://thinks.me/2016/03/21/audiotrack_pause_stop/index.html">
 <meta property="og:site_name" content="Thinking">
 <meta property="og:description" content="简述前面我们已经完成了，从audiotrack的创建、播放，接下来我们要看下暂停和停止。pause和stop逻辑基本上是一样的，它们的不同点在于，pause的场景是，立马就暂停了，不管buffer中是否有数据，而stop的场景的话，则会将buffer中的数据排空，然后重置状态。">
 <meta property="og:updated_time" content="2016-03-21T09:32:59.000Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="audiotrack的pause\stop流程">
+<meta name="twitter:title" content="audiotrack的pause\stop流程(mode_stream)">
 <meta name="twitter:description" content="简述前面我们已经完成了，从audiotrack的创建、播放，接下来我们要看下暂停和停止。pause和stop逻辑基本上是一样的，它们的不同点在于，pause的场景是，立马就暂停了，不管buffer中是否有数据，而stop的场景的话，则会将buffer中的数据排空，然后重置状态。">
 
 
@@ -86,7 +86,7 @@
   };
 </script>
 
-  <title> audiotrack的pause\stop流程 | Thinking </title>
+  <title> audiotrack的pause\stop流程(mode_stream) | Thinking </title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -226,7 +226,7 @@
             
             
               
-                audiotrack的pause\stop流程
+                audiotrack的pause\stop流程(mode_stream)
               
             
           </h1>
@@ -758,16 +758,16 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2016/03/18/audiotrack_write/" rel="next" title="audiotrack的write流程">
-                <i class="fa fa-chevron-left"></i> audiotrack的write流程
+              <a href="/2016/03/18/audiotrack_write/" rel="next" title="audiotrack的write流程(mode_stream)">
+                <i class="fa fa-chevron-left"></i> audiotrack的write流程(mode_stream)
               </a>
             
           </div>
 
           <div class="post-nav-prev post-nav-item">
             
-              <a href="/2016/03/21/audiotrack_flush/" rel="prev" title="audiotrack的Marker/PeriodPosition/flush流程">
-                audiotrack的Marker/PeriodPosition/flush流程 <i class="fa fa-chevron-right"></i>
+              <a href="/2016/03/21/audiotrack_flush/" rel="prev" title="audiotrack的Marker/PeriodPosition/flush流程(mode_stream)">
+                audiotrack的Marker/PeriodPosition/flush流程(mode_stream) <i class="fa fa-chevron-right"></i>
               </a>
             
           </div>
@@ -795,7 +795,7 @@
   <div class="comments" id="comments">
     
       <div class="ds-thread" data-thread-key="2016/03/21/audiotrack_pause_stop/"
-           data-title="audiotrack的pause\stop流程" data-url="http://thinks.me/2016/03/21/audiotrack_pause_stop/">
+           data-title="audiotrack的pause\stop流程(mode_stream)" data-url="http://thinks.me/2016/03/21/audiotrack_pause_stop/">
       </div>
     
   </div>
@@ -840,7 +840,7 @@
         <nav class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">12</span>
+              <span class="site-state-item-count">13</span>
               <span class="site-state-item-name">日志</span>
             </a>
           </div>

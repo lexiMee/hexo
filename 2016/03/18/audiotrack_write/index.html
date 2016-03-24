@@ -64,16 +64,16 @@
 
 生产者写数据，线程消费数据，线程消费了n个数据之后，发现已经完成minbuffersize的消费，会去通知你继续填充数据">
 <meta property="og:type" content="article">
-<meta property="og:title" content="audiotrack的write流程">
+<meta property="og:title" content="audiotrack的write流程(mode_stream)">
 <meta property="og:url" content="http://thinks.me/2016/03/18/audiotrack_write/index.html">
 <meta property="og:site_name" content="Thinking">
 <meta property="og:description" content="简述到目前为止，我们已经完成了audiotrack创建和设置，它完成了cblk、clientproxy、serverproxy、track、output等的创建和关联，并且打开了音频通路，紧接着就等我们写数据了。
 读写数据的操作是一个生产者和消费者的逻辑。这边的逻辑是这样的：
 
 生产者写数据，线程消费数据，线程消费了n个数据之后，发现已经完成minbuffersize的消费，会去通知你继续填充数据">
-<meta property="og:updated_time" content="2016-03-23T02:01:27.178Z">
+<meta property="og:updated_time" content="2016-03-24T02:47:36.040Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="audiotrack的write流程">
+<meta name="twitter:title" content="audiotrack的write流程(mode_stream)">
 <meta name="twitter:description" content="简述到目前为止，我们已经完成了audiotrack创建和设置，它完成了cblk、clientproxy、serverproxy、track、output等的创建和关联，并且打开了音频通路，紧接着就等我们写数据了。
 读写数据的操作是一个生产者和消费者的逻辑。这边的逻辑是这样的：
 
@@ -95,7 +95,7 @@
   };
 </script>
 
-  <title> audiotrack的write流程 | Thinking </title>
+  <title> audiotrack的write流程(mode_stream) | Thinking </title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -235,7 +235,7 @@
             
             
               
-                audiotrack的write流程
+                audiotrack的write流程(mode_stream)
               
             
           </h1>
@@ -1553,16 +1553,16 @@ no_init:
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2016/03/18/audiotrack_play/" rel="next" title="audiotrack的play流程">
-                <i class="fa fa-chevron-left"></i> audiotrack的play流程
+              <a href="/2016/03/18/audiotrack_play/" rel="next" title="audiotrack的play流程(mode_stream)">
+                <i class="fa fa-chevron-left"></i> audiotrack的play流程(mode_stream)
               </a>
             
           </div>
 
           <div class="post-nav-prev post-nav-item">
             
-              <a href="/2016/03/21/audiotrack_pause_stop/" rel="prev" title="audiotrack的pause\stop流程">
-                audiotrack的pause\stop流程 <i class="fa fa-chevron-right"></i>
+              <a href="/2016/03/21/audiotrack_pause_stop/" rel="prev" title="audiotrack的pause\stop流程(mode_stream)">
+                audiotrack的pause\stop流程(mode_stream) <i class="fa fa-chevron-right"></i>
               </a>
             
           </div>
@@ -1590,7 +1590,7 @@ no_init:
   <div class="comments" id="comments">
     
       <div class="ds-thread" data-thread-key="2016/03/18/audiotrack_write/"
-           data-title="audiotrack的write流程" data-url="http://thinks.me/2016/03/18/audiotrack_write/">
+           data-title="audiotrack的write流程(mode_stream)" data-url="http://thinks.me/2016/03/18/audiotrack_write/">
       </div>
     
   </div>
@@ -1635,7 +1635,7 @@ no_init:
         <nav class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">12</span>
+              <span class="site-state-item-count">13</span>
               <span class="site-state-item-name">日志</span>
             </a>
           </div>
