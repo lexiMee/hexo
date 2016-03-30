@@ -1,0 +1,1211 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css"/>
+
+
+
+
+  <link href="//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=0.5.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Android,AudioTrack," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="Thinking" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=0.5.0" />
+
+
+
+
+
+
+<meta name="description" content="简述由于前面已经学习了mode_stream的场景，所以我们这次不需要完全重新来一遍，我们只列出其中不一样的地方，所以这篇文章我们应该就可以完成全部，因为server端的逻辑是一样，所以我们主要集中在client端部分以及setLoop函数的实现。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="mode_static audiotrack流程和setLoop学习">
+<meta property="og:url" content="http://thinks.me/2016/03/24/audiotrack_static_loop/index.html">
+<meta property="og:site_name" content="Thinking">
+<meta property="og:description" content="简述由于前面已经学习了mode_stream的场景，所以我们这次不需要完全重新来一遍，我们只列出其中不一样的地方，所以这篇文章我们应该就可以完成全部，因为server端的逻辑是一样，所以我们主要集中在client端部分以及setLoop函数的实现。">
+<meta property="og:updated_time" content="2016-03-24T02:49:45.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="mode_static audiotrack流程和setLoop学习">
+<meta name="twitter:description" content="简述由于前面已经学习了mode_stream的场景，所以我们这次不需要完全重新来一遍，我们只列出其中不一样的地方，所以这篇文章我们应该就可以完成全部，因为server端的逻辑是一样，所以我们主要集中在client端部分以及setLoop函数的实现。">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Pisces',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 0,
+      author: '博主'
+    }
+  };
+</script>
+
+  <title> mode_static audiotrack流程和setLoop学习 | Thinking </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?1a17ff812788f97b5ec90bee6eba907f";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Thinking</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle"></p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-home fa-fw"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-th fa-fw"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-archive fa-fw"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-tags fa-fw"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                mode_static audiotrack流程和setLoop学习
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2016-03-24T10:49:43+08:00" content="2016-03-24">
+              2016-03-24
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/android开发/" itemprop="url" rel="index">
+                    <span itemprop="name">android开发</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2016/03/24/audiotrack_static_loop/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/03/24/audiotrack_static_loop/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="简述">简述</h2><p>由于前面已经学习了mode_stream的场景，所以我们这次不需要完全重新来一遍，我们只列出其中不一样的地方，所以这篇文章我们应该就可以完成全部，因为server端的逻辑是一样，所以我们主要集中在client端部分以及setLoop函数的实现。</p>
+<a id="more"></a>
+<h2 id="正文">正文</h2><p>下面是测试代码，通过code去产生正弦波音频数据，播放时间为1s，然后loop 1次。这边的代码是从cts的代码中抠出来的，在<code>AudioTrackTest::testPlayStaticData()</code>中。</p>
+<pre><code><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">playStaticAudio</span><span class="params">()</span> </span>{
+    <span class="keyword">int</span> TEST_CONF = AudioFormat.CHANNEL_OUT_MONO;
+    <span class="keyword">int</span> TEST_FORMAT = AudioFormat.ENCODING_PCM_16BIT;
+    <span class="keyword">int</span> TEST_SR = <span class="number">48000</span>;
+    <span class="keyword">int</span> TEST_LOOPS = <span class="number">1</span>;
+    <span class="keyword">int</span> WAIT_MSEC = <span class="number">200</span>;
+    final <span class="keyword">int</span> seconds = <span class="number">1</span>;
+    final <span class="keyword">int</span> channelCount = Integer.bitCount(TEST_CONF);
+    final <span class="keyword">int</span> bufferFrames = seconds * TEST_SR;
+    final <span class="keyword">int</span> bufferSamples = bufferFrames * channelCount;
+    final <span class="keyword">int</span> bufferSize = bufferSamples * <span class="number">16</span>;
+    <span class="keyword">double</span> frequency = <span class="number">400</span>;
+    final <span class="keyword">double</span> testFrequency = frequency / channelCount;
+    AudioTrack track = <span class="keyword">new</span> AudioTrack(<span class="number">3</span>, TEST_SR,
+            TEST_CONF, TEST_FORMAT, bufferSize, AudioTrack.MODE_STATIC);
+    <span class="keyword">short</span> data[] = createSoundDataInShortArray(
+            bufferSamples, TEST_SR,
+            testFrequency, <span class="number">100</span>);
+    track.write(data, <span class="number">0</span> <span class="comment">/*offsetInBytes*/</span>, data.length);
+    track.setLoopPoints(<span class="number">0</span> <span class="comment">/*startInFrames*/</span>, bufferFrames, TEST_LOOPS);
+    track.play();
+    <span class="keyword">try</span> {
+        Thread.sleep(seconds * <span class="number">1000</span> * (TEST_LOOPS + <span class="number">1</span>));
+        Thread.sleep(WAIT_MSEC);
+    } <span class="keyword">catch</span> (InterruptedException e) {
+        e.printStackTrace();
+    }
+
+    <span class="comment">// Check position after looping. AudioTrack.getPlaybackHeadPosition() returns</span>
+    <span class="comment">// the running count of frames played, not the actual static buffer position.</span>
+    <span class="keyword">int</span> position = track.getPlaybackHeadPosition();
+    track.stop();
+    <span class="keyword">try</span> {
+        Thread.sleep(WAIT_MSEC);
+    } <span class="keyword">catch</span> (InterruptedException e) {
+        e.printStackTrace();
+    }
+    <span class="comment">// -------- tear down --------------</span>
+    track.release();
+}
+</code></pre><h3 id="mode_static_audiotrack">mode_static audiotrack</h3><h4 id="创建">创建</h4><p>从jni开始看<code>android_media_AudioTrack_setup</code>函数中对于STATIC MODE的处理</p>
+<pre><code><span class="keyword">case</span> MODE_STATIC:
+    <span class="comment">// AudioTrack采用share memory</span>
+    <span class="comment">// 在client这边已经早早的把空间给分配了，而stream的是在server端分配的</span>
+    <span class="keyword">if</span> (!lpJniStorage-&gt;allocSharedMem(buffSizeInBytes)) {
+        <span class="keyword">goto</span> native_init_failure;
+    }
+
+    status = lpTrack-&gt;<span class="built_in">set</span>(
+            AUDIO_STREAM_DEFAULT,
+            sampleRateInHertz,
+            format,<span class="comment">// word length, PCM</span>
+            nativeChannelMask,
+            frameCount,
+            AUDIO_OUTPUT_FLAG_NONE,
+            audioCallback, &amp;(lpJniStorage-&gt;mCallbackData),<span class="comment">//callback, callback data (user));</span>
+            <span class="number">0</span>,<span class="comment">// notificationFrames == 0 since not using EVENT_MORE_DATA to feed the AudioTrack</span>
+            <span class="comment">// 内存空间地址</span>
+            lpJniStorage-&gt;mMemBase,<span class="comment">// shared mem</span>
+            <span class="literal">true</span>,<span class="comment">// thread can call Java</span>
+            sessionId,<span class="comment">// audio session ID</span>
+            <span class="comment">// transfer 类型</span>
+            AudioTrack::TRANSFER_SHARED,
+            <span class="literal">NULL</span>,                         <span class="comment">// default offloadInfo</span>
+            -<span class="number">1</span>, -<span class="number">1</span>,                       <span class="comment">// default uid, pid values</span>
+            paa);
+    <span class="keyword">break</span>;
+</code></pre><p>上面我们可以知道static的内存分配是发生在client这端的，并且类型为transfer_share</p>
+<p>那接下来我们可以直接来看audiotrack中的<code>createTrack_l()</code>函数的部分code</p>
+<pre><code><span class="keyword">else</span> <span class="keyword">if</span> (mSharedBuffer != <span class="number">0</span>) {
+    <span class="comment">// 判断share memory的分配是否符合要求，就是需要做到对齐。</span>
+    <span class="keyword">size_t</span> alignment = audio_bytes_per_sample(mFormat);
+    <span class="keyword">if</span> (alignment &amp; <span class="number">1</span>) {
+        alignment = <span class="number">1</span>;
+    }
+    <span class="keyword">if</span> (mChannelCount &gt; <span class="number">1</span>) {
+        alignment &lt;&lt;= <span class="number">1</span>;
+    }
+    <span class="comment">// 就是要求必须是0尾的，这种后面处理的效率比较高</span>
+    <span class="keyword">if</span> (((<span class="keyword">uintptr_t</span>)mSharedBuffer-&gt;pointer() &amp; (alignment - <span class="number">1</span>)) != <span class="number">0</span>) {
+        status = BAD_VALUE;
+        <span class="keyword">goto</span> release;
+    }
+    <span class="comment">// 重新计算framecount</span>
+    frameCount = mSharedBuffer-&gt;size() / mFrameSize;
+}
+</code></pre><p>上面部分主要是完成了内存空间的检测和framecount的计算。</p>
+<pre><code>sp&lt;IAudioTrack&gt; track = audioFlinger-&gt;createTrack<span class="list">(<span class="keyword">streamType</span>,
+                                                  mSampleRate,
+                                                  mFormat,
+                                                  mChannelMask,
+                                                  <span class="keyword">&amp;temp</span>,
+                                                  <span class="keyword">&amp;trackFlags</span>,
+                                                  mSharedBuffer,
+                                                  output,
+                                                  tid,
+                                                  <span class="keyword">&amp;mSessionId</span>,
+                                                  mClientUid,
+                                                  <span class="keyword">&amp;status</span>)</span><span class="comment">;</span>
+</code></pre><p>这个将会决定在server端创建对应的track，采用了static的话，在server端所创建的serverproxy也会发生变化。这个后面再来说，先看下client端创建的staticclientproxy。</p>
+<pre><code><span class="comment">// update proxy</span>
+<span class="keyword">if</span> (mSharedBuffer == <span class="number">0</span>) {
+    mStaticProxy.clear();
+    mProxy = <span class="keyword">new</span> AudioTrackClientProxy(cblk, buffers, frameCount, mFrameSize);
+} <span class="keyword">else</span> {
+    mStaticProxy = <span class="keyword">new</span> StaticAudioTrackClientProxy(cblk, buffers, frameCount, mFrameSize);
+    mProxy = mStaticProxy;
+}
+
+StaticAudioTrackClientProxy::StaticAudioTrackClientProxy(<span class="keyword">audio_track_cblk_t</span>* cblk, <span class="keyword">void</span> *buffers, <span class="keyword">size_t</span> frameCount, <span class="keyword">size_t</span> frameSize)
+    : AudioTrackClientProxy(cblk, buffers, frameCount, frameSize),
+      mMutator(&amp;cblk-&gt;u.mStatic.mSingleStateQueue),
+      mPosLoopObserver(&amp;cblk-&gt;u.mStatic.mPosLoopQueue)
+{
+    <span class="built_in">memset</span>(&amp;mState, <span class="number">0</span>, <span class="keyword">sizeof</span>(mState));
+    <span class="built_in">memset</span>(&amp;mPosLoop, <span class="number">0</span>, <span class="keyword">sizeof</span>(mPosLoop));
+}
+</code></pre><p>StaticAudioTrackClientProxy继承自AudioTrackProxy，增加了四个成员mState、mMutator、mPosLoopObserver、mPosLoop，这些都是为了setLoop而存在的，后面我们再来分析。</p>
+<p>那我们来看下server端的对于track的创建。<br>下面是TrackBase构造函数的一部分：</p>
+<pre><code><span class="keyword">size_t</span> size = <span class="keyword">sizeof</span>(<span class="keyword">audio_track_cblk_t</span>);
+<span class="keyword">size_t</span> bufferSize = (buffer == <span class="literal">NULL</span> ? roundup(frameCount) : frameCount) * mFrameSize;
+<span class="keyword">if</span> (buffer == <span class="literal">NULL</span> &amp;&amp; alloc == ALLOC_CBLK) {
+    size += bufferSize;
+}
+<span class="comment">// client从audioflinger过来的，这个应该是不为0的。</span>
+<span class="keyword">if</span> (client != <span class="number">0</span>) {
+    <span class="comment">// 只需要分配一个结构体audio_track_cblk_t的大小，如果是stream的话，那还需要buffer的大小</span>
+    mCblkMemory = client-&gt;heap()-&gt;allocate(size);
+    <span class="keyword">if</span> (mCblkMemory == <span class="number">0</span> ||
+            (mCblk = <span class="keyword">static_cast</span>&lt;<span class="keyword">audio_track_cblk_t</span> *&gt;(mCblkMemory-&gt;pointer())) == <span class="literal">NULL</span>) {
+        client-&gt;heap()-&gt;dump(<span class="string">"AudioTrack"</span>);
+        mCblkMemory.clear();
+        <span class="keyword">return</span>;
+    }
+} <span class="keyword">else</span> {
+    <span class="comment">// this syntax avoids calling the audio_track_cblk_t constructor twice</span>
+    mCblk = (<span class="keyword">audio_track_cblk_t</span> *) <span class="keyword">new</span> <span class="keyword">uint8_t</span>[size];
+    <span class="comment">// assume mCblk != NULL</span>
+}
+
+<span class="keyword">if</span> (mCblk != <span class="literal">NULL</span>) {
+    <span class="comment">// 构造函数初始化</span>
+    <span class="keyword">new</span>(mCblk) <span class="keyword">audio_track_cblk_t</span>();
+    <span class="keyword">switch</span> (alloc) {
+    ...
+    <span class="keyword">case</span> ALLOC_CBLK:
+        <span class="comment">// clear all buffers</span>
+        <span class="keyword">if</span> (buffer == <span class="literal">NULL</span>) {
+            mBuffer = (<span class="keyword">char</span>*)mCblk + <span class="keyword">sizeof</span>(<span class="keyword">audio_track_cblk_t</span>);
+            <span class="built_in">memset</span>(mBuffer, <span class="number">0</span>, bufferSize);
+        } <span class="keyword">else</span> {
+            <span class="comment">// 直接指向share memory的地址</span>
+            mBuffer = buffer;<span class="comment">//这个buffer是传参为share memory的地址</span>
+        }
+        <span class="keyword">break</span>;
+     ...
+    }
+}
+</code></pre><p>TrackBase的构造函数主要是完成了mCblk的创建和初始化，并且确定buffer的地址。</p>
+<p>接下来看下Track的构造函数：</p>
+<pre><code><span class="keyword">if</span> (sharedBuffer == <span class="number">0</span>) {
+    mAudioTrackServerProxy = <span class="keyword">new</span> AudioTrackServerProxy(mCblk, mBuffer, <span class="variable">frameCount</span>,
+            mFrameSize, !isExternalTrack(), sampleRate);
+} <span class="keyword">else</span> {
+    mAudioTrackServerProxy = <span class="keyword">new</span> StaticAudioTrackServerProxy(mCblk, mBuffer, <span class="variable">frameCount</span>,
+            mFrameSize);
+}
+mServerProxy = mAudioTrackServerProxy;
+</code></pre><p>就是创建了不同的proxy。</p>
+<p>这边我们需要来看下proxy的构造函数：</p>
+<pre><code>StaticAudioTrackClientProxy::StaticAudioTrackClientProxy(<span class="keyword">audio_track_cblk_t</span>* cblk, <span class="keyword">void</span> *buffers,
+        <span class="keyword">size_t</span> frameCount, <span class="keyword">size_t</span> frameSize)
+    : AudioTrackClientProxy(cblk, buffers, frameCount, frameSize),
+      <span class="comment">// 这个是client这边的state的生产者，是负责将state的信息放到队列中，等待server中获取的，它们共</span>
+      <span class="comment">// 享shared的对象</span>
+      mMutator(&amp;cblk-&gt;u.mStatic.mSingleStateQueue),
+      <span class="comment">// 这个是client这边的posLoop信息的消费者，server是posLoop信息的生产者，它们共享shared的对象</span>
+      mPosLoopObserver(&amp;cblk-&gt;u.mStatic.mPosLoopQueue)
+{
+    <span class="built_in">memset</span>(&amp;mState, <span class="number">0</span>, <span class="keyword">sizeof</span>(mState));
+    <span class="built_in">memset</span>(&amp;mPosLoop, <span class="number">0</span>, <span class="keyword">sizeof</span>(mPosLoop));
+}
+
+StaticAudioTrackServerProxy::StaticAudioTrackServerProxy(<span class="keyword">audio_track_cblk_t</span>* cblk, <span class="keyword">void</span> *buffers,
+        <span class="keyword">size_t</span> frameCount, <span class="keyword">size_t</span> frameSize)
+    : AudioTrackServerProxy(cblk, buffers, frameCount, frameSize),
+      <span class="comment">// 这个是server的state消费者，跟client共享同一个shared对象</span>
+      mObserver(&amp;cblk-&gt;u.mStatic.mSingleStateQueue),
+      <span class="comment">// 这个是server的posLoop生产者，跟client共享同一个shared对象</span>
+      mPosLoopMutator(&amp;cblk-&gt;u.mStatic.mPosLoopQueue),
+      <span class="comment">// mFramesReadySafe，mFramesReady一开始就设置为frameCount，因为只有填充好数据才能执行play。</span>
+      <span class="comment">// 但是其填充的数据量是不确定的。</span>
+      mFramesReadySafe(frameCount), mFramesReady(frameCount),
+      mFramesReadyIsCalledByMultipleThreads(<span class="literal">false</span>)
+{
+    <span class="built_in">memset</span>(&amp;mState, <span class="number">0</span>, <span class="keyword">sizeof</span>(mState));
+}
+</code></pre><p>重点就在上面注释的地方了，总共是有两个生产者和消费者的模型的，一个是针对state，另外一个是针对position和loopCount。<br>state模型，是为了通知server端，上层有对pos和loopCount进行修改的需求，所以生产者是client，消费者是server。</p>
+<p>posLoop模型，由于pos和Loop只有server端消费了才算消费，所以需要server端来通知client端消费情况，所以server端为生产者，client端为消费者。</p>
+<p>对于StaticAudioTrackServerProxy它的实现就跟AudioTrackServerProxy有一定的差别了，它的<code>obtainBuffer</code>和<code>releaseBuffer</code>等一系列的方法都重写了。</p>
+<h4 id="play/stop/release">play/stop/release</h4><p>这部分的逻辑跟stream模式下的逻辑是一致的。需要的话请参考下<br><a href="http://thinks.me/2016/03/18/audiotrack_play/" title="audiotrack的play流程">http://thinks.me/2016/03/18/audiotrack_play/</a><br>play的触发，在非share memory，会将mFillingUpStatus设置为FILLING，会等待数据填充满，但是对于static它是要求先填充数据之后再进行播放的，所以一开始mFillingUpStatus是为FILLED的。</p>
+<p><a href="http://thinks.me/2016/03/21/audiotrack_pause_stop/" title="audiotrack的pause\stop流程">http://thinks.me/2016/03/21/audiotrack_pause_stop/</a></p>
+<h4 id="write">write</h4><p>write的部分，跟mode_stream的差别是比较大的，static的实现是非常简单的，我们直接看jni的代码：</p>
+<pre><code>static jint writeToTrack<span class="list">(<span class="keyword">const</span> sp&lt;AudioTrack&gt;&amp; track, jint audioFormat, const T <span class="variable">*data,
+                         jint offsetInSamples, jint sizeInSamples, bool blocking) {
+    ssize_t written = 0;
+    size_t sizeInBytes = sizeInSamples *</span> sizeof<span class="list">(<span class="keyword">T</span>)</span><span class="comment">;</span>
+    // 不是采用share memory
+    if <span class="list">(<span class="keyword">track-&gt;sharedBuffer</span><span class="list">()</span> == <span class="number">0</span>)</span> {
+        written = track-&gt;write<span class="list">(<span class="keyword">data</span> + offsetInSamples, sizeInBytes, blocking)</span><span class="comment">;</span>
+        // for compatibility with earlier behavior of write<span class="list">()</span>, return <span class="number">0</span> in this case
+        if <span class="list">(<span class="keyword">written</span> == <span class="list">(<span class="keyword">ssize_t</span>)</span> WOULD_BLOCK)</span> {
+            written = <span class="number">0</span><span class="comment">;</span>
+        }
+    } else {
+        // 采用share memory
+        if <span class="list">(<span class="list">(<span class="keyword">size_t</span>)</span>sizeInBytes &gt; track-&gt;sharedBuffer<span class="list">()</span>-&gt;size<span class="list">()</span>)</span> {
+            sizeInBytes = track-&gt;sharedBuffer<span class="list">()</span>-&gt;size<span class="list">()</span><span class="comment">;</span>
+        }
+        // 直接将数据拷贝到缓冲区了。
+        memcpy<span class="list">(<span class="keyword">track-&gt;sharedBuffer</span><span class="list">()</span>-&gt;pointer<span class="list">()</span>, data + offsetInSamples, sizeInBytes)</span><span class="comment">;</span>
+        written = sizeInBytes<span class="comment">;</span>
+    }
+    if <span class="list">(<span class="keyword">written</span> &gt; <span class="number">0</span>)</span> {
+        return written / sizeof<span class="list">(<span class="keyword">T</span>)</span><span class="comment">;</span>
+    }
+    // for compatibility, error codes pass through unchanged
+    return written<span class="comment">;</span>
+}</span>
+</code></pre><p>从上面代码中，我们发现share memory的方法非常简单，直接将数据拷贝到track的缓冲区了，并没像stream mode下面需要obtainBuffer,releaseBuffer,甚至还会有阻塞等情况。但是于此同时，我们就不得不去想，那audioflinger那边是如何判断这边数据准备好了，还是它是否要求必须先write完之后，才能进行play，否则就会报错。其实事实就是这样的，这个操作是在java层完成的，在audiotrack构造函数中，发现如果是static的类型，则对应的state是跟stream不一样的，它会设置为STATE_NO_STATIC_DATA，只有写如数据了，state才会变成STATE_INITIALIZED，这样去执行play的时候才不会报state异常。</p>
+<p>对于audioflinger的部分我们就不用再来分析了，我们直接来看serverproxy中的两个关键函数，<code>obtainBuffer</code>和<code>releaseBuffer</code>吧。</p>
+<pre><code><span class="keyword">status_t</span> StaticAudioTrackServerProxy::obtainBuffer(Buffer* buffer, <span class="keyword">bool</span> ackFlush __unused)
+{
+    <span class="comment">// 如果出现异常，则退出。</span>
+    <span class="keyword">if</span> (mIsShutdown) {
+        buffer-&gt;mFrameCount = <span class="number">0</span>;
+        buffer-&gt;mRaw = <span class="literal">NULL</span>;
+        buffer-&gt;mNonContig = <span class="number">0</span>;
+        mUnreleased = <span class="number">0</span>;
+        <span class="keyword">return</span> NO_INIT;
+    }
+    <span class="comment">// 去获取client端是否有变更了position或者loopCount信息，如果没有变更则获取mState.mPosition。</span>
+    <span class="keyword">ssize_t</span> positionOrStatus = pollPosition();
+    <span class="comment">// 如果返回是个异常值，则退出</span>
+    <span class="keyword">if</span> (positionOrStatus &lt; <span class="number">0</span>) {
+        buffer-&gt;mFrameCount = <span class="number">0</span>;
+        buffer-&gt;mRaw = <span class="literal">NULL</span>;
+        buffer-&gt;mNonContig = <span class="number">0</span>;
+        mUnreleased = <span class="number">0</span>;
+        <span class="keyword">return</span> (<span class="keyword">status_t</span>) positionOrStatus;
+    }
+    <span class="comment">// 下面是简单的找到数据在缓冲区的位置</span>
+    <span class="keyword">size_t</span> position = (<span class="keyword">size_t</span>) positionOrStatus;
+    <span class="keyword">size_t</span> end = mState.mLoopCount != <span class="number">0</span> ? mState.mLoopEnd : mFrameCount;
+    <span class="keyword">size_t</span> avail;
+    <span class="keyword">if</span> (position &lt; end) {
+        avail = end - position;
+        <span class="keyword">size_t</span> wanted = buffer-&gt;mFrameCount;
+        <span class="keyword">if</span> (avail &lt; wanted) {
+            buffer-&gt;mFrameCount = avail;
+        } <span class="keyword">else</span> {
+            avail = wanted;
+        }
+        buffer-&gt;mRaw = &amp;((<span class="keyword">char</span> *) mBuffers)[position * mFrameSize];
+    } <span class="keyword">else</span> {
+        avail = <span class="number">0</span>;
+        buffer-&gt;mFrameCount = <span class="number">0</span>;
+        buffer-&gt;mRaw = <span class="literal">NULL</span>;
+    }
+    LOG_ALWAYS_FATAL_IF(mFramesReady &lt; (<span class="keyword">int64_t</span>) avail);
+    buffer-&gt;mNonContig = mFramesReady == INT64_MAX ? SIZE_MAX : clampToSize(mFramesReady - avail);
+    mUnreleased = avail;
+    <span class="keyword">return</span> NO_ERROR;
+}
+</code></pre><p>上面的函数，我们需要注意的是里面函数<code>pollPosition</code>的实现，这个我们一会儿结合<code>setLoop</code>再来一起学习吧。剩下的部分是简单的换算buffer的指针和数据的多少。获取到buffer了，那用完就进入<code>releaseBuffer</code>了。</p>
+<pre><code><span class="keyword">void</span> StaticAudioTrackServerProxy::releaseBuffer(Buffer* buffer)
+{
+    <span class="comment">// 获取真正被消费的帧数</span>
+    <span class="keyword">size_t</span> stepCount = buffer-&gt;mFrameCount;
+    <span class="keyword">if</span> (stepCount == <span class="number">0</span>) {
+        buffer-&gt;mRaw = <span class="literal">NULL</span>;
+        buffer-&gt;mNonContig = <span class="number">0</span>;
+        <span class="keyword">return</span>;
+    }
+    <span class="comment">// 计算还剩下多少帧尚未被消费</span>
+    mUnreleased -= stepCount;
+    <span class="keyword">audio_track_cblk_t</span>* cblk = mCblk;
+    <span class="comment">// 获取当前position的位置</span>
+    <span class="keyword">size_t</span> position = mState.mPosition;
+    <span class="comment">// 更新position</span>
+    <span class="keyword">size_t</span> newPosition = position + stepCount;
+    <span class="keyword">int32_t</span> setFlags = <span class="number">0</span>;
+    <span class="keyword">if</span> (!(position &lt;= newPosition &amp;&amp; newPosition &lt;= mFrameCount)) {
+        newPosition = mFrameCount;
+    } <span class="keyword">else</span> <span class="keyword">if</span> (mState.mLoopCount != <span class="number">0</span> &amp;&amp; newPosition == mState.mLoopEnd) {
+        <span class="comment">// 对于有loop的，当新的position已经到达边界了，那就设置为start</span>
+        newPosition = mState.mLoopStart;
+        <span class="comment">// loopCount为1表示为无限循环。</span>
+        <span class="keyword">if</span> (mState.mLoopCount == -<span class="number">1</span> || --mState.mLoopCount != <span class="number">0</span>) {
+            setFlags = CBLK_LOOP_CYCLE;
+        } <span class="keyword">else</span> {
+            setFlags = CBLK_LOOP_FINAL;
+        }
+    }
+    <span class="comment">// 如果此时newPosition依然为framecount，那就设置flag为BUFFER_END</span>
+    <span class="keyword">if</span> (newPosition == mFrameCount) {
+        setFlags |= CBLK_BUFFER_END;
+    }
+    <span class="comment">// 更新position到mState</span>
+    mState.mPosition = newPosition;
+    <span class="comment">// 更新mFramesReady</span>
+    <span class="keyword">if</span> (mFramesReady != INT64_MAX) {
+        mFramesReady -= stepCount;
+    }
+    <span class="comment">// 类型转换吧。。。。</span>
+    mFramesReadySafe = clampToSize(mFramesReady);
+    <span class="comment">// 更新cblk中mServer</span>
+    cblk-&gt;mServer += stepCount;
+    <span class="comment">// 将最新pos和loopCount 推入到消费队列中，等待client端消费。</span>
+    StaticAudioTrackPosLoop posLoop;
+    posLoop.mBufferPosition = mState.mPosition;
+    posLoop.mLoopCount = mState.mLoopCount;
+    mPosLoopMutator.push(posLoop);
+    <span class="comment">// 将flag更新到cblk中的flags中</span>
+    <span class="keyword">if</span> (setFlags != <span class="number">0</span>) {
+        (<span class="keyword">void</span>) android_atomic_or(setFlags, &amp;cblk-&gt;mFlags);
+        <span class="comment">// this would be a good place to wake a futex</span>
+    }
+
+    buffer-&gt;mFrameCount = <span class="number">0</span>;
+    buffer-&gt;mRaw = <span class="literal">NULL</span>;
+    buffer-&gt;mNonContig = <span class="number">0</span>;
+}
+</code></pre><p>从上面的函数中，我们厘清下这个函数的作用：</p>
+<ol>
+<li>更新position，更新flag、更新frameready数</li>
+<li>将pos和loopCount的信息丢给client端</li>
+</ol>
+<p>我们还知道mFramesReady和mFramesReadySafe，mFramesReadySafe的出现完全只是为了安全而存在的，正常情况下它们两的值是相等的。</p>
+<p>到这边，我们来回想下，整个数据生产消费逻辑：<br>static track一旦进入play，就会开始去获取数据，然后release。。然后就是又获取数据，release数据，写的逻辑在后面是没意义了。</p>
+<h4 id="setLoop">setLoop</h4><p>接下来我们来看下loop吧。。</p>
+<pre><code><span class="comment">// loopStart、loopEnd都是以帧为单位的</span>
+<span class="keyword">status_t</span> AudioTrack::setLoop(<span class="keyword">uint32_t</span> loopStart, <span class="keyword">uint32_t</span> loopEnd, <span class="keyword">int</span> loopCount)
+{
+    <span class="comment">// 必须是sharebuffer或者time或者offload才可以setLoop</span>
+    <span class="keyword">if</span> (mSharedBuffer == <span class="number">0</span> || mIsTimed || isOffloadedOrDirect()) {
+        <span class="keyword">return</span> INVALID_OPERATION;
+    }
+    <span class="comment">// 判断参数是否允许</span>
+    <span class="comment">// a)loopCount为0的话，没特殊要求</span>
+    <span class="comment">// b)loopCount大于等于-1，loopStart必须小于loopEnd, loopEnd必须小于等于缓冲区的帧数并且</span>
+    <span class="comment">// loopEnd和loopStart之间的帧差必须大于等于MIN_LOOP</span>
+    <span class="comment">// c)其他情况一概拒绝</span>
+    <span class="keyword">if</span> (loopCount == <span class="number">0</span>) {
+        ;
+    } <span class="keyword">else</span> <span class="keyword">if</span> (loopCount &gt;= -<span class="number">1</span> &amp;&amp; loopStart &lt; loopEnd &amp;&amp; loopEnd &lt;= mFrameCount &amp;&amp;
+            loopEnd - loopStart &gt;= MIN_LOOP) {
+        ;
+    } <span class="keyword">else</span> {
+        <span class="keyword">return</span> BAD_VALUE;
+    }
+
+    <span class="function">AutoMutex <span class="title">lock</span><span class="params">(mLock)</span></span>;
+    <span class="comment">// 如果当前状态为ACTIVE是不给设置的。</span>
+    <span class="keyword">if</span> (mState == STATE_ACTIVE) {
+        <span class="keyword">return</span> INVALID_OPERATION;
+    }
+    setLoop_l(loopStart, loopEnd, loopCount);
+    <span class="keyword">return</span> NO_ERROR;
+}
+
+<span class="keyword">void</span> AudioTrack::setLoop_l(<span class="keyword">uint32_t</span> loopStart, <span class="keyword">uint32_t</span> loopEnd, <span class="keyword">int</span> loopCount)
+{
+    <span class="comment">// 将数据进行保存，然后调用proxy进行setLoop</span>
+    mLoopCount = loopCount;
+    mLoopEnd = loopEnd;
+    mLoopStart = loopStart;
+    mLoopCountNotified = loopCount;
+    mStaticProxy-&gt;setLoop(loopStart, loopEnd, loopCount);
+}
+
+<span class="keyword">void</span> StaticAudioTrackClientProxy::setLoop(<span class="keyword">size_t</span> loopStart, <span class="keyword">size_t</span> loopEnd, <span class="keyword">int</span> loopCount)
+{
+    <span class="comment">// 64bit的客户端会发生这个问题。。。</span>
+    <span class="keyword">if</span> (loopStart &gt; UINT32_MAX || loopEnd &gt; UINT32_MAX) {
+        <span class="keyword">return</span>;
+    }
+    mState.mLoopStart = (<span class="keyword">uint32_t</span>) loopStart;
+    mState.mLoopEnd = (<span class="keyword">uint32_t</span>) loopEnd;
+    mState.mLoopCount = loopCount;
+    <span class="comment">// max(self, other) + 1</span>
+    mState.mLoopSequence = incrementSequence(mState.mLoopSequence, mState.mPositionSequence);
+    <span class="comment">// 获取下最新的position的信息</span>
+    getBufferPositionAndLoopCount(<span class="literal">NULL</span>, <span class="literal">NULL</span>);
+    <span class="keyword">if</span> (mState.mLoopCount != <span class="number">0</span> &amp;&amp; mPosLoop.mBufferPosition &gt;= mState.mLoopEnd) {
+        mPosLoop.mBufferPosition = mState.mLoopStart;
+    }
+    mPosLoop.mLoopCount = mState.mLoopCount;
+    <span class="comment">// state发生了变化，所以将mState放入消费队列中</span>
+    (<span class="keyword">void</span>) mMutator.push(mState);
+}
+</code></pre><p>上面的代码逻辑基本上<code>setLoop</code>的参数如何设置到clientproxy中。需要重点关注的是clientproxy中的<code>setLoop</code>函数。</p>
+<p>将loop的相关信息更新到mState和mPosLoop，然后push到消费队列中，这样serverproxy那边在<code>pollPosition</code>的时候，就会获取到新的参数，然后重新确定buffer的指针等信息，来实现loop的功能。</p>
+<p>下面我们补充下个别函数的实现说明。</p>
+<pre><code><span class="keyword">void</span> StaticAudioTrackClientProxy::getBufferPositionAndLoopCount(
+        <span class="keyword">size_t</span> *position, <span class="keyword">int</span> *loopCount)
+{
+    <span class="comment">// 要确保clientproxy发给serverproxy的消息已经被serverproxy处理了，然后再去读取serverproxy信息</span>
+    <span class="keyword">if</span> (mMutator.ack() == StaticAudioTrackSingleStateQueue::SSQ_DONE) {
+         <span class="keyword">if</span> (mPosLoopObserver.poll(mPosLoop)) {
+             ; 
+         }
+    }
+    <span class="keyword">if</span> (position != <span class="literal">NULL</span>) {
+        *position = mPosLoop.mBufferPosition;
+    }
+    <span class="keyword">if</span> (loopCount != <span class="literal">NULL</span>) {
+        *loopCount = mPosLoop.mLoopCount;
+    }
+}
+</code></pre><p>有没有消息的话取决于push的过程：</p>
+<pre><code>int32_t push(const T&amp; <span class="keyword">value</span>)
+{
+    Shared *shared = mShared;
+    int32_t <span class="keyword">sequence</span> = mSequence;
+    <span class="keyword">sequence</span>++;
+    // 用<span class="keyword">sequence</span>来实现原子操作。
+    android_atomic_acquire_store(<span class="keyword">sequence</span>, &amp;shared-&gt;mSequence);
+    shared-&gt;mValue = <span class="keyword">value</span>;
+    <span class="keyword">sequence</span>++;
+    android_atomic_release_store(<span class="keyword">sequence</span>, &amp;shared-&gt;mSequence);
+    mSequence = <span class="keyword">sequence</span>;
+    <span class="keyword">return</span> <span class="keyword">sequence</span>;
+}
+</code></pre><p>这边巧用了sequence来实现原子操作。如果为奇数表示正要开始，为偶数就表示已经push进去了。<br>如果该item被observer消费的话，会更新ack跟sequence相等。<br>observer在获取完该item的时候一般会进行done操作，会将该ack进行加1操作。<br>所以如果有个item被处理了，那下面会返回SSQ_DONE。</p>
+<pre><code><span class="comment">// 获取数据之前一般会调用ack来确定是否已经处理好了，如果处理好了，再去poll数据出来</span>
+<span class="function"><span class="keyword">enum</span> SSQ_STATUS <span class="title">ack</span><span class="params">()</span> <span class="keyword">const</span>
+</span>{
+    <span class="comment">// 当observer读到一个已经改变的item的时候，ack是会被改为跟mSequence一致的。</span>
+    <span class="comment">// mSequence是用来当作互斥锁的作用的，赋值之前为奇数、赋值之后为偶数。</span>
+    <span class="comment">// 当observer已经处理完之后，会执行done，这个时候ack会加1.变成奇数</span>
+    <span class="comment">// 如果ack等于mSequence，那表示当前已经获取到这个item，正在处理。</span>
+    <span class="comment">// 然后再确定下当前是处理完了还是在处理过程中，这个时候就判断ack了。</span>
+    <span class="comment">// 如果ack小于mSequence &amp; ~1,肯定为正，所以为pending，表示数据尚未被observer获取。</span>
+    <span class="keyword">const</span> <span class="keyword">int32_t</span> ack = android_atomic_acquire_load(&amp;mShared-&gt;mAck);
+    <span class="keyword">return</span> ack - mSequence &amp; ~<span class="number">1</span> ? SSQ_PENDING <span class="comment">/* seq differ */</span> :
+            ack &amp; <span class="number">1</span> ? SSQ_DONE : SSQ_READ;
+}
+</code></pre><p>上面的<code>ack</code>是用来判断当前item的处理状态。</p>
+<p>这段时间发现audio这边特别喜欢用生产者消费者的逻辑，除了static mode的信息共享，fast  mixer的数据流、stream mode的数据流。</p>
+<p>感觉这篇文章讲得逻辑可能有点乱，这边稍微总结下，其实消费数据这块逻辑很简单，就是一个固定大小的缓冲区，我们只要去控制position就可以完成loop或者从那边开始的操作了，它的复杂性，其实并不是在这边，让别人觉得混乱的是<code>SingleStateQueue</code>实现的信息共享，并且还巧妙的采用sequence来实现原子操作。而这部分的代码查阅是需要结合serverproxy和clientproxy一起来看的，因为它们各自有生产者和消费者，clientproxy的生产者和serverproxy的消费者对接，clientproxy的消费者跟serverproxy的生产者对接，这样来实现的消息的互相传递。</p>
+
+      
+    </div>
+
+    <div>
+      
+        
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Android/" rel="tag">#Android</a>
+          
+            <a href="/tags/AudioTrack/" rel="tag">#AudioTrack</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/03/21/audiotrack_flush/" rel="next" title="audiotrack的Marker/PeriodPosition/flush流程(mode_stream)">
+                <i class="fa fa-chevron-left"></i> audiotrack的Marker/PeriodPosition/flush流程(mode_stream)
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div class="ds-thread" data-thread-key="2016/03/24/audiotrack_static_loop/"
+           data-title="mode_static audiotrack流程和setLoop学习" data-url="http://thinks.me/2016/03/24/audiotrack_static_loop/">
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.png"
+               alt="LexiMee" />
+          <p class="site-author-name" itemprop="name">LexiMee</p>
+          <p class="site-description motion-element" itemprop="description">leave me alone</p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">13</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">2</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">9</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        <div class="links-of-blogroll motion-element">
+          
+        </div>
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator">
+            <i class="fa fa-angle-double-up"></i>
+          </div>
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#简述"><span class="nav-number">1.</span> <span class="nav-text">简述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#正文"><span class="nav-number">2.</span> <span class="nav-text">正文</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#mode_static_audiotrack"><span class="nav-number">2.1.</span> <span class="nav-text">mode_static audiotrack</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#创建"><span class="nav-number">2.1.1.</span> <span class="nav-text">创建</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#play/stop/release"><span class="nav-number">2.1.2.</span> <span class="nav-text">play/stop/release</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#write"><span class="nav-number">2.1.3.</span> <span class="nav-text">write</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#setLoop"><span class="nav-number">2.1.4.</span> <span class="nav-text">setLoop</span></a></li></ol></li></ol></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator">
+            <i class="fa fa-angle-double-down"></i>
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2015 - 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">LexiMee</span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="http://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Pisces
+  </a>
+</div>
+
+
+
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+
+  
+
+
+
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=0.5.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=0.5.0"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=0.5.0"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=0.5.0"></script>
+
+
+
+  
+  
+<script type="text/javascript" src="/js/src/scrollspy.js?v=0.5.0"></script>
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 1 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = NexT.utils.escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    NexT.motion.middleWares.sidebar = function () {
+      var $tocContent = $('.post-toc-content');
+
+      if (CONFIG.scheme !== 'Pisces' && (CONFIG.sidebar.display === 'post' || CONFIG.sidebar.display === 'always')) {
+        if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+          NexT.utils.displaySidebar();
+        }
+      }
+    };
+  });
+</script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=0.5.0"></script>
+
+
+
+  
+
+  
+    
+  
+
+  <script type="text/javascript">
+    var duoshuoQuery = {short_name:"thinks"};
+    (function() {
+      var ds = document.createElement('script');
+      ds.type = 'text/javascript';ds.async = true;
+      ds.id = 'duoshuo-script';
+      ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+      ds.charset = 'UTF-8';
+      (document.getElementsByTagName('head')[0]
+      || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+  </script>
+
+  
+    
+  
+
+
+
+
+
+  
+  
+  
+
+  
+
+
+</body>
+</html>
