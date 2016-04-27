@@ -62,7 +62,7 @@
 <meta name="description" content="简述这次，我们来看下a2dp下面的播放场景吧。a2dp是蓝牙用来播放音乐的协议，正常情况下，播放音乐只从蓝牙耳机端输出，但是如果是来个通知类的声音，那策略的选择会同时从蓝牙耳机和speaker同时输出，由于speaker和蓝牙是采用的不同硬件设备输出，所以它在hal层应该是对应两个so的。所以，谷歌针对这种场景，继承PlaybackThread，实现了DuplicatingThread，这样就需要">
 <meta property="og:type" content="article">
 <meta property="og:title" content="a2dp场景分析">
-<meta property="og:url" content="http://thinks.me/2016/04/07/audio_a2dp/index.html">
+<meta property="og:url" content="http://thinks.me/2016/04/09/audio_a2dp/index.html">
 <meta property="og:site_name" content="Thinking">
 <meta property="og:description" content="简述这次，我们来看下a2dp下面的播放场景吧。a2dp是蓝牙用来播放音乐的协议，正常情况下，播放音乐只从蓝牙耳机端输出，但是如果是来个通知类的声音，那策略的选择会同时从蓝牙耳机和speaker同时输出，由于speaker和蓝牙是采用的不同硬件设备输出，所以它在hal层应该是对应两个so的。所以，谷歌针对这种场景，继承PlaybackThread，实现了DuplicatingThread，这样就需要">
 <meta property="og:image" content="http://thinks.me/image/outputtrack.jpg">
@@ -239,8 +239,8 @@
               <i class="fa fa-calendar-o"></i>
             </span>
             <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2016-04-07T17:13:35+08:00" content="2016-04-07">
-              2016-04-07
+            <time itemprop="dateCreated" datetime="2016-04-09T17:13:35+08:00" content="2016-04-09">
+              2016-04-09
             </time>
           </span>
 
@@ -269,8 +269,8 @@
             
               <span class="post-comments-count">
                 &nbsp; | &nbsp;
-                <a href="/2016/04/07/audio_a2dp/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/04/07/audio_a2dp/" itemprop="commentsCount"></span>
+                <a href="/2016/04/09/audio_a2dp/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/04/09/audio_a2dp/" itemprop="commentsCount"></span>
                 </a>
               </span>
             
@@ -1405,8 +1405,8 @@ AudioFlinger::PlaybackThread::OutputTrack::OutputTrack(
           
   <div class="comments" id="comments">
     
-      <div class="ds-thread" data-thread-key="2016/04/07/audio_a2dp/"
-           data-title="a2dp场景分析" data-url="http://thinks.me/2016/04/07/audio_a2dp/">
+      <div class="ds-thread" data-thread-key="2016/04/09/audio_a2dp/"
+           data-title="a2dp场景分析" data-url="http://thinks.me/2016/04/09/audio_a2dp/">
       </div>
     
   </div>
