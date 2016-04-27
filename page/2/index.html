@@ -228,6 +228,133 @@
             
               
                 
+                <a class="post-title-link" href="/2016/03/18/audiotrack_write/" itemprop="url">
+                  audiotrack的write流程(mode_stream)
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2016-03-18T14:23:24+08:00" content="2016-03-18">
+              2016-03-18
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/android开发/" itemprop="url" rel="index">
+                    <span itemprop="name">android开发</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2016/03/18/audiotrack_write/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/03/18/audiotrack_write/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <h2 id="简述">简述</h2><p>到目前为止，我们已经完成了audiotrack创建和设置，它完成了cblk、clientproxy、serverproxy、track、output等的创建和关联，并且打开了音频通路，紧接着就等我们写数据了。</p>
+<p>读写数据的操作是一个生产者和消费者的逻辑。这边的逻辑是这样的：</p>
+<blockquote>
+<p>生产者写数据，线程消费数据，线程消费了n个数据之后，发现已经完成minbuffersize的消费，会去通知你继续填充数据。它们是在两个独立的线程里面的。</p>
+</blockquote>
+<p>所以可能会出现三种情况的数据填写：</p>
+<ol>
+<li>生产者极快。生产者数据写完了，等待消费者消费到minbuffersize，然后唤醒生产者继续填充，在消费者进行下次消费之前已经填充完，又进入等待。看起来好像是有序的填充，等待，消费，唤醒，填充，等待，消费，唤醒的线性逻辑</li>
+<li>生产和消费速度相当。生产者数据写完了，等待消费者消费到minbuffersize，然后唤醒生产者继续填充，生产者的生产速度极慢，每次填充都正好满足消费者的。这边看起来就是异步的了，一边一直在填充、一边一直在消费，基本上没有唤醒情况</li>
+<li>生产速度远远小于消费速度。生产者的数据写入太慢，消费者消费过快，这个时候就会出现underrun了，这个时候消费者会给生产者一定的机会，如果还是没能够给到数据，则就将其赶出判断的行列。</li>
+</ol>
+          <div class="post-more-link text-center">
+            <a class="btn" href="/2016/03/18/audiotrack_write/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                
                 <a class="post-title-link" href="/2016/03/18/audiotrack_play/" itemprop="url">
                   audiotrack的play流程(mode_stream)
                 </a>
@@ -677,134 +804,6 @@
 
 
     
-      
-
-  
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/2015/11/22/dagger2_second/" itemprop="url">
-                  Dagger 2 SubComponent
-                </a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            <span class="post-meta-item-icon">
-              <i class="fa fa-calendar-o"></i>
-            </span>
-            <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2015-11-22T14:26:02+08:00" content="2015-11-22">
-              2015-11-22
-            </time>
-          </span>
-
-          
-            <span class="post-category" >
-              &nbsp; | &nbsp;
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-              
-                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
-                  <a href="/categories/android开发/" itemprop="url" rel="index">
-                    <span itemprop="name">android开发</span>
-                  </a>
-                </span>
-
-                
-                
-
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                &nbsp; | &nbsp;
-                <a href="/2015/11/22/dagger2_second/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2015/11/22/dagger2_second/" itemprop="commentsCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-
-          
-          
-
-        </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <p>学习源码：<a href="https://github.com/mvarnagiris/Financius">https://github.com/mvarnagiris/Financius</a></p>
-<p>本来该文章打算稍微介绍下Dagger2的SubComponent的，但是发现单单介绍这个标签好像并没有什么卵用，因为它的使用方法跟Component基本上没有太大区别。</p>
-<h3 id="SubComponent的使用">SubComponent的使用</h3><p>SubComponent的语法规则可以参考前一篇博客里面的Component的使用。</p>
-<p>那如何将Component和SubComponent关联起来呢？</p>
-<blockquote>
-<p>只需要在Component中声明一个函数返回值为该SubComponent即可：</p>
-</blockquote>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">ActivityComponent <span class="title">plus</span><span class="params">()</span></span>;</span><br></pre></td></tr></table></figure>
-<p>那SubComponent在apt生成的代码中的表现形式又是如何的呢？</p>
-<blockquote>
-<p>该SubComponent的实现类将直接成为Component的private final内部类。而如果是独立的Component，那它将拥有自己的一个public的实现类。由于是private final类，所以获取该SubComponent只能通过在Component中声明的函数进行获取。</p>
-</blockquote>
-          <div class="post-more-link text-center">
-            <a class="btn" href="/2015/11/22/dagger2_second/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
   </section>
 
   
@@ -850,7 +849,7 @@
         <nav class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">14</span>
+              <span class="site-state-item-count">15</span>
               <span class="site-state-item-name">日志</span>
             </a>
           </div>
@@ -867,7 +866,7 @@
           
             <div class="site-state-item site-state-tags">
               <a href="/tags">
-                <span class="site-state-item-count">10</span>
+                <span class="site-state-item-count">11</span>
                 <span class="site-state-item-name">标签</span>
               </a>
             </div>

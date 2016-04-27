@@ -345,6 +345,124 @@
             
               
                 
+                <a class="post-title-link" href="/2016/04/07/audio_a2dp/" itemprop="url">
+                  a2dp场景分析
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2016-04-07T17:13:35+08:00" content="2016-04-07">
+              2016-04-07
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/android开发/" itemprop="url" rel="index">
+                    <span itemprop="name">android开发</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2016/04/07/audio_a2dp/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/04/07/audio_a2dp/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <h2 id="简述">简述</h2><p>这次，我们来看下a2dp下面的播放场景吧。a2dp是蓝牙用来播放音乐的协议，正常情况下，播放音乐只从蓝牙耳机端输出，但是如果是来个通知类的声音，那策略的选择会同时从蓝牙耳机和speaker同时输出，由于speaker和蓝牙是采用的不同硬件设备输出，所以它在hal层应该是对应两个so的。所以，谷歌针对这种场景，继承PlaybackThread，实现了DuplicatingThread，这样就需要在audioflinger这边实现将数据拷贝到两个缓冲区的操作了。</p>
+<h2 id="正文">正文</h2><p>在android下，对于链接蓝牙的音乐播放的话，按照我们的认知，肯定得从蓝牙出来，这是毋庸置疑的，也合乎常理，这个和一般的音乐播放一样，只是需要单纯的选择到对应的设备通过一个output即可完成播放。但是有一些特殊的场景，需要声音即从蓝牙耳机输出，又从设备的speaker输出，这个时候对于单个output的播放方式就无法满足这种场景了，于是谷歌引入duplicate播放该种类型声音的方案，接下来我们将一起来分析这部分的代码。</p>
+          <div class="post-more-link text-center">
+            <a class="btn" href="/2016/04/07/audio_a2dp/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                
                 <a class="post-title-link" href="/2016/03/24/audiotrack_static_loop/" itemprop="url">
                   audiotrack流程和setLoop学习(mode_static)
                 </a>
@@ -675,133 +793,6 @@
 
 
     
-      
-
-  
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/2016/03/18/audiotrack_write/" itemprop="url">
-                  audiotrack的write流程(mode_stream)
-                </a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            <span class="post-meta-item-icon">
-              <i class="fa fa-calendar-o"></i>
-            </span>
-            <span class="post-meta-item-text">发表于</span>
-            <time itemprop="dateCreated" datetime="2016-03-18T14:23:24+08:00" content="2016-03-18">
-              2016-03-18
-            </time>
-          </span>
-
-          
-            <span class="post-category" >
-              &nbsp; | &nbsp;
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-              
-                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
-                  <a href="/categories/android开发/" itemprop="url" rel="index">
-                    <span itemprop="name">android开发</span>
-                  </a>
-                </span>
-
-                
-                
-
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                &nbsp; | &nbsp;
-                <a href="/2016/03/18/audiotrack_write/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/03/18/audiotrack_write/" itemprop="commentsCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-
-          
-          
-
-        </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <h2 id="简述">简述</h2><p>到目前为止，我们已经完成了audiotrack创建和设置，它完成了cblk、clientproxy、serverproxy、track、output等的创建和关联，并且打开了音频通路，紧接着就等我们写数据了。</p>
-<p>读写数据的操作是一个生产者和消费者的逻辑。这边的逻辑是这样的：</p>
-<blockquote>
-<p>生产者写数据，线程消费数据，线程消费了n个数据之后，发现已经完成minbuffersize的消费，会去通知你继续填充数据。它们是在两个独立的线程里面的。</p>
-</blockquote>
-<p>所以可能会出现三种情况的数据填写：</p>
-<ol>
-<li>生产者极快。生产者数据写完了，等待消费者消费到minbuffersize，然后唤醒生产者继续填充，在消费者进行下次消费之前已经填充完，又进入等待。看起来好像是有序的填充，等待，消费，唤醒，填充，等待，消费，唤醒的线性逻辑</li>
-<li>生产和消费速度相当。生产者数据写完了，等待消费者消费到minbuffersize，然后唤醒生产者继续填充，生产者的生产速度极慢，每次填充都正好满足消费者的。这边看起来就是异步的了，一边一直在填充、一边一直在消费，基本上没有唤醒情况</li>
-<li>生产速度远远小于消费速度。生产者的数据写入太慢，消费者消费过快，这个时候就会出现underrun了，这个时候消费者会给生产者一定的机会，如果还是没能够给到数据，则就将其赶出判断的行列。</li>
-</ol>
-          <div class="post-more-link text-center">
-            <a class="btn" href="/2016/03/18/audiotrack_write/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
   </section>
 
   
@@ -847,7 +838,7 @@
         <nav class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">14</span>
+              <span class="site-state-item-count">15</span>
               <span class="site-state-item-name">日志</span>
             </a>
           </div>
@@ -864,7 +855,7 @@
           
             <div class="site-state-item site-state-tags">
               <a href="/tags">
-                <span class="site-state-item-count">10</span>
+                <span class="site-state-item-count">11</span>
                 <span class="site-state-item-name">标签</span>
               </a>
             </div>

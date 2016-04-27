@@ -1,0 +1,1815 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css"/>
+
+
+
+
+  <link href="//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=0.5.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Android,AudioTrack,a2dp," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="Thinking" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=0.5.0" />
+
+
+
+
+
+
+<meta name="description" content="简述这次，我们来看下a2dp下面的播放场景吧。a2dp是蓝牙用来播放音乐的协议，正常情况下，播放音乐只从蓝牙耳机端输出，但是如果是来个通知类的声音，那策略的选择会同时从蓝牙耳机和speaker同时输出，由于speaker和蓝牙是采用的不同硬件设备输出，所以它在hal层应该是对应两个so的。所以，谷歌针对这种场景，继承PlaybackThread，实现了DuplicatingThread，这样就需要">
+<meta property="og:type" content="article">
+<meta property="og:title" content="a2dp场景分析">
+<meta property="og:url" content="http://thinks.me/2016/04/07/audio_a2dp/index.html">
+<meta property="og:site_name" content="Thinking">
+<meta property="og:description" content="简述这次，我们来看下a2dp下面的播放场景吧。a2dp是蓝牙用来播放音乐的协议，正常情况下，播放音乐只从蓝牙耳机端输出，但是如果是来个通知类的声音，那策略的选择会同时从蓝牙耳机和speaker同时输出，由于speaker和蓝牙是采用的不同硬件设备输出，所以它在hal层应该是对应两个so的。所以，谷歌针对这种场景，继承PlaybackThread，实现了DuplicatingThread，这样就需要">
+<meta property="og:image" content="http://thinks.me/image/outputtrack.jpg">
+<meta property="og:updated_time" content="2016-04-07T09:13:37.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="a2dp场景分析">
+<meta name="twitter:description" content="简述这次，我们来看下a2dp下面的播放场景吧。a2dp是蓝牙用来播放音乐的协议，正常情况下，播放音乐只从蓝牙耳机端输出，但是如果是来个通知类的声音，那策略的选择会同时从蓝牙耳机和speaker同时输出，由于speaker和蓝牙是采用的不同硬件设备输出，所以它在hal层应该是对应两个so的。所以，谷歌针对这种场景，继承PlaybackThread，实现了DuplicatingThread，这样就需要">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Pisces',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 0,
+      author: '博主'
+    }
+  };
+</script>
+
+  <title> a2dp场景分析 | Thinking </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?1a17ff812788f97b5ec90bee6eba907f";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Thinking</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle"></p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-home fa-fw"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-th fa-fw"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-archive fa-fw"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-tags fa-fw"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                a2dp场景分析
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2016-04-07T17:13:35+08:00" content="2016-04-07">
+              2016-04-07
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/android开发/" itemprop="url" rel="index">
+                    <span itemprop="name">android开发</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2016/04/07/audio_a2dp/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/04/07/audio_a2dp/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="简述">简述</h2><p>这次，我们来看下a2dp下面的播放场景吧。a2dp是蓝牙用来播放音乐的协议，正常情况下，播放音乐只从蓝牙耳机端输出，但是如果是来个通知类的声音，那策略的选择会同时从蓝牙耳机和speaker同时输出，由于speaker和蓝牙是采用的不同硬件设备输出，所以它在hal层应该是对应两个so的。所以，谷歌针对这种场景，继承PlaybackThread，实现了DuplicatingThread，这样就需要在audioflinger这边实现将数据拷贝到两个缓冲区的操作了。</p>
+<h2 id="正文">正文</h2><p>在android下，对于链接蓝牙的音乐播放的话，按照我们的认知，肯定得从蓝牙出来，这是毋庸置疑的，也合乎常理，这个和一般的音乐播放一样，只是需要单纯的选择到对应的设备通过一个output即可完成播放。但是有一些特殊的场景，需要声音即从蓝牙耳机输出，又从设备的speaker输出，这个时候对于单个output的播放方式就无法满足这种场景了，于是谷歌引入duplicate播放该种类型声音的方案，接下来我们将一起来分析这部分的代码。</p>
+<a id="more"></a>
+<h3 id="链接蓝牙">链接蓝牙</h3><p>这部分的代码在AudioPolicyManager.cpp中</p>
+<p>从蓝牙链接上来，到链接完成，总共会执行3次的<code>setDeviceConnectionStateInt</code>,分别对应SCO、A2DP、IN_SCO。<br>A2DP的场景会触发打开两个output，一个是mixer output，另外一个是duplicate output，关联新建的output和primary output。<br>IN_SCO会触发创建一个input，紧接着会被关闭，所以目的更确切的说，应该是更新设备的desc。<br>对于input的关闭是针对所有的input的，所以这个时候如果正巧有录音线程在跑的话，会触发audiorecord的重新restore的操作。</p>
+<pre><code>status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t device,
+                                                         audio_policy_dev_state_t state,
+                                                         <span class="keyword">const</span> <span class="keyword">char</span> *device_address,
+                                                         <span class="keyword">const</span> <span class="keyword">char</span> *device_name)
+{
+    <span class="comment">// 同一时间只能是单个设备的连入或者断开</span>
+    <span class="keyword">if</span> (!audio_is_output_device(device) &amp;&amp; !audio_is_input_device(device)) <span class="keyword">return</span> BAD_VALUE;
+    <span class="comment">// 找到对应的设备描述对象</span>
+    sp&lt;DeviceDescriptor&gt; devDesc =
+            mHwModules.getDeviceDescriptor(device, device_address, device_name);
+
+    <span class="comment">// 如果是输出设备</span>
+    <span class="keyword">if</span> (audio_is_output_device(device)) {
+        SortedVector &lt;audio_io_handle_t&gt; outputs;
+
+        ssize_t index = mAvailableOutputDevices.indexOf(devDesc);
+        <span class="comment">// 后面我们可能会更新output，所以这边做下备份，这个变量在后面checkOutputForAllStrategies中</span>
+        <span class="comment">// 用到</span>
+        mPreviousOutputs = mOutputs;
+        <span class="keyword">switch</span> (state)
+        {
+        <span class="comment">// 连入</span>
+        <span class="keyword">case</span> AUDIO_POLICY_DEVICE_STATE_AVAILABLE: {
+            <span class="comment">// 说明设备已经接入，直接返回非法操作</span>
+            <span class="keyword">if</span> (index &gt;= <span class="number">0</span>) {
+                <span class="keyword">return</span> INVALID_OPERATION;
+            }
+
+            <span class="comment">// 将新的设备添加到mAvailableOutputDevices中来</span>
+            index = mAvailableOutputDevices.add(devDesc);
+            <span class="keyword">if</span> (index &gt;= <span class="number">0</span>) {
+                <span class="comment">// 获取到对应的so的对象</span>
+                sp&lt;HwModule&gt; module = mHwModules.getModuleForDevice(device);
+                <span class="keyword">if</span> (module == <span class="number">0</span>) {
+                    mAvailableOutputDevices.remove(devDesc);
+                    <span class="keyword">return</span> INVALID_OPERATION;
+                }
+                <span class="comment">// 将module对象保存到device descriptor中的成员变量中</span>
+                mAvailableOutputDevices[index]-&gt;attach(module);
+            } <span class="keyword">else</span> {
+                <span class="keyword">return</span> NO_MEMORY;
+            }
+            <span class="comment">// 连入：这个函数主要是将包含这个device的profile都给打开，然后更新参数</span>
+            <span class="keyword">if</span> (checkOutputsForDevice(devDesc, state, outputs, devDesc-&gt;mAddress) != NO_ERROR) {
+                mAvailableOutputDevices.remove(devDesc);
+                <span class="keyword">return</span> INVALID_OPERATION;
+            }
+            <span class="comment">// 告诉policy 引擎知道有新设备连入了</span>
+            mEngine-&gt;setDeviceConnectionState(devDesc, state);
+            <span class="comment">// 将新设备连入的信息通知给hal层</span>
+            AudioParameter param = AudioParameter(devDesc-&gt;mAddress);
+            param.addInt(String8(AUDIO_PARAMETER_DEVICE_CONNECT), device);
+            mpClientInterface-&gt;setParameters(AUDIO_IO_HANDLE_NONE, param.toString());
+
+            } <span class="keyword">break</span>;
+        <span class="comment">// 断开</span>
+        <span class="keyword">case</span> AUDIO_POLICY_DEVICE_STATE_UNAVAILABLE: {
+            <span class="keyword">if</span> (index &lt; <span class="number">0</span>) {
+                <span class="keyword">return</span> INVALID_OPERATION;
+            }
+            <span class="comment">// 将设备断开的信息传递给hal层</span>
+            AudioParameter param = AudioParameter(devDesc-&gt;mAddress);
+            param.addInt(String8(AUDIO_PARAMETER_DEVICE_DISCONNECT), device);
+            mpClientInterface-&gt;setParameters(AUDIO_IO_HANDLE_NONE, param.toString());
+
+            <span class="comment">// remove device from available output devices</span>
+            mAvailableOutputDevices.remove(devDesc);
+            <span class="comment">// 断开：找出需要关闭的output，并且将profile的参数重置回去</span>
+            checkOutputsForDevice(devDesc, state, outputs, devDesc-&gt;mAddress);
+
+            <span class="comment">// Propagate device availability to Engine</span>
+            mEngine-&gt;setDeviceConnectionState(devDesc, state);
+            } <span class="keyword">break</span>;
+
+        <span class="keyword">default</span>:
+            <span class="keyword">return</span> BAD_VALUE;
+        }
+        <span class="comment">// 蓝牙场景下，到这边就已经打开两个output了，这边是确认当前状态是否有必要让a2dp进入suspend状态。</span>
+        <span class="comment">// 判断依据主要就是：sco连接的时候，当前是否通话、以及是强制录音或communication是否走sco，则会suspend</span>
+        checkA2dpSuspend();
+        <span class="comment">// 针对所有的策略，只要存在output发生变化，如果原outputs中处于active状态，会进行mute和unmute操作</span>
+        <span class="comment">// 对于media的策略，只针对全局的音效，会进行effect的搬迁到播放的output上面。</span>
+        <span class="comment">// 某个策略下面对应的stream进行invalid的操作，这样对应的audiotrack会进行重新选择output输出。</span>
+        checkOutputForAllStrategies();
+        <span class="comment">// 执行完checkOutputForAllStrategies()就需要将不需要的output关闭</span>
+        <span class="comment">// 如果是断开或者是由于前面checkoutput打开的direct output的话，需要有关闭output的操作。</span>
+        <span class="keyword">if</span> (!outputs.isEmpty()) {
+            <span class="keyword">for</span> (size_t i = <span class="number">0</span>; i &lt; outputs.size(); i++) {
+                sp&lt;SwAudioOutputDescriptor&gt; desc = mOutputs.valueFor(outputs[i]);
+                <span class="comment">// 断开设备链接的时候，关闭没有使用的outputs。或者关闭是用来查询参数用的direct output（在</span>
+                <span class="comment">// checkOutputsForDevice中打开的）</span>
+                <span class="keyword">if</span> ((state == AUDIO_POLICY_DEVICE_STATE_UNAVAILABLE) ||
+                        (((desc-&gt;mFlags &amp; AUDIO_OUTPUT_FLAG_DIRECT) != <span class="number">0</span>) &amp;&amp;
+                         (desc-&gt;mDirectOpenCount == <span class="number">0</span>))) {
+                    closeOutput(outputs[i]);
+                }
+            }
+            <span class="comment">// check again after closing A2DP output to reset mA2dpSuspended if needed</span>
+            checkA2dpSuspend();
+        }
+        <span class="comment">// 更新策略输出设备，以及更新mOutputs</span>
+        updateDevicesAndOutputs();
+        <span class="comment">// 如果是通话过程中，则获取primary output的device，然后更新routing</span>
+        <span class="keyword">if</span> (mEngine-&gt;getPhoneState() == AUDIO_MODE_IN_CALL &amp;&amp; hasPrimaryOutput()) {
+            audio_devices_t newDevice = getNewOutputDevice(mPrimaryOutput, <span class="keyword">false</span> <span class="comment">/*fromCache*/</span>);
+            updateCallRouting(newDevice);
+        }
+        <span class="keyword">for</span> (size_t i = <span class="number">0</span>; i &lt; mOutputs.size(); i++) {
+            sp&lt;SwAudioOutputDescriptor&gt; desc = mOutputs.valueAt(i);
+            <span class="comment">// 在通话并且当前output为primary才不会进入，就是过滤上面已经UpdateCallRouting的处理</span>
+            <span class="comment">// 其他的output，需要重新设置device，因为别人有可能正在播放。</span>
+            <span class="keyword">if</span> ((mEngine-&gt;getPhoneState() != AUDIO_MODE_IN_CALL) || (desc != mPrimaryOutput)) {
+                audio_devices_t newDevice = getNewOutputDevice(desc, <span class="keyword">true</span> <span class="comment">/*fromCache*/</span>);
+                <span class="comment">// 这边是遍历所有的output，duplicate也在里面，但是duplicate的两个output也在，所以duplicate</span>
+                <span class="comment">// 直接就不用强制更新了。防止别人刚修改过，duplicate又来一次force操作。因为别的output可能在跑</span>
+                <span class="comment">// 但是并不需要用到duplicate，这个时候可能导致路由出现问题。</span>
+                <span class="keyword">bool</span> force = !desc-&gt;isDuplicated()
+                        &amp;&amp; (!device_distinguishes_on_address(device)
+                                <span class="comment">// always force when disconnecting (a non-duplicated device)</span>
+                                || (state == AUDIO_POLICY_DEVICE_STATE_UNAVAILABLE));
+                setOutputDevice(desc, newDevice, force, <span class="number">0</span>);
+            }
+        }
+        <span class="comment">// 通知上层这边设备发生变化了</span>
+        mpClientInterface-&gt;onAudioPortListUpdate();
+        <span class="keyword">return</span> NO_ERROR;
+    }  <span class="comment">// end if is output device</span>
+
+    <span class="comment">// handle input devices</span>
+    <span class="keyword">if</span> (audio_is_input_device(device)) {
+        SortedVector &lt;audio_io_handle_t&gt; inputs;
+
+        ssize_t index = mAvailableInputDevices.indexOf(devDesc);
+        <span class="keyword">switch</span> (state)
+        {
+        <span class="comment">// handle input device connection</span>
+        <span class="keyword">case</span> AUDIO_POLICY_DEVICE_STATE_AVAILABLE: {
+            <span class="keyword">if</span> (index &gt;= <span class="number">0</span>) {
+                <span class="keyword">return</span> INVALID_OPERATION;
+            }
+            sp&lt;HwModule&gt; module = mHwModules.getModuleForDevice(device);
+            <span class="keyword">if</span> (module == <span class="keyword">NULL</span>) {
+                <span class="keyword">return</span> INVALID_OPERATION;
+            }
+            <span class="comment">// 针对这个device找到对应的outputs</span>
+            <span class="keyword">if</span> (checkInputsForDevice(devDesc, state, inputs, devDesc-&gt;mAddress) != NO_ERROR) {
+                <span class="keyword">return</span> INVALID_OPERATION;
+            }
+
+            index = mAvailableInputDevices.add(devDesc);
+            <span class="keyword">if</span> (index &gt;= <span class="number">0</span>) {
+                mAvailableInputDevices[index]-&gt;attach(module);
+            } <span class="keyword">else</span> {
+                <span class="keyword">return</span> NO_MEMORY;
+            }
+
+            <span class="comment">// Set connect to HALs</span>
+            AudioParameter param = AudioParameter(devDesc-&gt;mAddress);
+            param.addInt(String8(AUDIO_PARAMETER_DEVICE_CONNECT), device);
+            mpClientInterface-&gt;setParameters(AUDIO_IO_HANDLE_NONE, param.toString());
+
+            <span class="comment">// Propagate device availability to Engine</span>
+            mEngine-&gt;setDeviceConnectionState(devDesc, state);
+        } <span class="keyword">break</span>;
+
+        <span class="comment">// handle input device disconnection</span>
+        <span class="keyword">case</span> AUDIO_POLICY_DEVICE_STATE_UNAVAILABLE: {
+            <span class="keyword">if</span> (index &lt; <span class="number">0</span>) {
+                <span class="keyword">return</span> INVALID_OPERATION;
+            }
+
+            <span class="comment">// Set Disconnect to HALs</span>
+            AudioParameter param = AudioParameter(devDesc-&gt;mAddress);
+            param.addInt(String8(AUDIO_PARAMETER_DEVICE_DISCONNECT), device);
+            mpClientInterface-&gt;setParameters(AUDIO_IO_HANDLE_NONE, param.toString());
+            <span class="comment">// 针对这个device找到对应的outputs</span>
+            checkInputsForDevice(devDesc, state, inputs, devDesc-&gt;mAddress);
+            mAvailableInputDevices.remove(devDesc);
+
+            <span class="comment">// Propagate device availability to Engine</span>
+            mEngine-&gt;setDeviceConnectionState(devDesc, state);
+        } <span class="keyword">break</span>;
+
+        <span class="keyword">default</span>:
+            <span class="keyword">return</span> BAD_VALUE;
+        }
+        <span class="comment">// 关闭所有的inputs，关闭会触发对应input中的record restore，这样就会通过新的input录入声音了。</span>
+        closeAllInputs();
+        <span class="comment">// 如果当前还处在通话过程，则更新下通话路径。这边也是更新的output device，并不是input</span>
+        <span class="keyword">if</span> (mEngine-&gt;getPhoneState() == AUDIO_MODE_IN_CALL &amp;&amp; hasPrimaryOutput()) {
+            audio_devices_t newDevice = getNewOutputDevice(mPrimaryOutput, <span class="keyword">false</span> <span class="comment">/*fromCache*/</span>);
+            updateCallRouting(newDevice);
+        }
+
+        mpClientInterface-&gt;onAudioPortListUpdate();
+        <span class="keyword">return</span> NO_ERROR;
+    } <span class="comment">// end if is input device</span>
+
+    <span class="keyword">return</span> BAD_VALUE;
+}
+</code></pre><p><code>setDeviceConnectionStateInt</code>函数的逻辑我们有必要这边稍微宏观的梳理下，针对output并且是插入设备的场景：</p>
+<ol>
+<li>通过device信息，从audio_policy.conf中去找寻符合该device的profiles</li>
+<li>对于找到的profiles的话，如果有尚未打开的话，则执行打开操作并更新device的信息</li>
+<li>检测下是否需要将a2dp线程进行suspend</li>
+<li>对所有的策略进行相关处理：将原outputs处于激活状态下面的stream进行mute和unmute；media策略中effect的搬迁；有stream在跑的output，进行对该stream的invalid操作。</li>
+<li>关闭direct的output</li>
+<li>更新下各个策略下面的输出设备以及mOutputs</li>
+<li>如果当前处在通话，则更新通话路由</li>
+<li>设置各个output的输出设备</li>
+</ol>
+<p>上面是逻辑上的认识，我们需要深入去看各个函数的实现。我们从<code>checkOutputsForDevice</code>开始。</p>
+<pre><code>status_t AudioPolicyManager::checkOutputsForDevice(<span class="keyword">const</span> sp&lt;DeviceDescriptor&gt; devDesc,
+                                                   audio_policy_dev_state_t state,
+                                                   SortedVector&lt;audio_io_handle_t&gt;&amp; outputs,
+                                                   <span class="keyword">const</span> String8 address)
+{
+    audio_devices_t device = devDesc-&gt;type();
+    sp&lt;SwAudioOutputDescriptor&gt; desc;
+
+    <span class="keyword">if</span> (audio_device_is_digital(device)) {
+        <span class="comment">// erase all current sample rates, formats and channel masks</span>
+        devDesc-&gt;clearCapabilities();
+    }
+
+    <span class="keyword">if</span> (state == AUDIO_POLICY_DEVICE_STATE_AVAILABLE) {
+        <span class="comment">// 1.先找出所有可以路由到这个设备的outputs</span>
+        <span class="keyword">for</span> (size_t i = <span class="number">0</span>; i &lt; mOutputs.size(); i++) {
+            desc = mOutputs.valueAt(i);
+            <span class="keyword">if</span> (!desc-&gt;isDuplicated() &amp;&amp; (desc-&gt;supportedDevices() &amp; device)) {
+                <span class="keyword">if</span> (!device_distinguishes_on_address(device)) {
+                    outputs.add(mOutputs.keyAt(i));
+                } <span class="keyword">else</span> {
+                    findIoHandlesByAddress(desc, device, address, outputs);
+                }
+            }
+        }
+        <span class="comment">// 2.接着看下遍历所有的profiles，看那个可以路由到这个设备</span>
+        SortedVector&lt; sp&lt;IOProfile&gt; &gt; profiles;
+        <span class="keyword">for</span> (size_t i = <span class="number">0</span>; i &lt; mHwModules.size(); i++)
+        {
+            <span class="keyword">if</span> (mHwModules[i]-&gt;mHandle == <span class="number">0</span>) {
+                <span class="keyword">continue</span>;
+            }
+            <span class="keyword">for</span> (size_t j = <span class="number">0</span>; j &lt; mHwModules[i]-&gt;mOutputProfiles.size(); j++)
+            {
+                sp&lt;IOProfile&gt; profile = mHwModules[i]-&gt;mOutputProfiles[j];
+                <span class="keyword">if</span> (profile-&gt;mSupportedDevices.types() &amp; device) {
+                    <span class="keyword">if</span> (!device_distinguishes_on_address(device) ||
+                            address == profile-&gt;mSupportedDevices[<span class="number">0</span>]-&gt;mAddress) {
+                        profiles.add(profile);
+                    }
+                }
+            }
+        }
+
+        <span class="keyword">if</span> (profiles.isEmpty() &amp;&amp; outputs.isEmpty()) {
+            <span class="keyword">return</span> BAD_VALUE;
+        }
+
+        <span class="comment">// 如果有需要的话，将会打开符合匹配的profiles</span>
+        <span class="comment">// Direct outputs将会被临时打开用来动态查询参数，并且将会在setDeviceConnectionState中被关闭。</span>
+        <span class="keyword">for</span> (ssize_t profile_index = <span class="number">0</span>; profile_index &lt; (ssize_t)profiles.size(); profile_index++) {
+            sp&lt;IOProfile&gt; profile = profiles[profile_index];
+
+            <span class="comment">// 如果已经打开了这个profile，那就看下一个profile</span>
+            size_t j;
+            <span class="keyword">for</span> (j = <span class="number">0</span>; j &lt; outputs.size(); j++) {
+                desc = mOutputs.valueFor(outputs.itemAt(j));
+                <span class="keyword">if</span> (!desc-&gt;isDuplicated() &amp;&amp; desc-&gt;mProfile == profile) {
+                    <span class="comment">// 如果跟该profile匹配的话，我们将获取这个profile的详细信息，存储到devDesc中</span>
+                    <span class="keyword">if</span> (audio_device_is_digital(device)) {
+                        devDesc-&gt;importAudioPort(profile);
+                    }
+                    <span class="keyword">break</span>;
+                }
+            }
+            <span class="comment">// 没有已经打开的output是对应这个的话，那就继续执行open的操作。</span>
+            <span class="keyword">if</span> (j != outputs.size()) {
+                <span class="keyword">continue</span>;
+            }
+
+            desc = <span class="keyword">new</span> SwAudioOutputDescriptor(profile, mpClientInterface);
+            desc-&gt;mDevice = device;
+            audio_config_t config = AUDIO_CONFIG_INITIALIZER;
+            config.sample_rate = desc-&gt;mSamplingRate;
+            config.channel_mask = desc-&gt;mChannelMask;
+            config.format = desc-&gt;mFormat;
+            config.offload_info.sample_rate = desc-&gt;mSamplingRate;
+            config.offload_info.channel_mask = desc-&gt;mChannelMask;
+            config.offload_info.format = desc-&gt;mFormat;
+            audio_io_handle_t output = AUDIO_IO_HANDLE_NONE;
+            <span class="comment">// 去尝试打开这个profile</span>
+            status_t status = mpClientInterface-&gt;openOutput(profile-&gt;getModuleHandle(),
+                                                            &amp;output,
+                                                            &amp;config,
+                                                            &amp;desc-&gt;mDevice,
+                                                            address,
+                                                            &amp;desc-&gt;mLatency,
+                                                            desc-&gt;mFlags);
+            <span class="keyword">if</span> (status == NO_ERROR) {
+                <span class="comment">// 将参数更新到desc中</span>
+                desc-&gt;mSamplingRate = config.sample_rate;
+                desc-&gt;mChannelMask = config.channel_mask;
+                desc-&gt;mFormat = config.format;
+
+                <span class="comment">// Here is where the out_set_parameters() for card &amp; device gets called</span>
+                <span class="keyword">if</span> (!address.isEmpty()) {
+                    <span class="keyword">char</span> *param = audio_device_address_to_parameter(device, address);
+                    mpClientInterface-&gt;setParameters(output, String8(param));
+                    free(param);
+                }
+
+                <span class="comment">// Here is where we step through and resolve any "dynamic" fields</span>
+                String8 reply;
+                <span class="keyword">char</span> *value;
+                <span class="comment">// 下面是对于profile数据不全的情况，从hal层采集数据上来填充。</span>
+                <span class="comment">// 如果profile中没有记录采样率的话，则问hal层要。</span>
+                <span class="keyword">if</span> (profile-&gt;mSamplingRates[<span class="number">0</span>] == <span class="number">0</span>) {
+                    reply = mpClientInterface-&gt;getParameters(output,
+                                            String8(AUDIO_PARAMETER_STREAM_SUP_SAMPLING_RATES));
+                    value = strpbrk((<span class="keyword">char</span> *)reply.string(), <span class="string">"="</span>);
+                    <span class="keyword">if</span> (value != <span class="keyword">NULL</span>) {
+                        profile-&gt;loadSamplingRates(value + <span class="number">1</span>);
+                    }
+                }
+                <span class="keyword">if</span> (profile-&gt;mFormats[<span class="number">0</span>] == AUDIO_FORMAT_DEFAULT) {
+                    reply = mpClientInterface-&gt;getParameters(output,
+                                                   String8(AUDIO_PARAMETER_STREAM_SUP_FORMATS));
+                    value = strpbrk((<span class="keyword">char</span> *)reply.string(), <span class="string">"="</span>);
+                    <span class="keyword">if</span> (value != <span class="keyword">NULL</span>) {
+                        profile-&gt;loadFormats(value + <span class="number">1</span>);
+                    }
+                }
+                <span class="keyword">if</span> (profile-&gt;mChannelMasks[<span class="number">0</span>] == <span class="number">0</span>) {
+                    reply = mpClientInterface-&gt;getParameters(output,
+                                                  String8(AUDIO_PARAMETER_STREAM_SUP_CHANNELS));
+                    value = strpbrk((<span class="keyword">char</span> *)reply.string(), <span class="string">"="</span>);
+                    <span class="keyword">if</span> (value != <span class="keyword">NULL</span>) {
+                        profile-&gt;loadOutChannels(value + <span class="number">1</span>);
+                    }
+                }
+                <span class="comment">// 1. mSamplingRates、mFormats、mChannelMasks只要有一个数据是缺失的话，就会关闭该output</span>
+                <span class="comment">// 2. 如果该profile的这三个参数的数组中，存在第一个为0的，就需要关闭，重新配置参数再打开。</span>
+                <span class="keyword">if</span> (((profile-&gt;mSamplingRates[<span class="number">0</span>] == <span class="number">0</span>) &amp;&amp;
+                         (profile-&gt;mSamplingRates.size() &lt; <span class="number">2</span>)) ||
+                     ((profile-&gt;mFormats[<span class="number">0</span>] == AUDIO_FORMAT_DEFAULT) &amp;&amp;
+                         (profile-&gt;mFormats.size() &lt; <span class="number">2</span>)) ||
+                     ((profile-&gt;mChannelMasks[<span class="number">0</span>] == <span class="number">0</span>) &amp;&amp;
+                         (profile-&gt;mChannelMasks.size() &lt; <span class="number">2</span>))) {
+                    mpClientInterface-&gt;closeOutput(output);
+                    output = AUDIO_IO_HANDLE_NONE;
+                } <span class="keyword">else</span> <span class="keyword">if</span> (profile-&gt;mSamplingRates[<span class="number">0</span>] == <span class="number">0</span> || profile-&gt;mFormats[<span class="number">0</span>] == <span class="number">0</span> ||
+                            profile-&gt;mChannelMasks[<span class="number">0</span>] == <span class="number">0</span>) {
+                    mpClientInterface-&gt;closeOutput(output);
+                    <span class="comment">// 根据一定的策略，从数组中选出合适的参数。</span>
+                    config.sample_rate = profile-&gt;pickSamplingRate();
+                    config.channel_mask = profile-&gt;pickChannelMask();
+                    config.format = profile-&gt;pickFormat();
+                    config.offload_info.sample_rate = config.sample_rate;
+                    config.offload_info.channel_mask = config.channel_mask;
+                    config.offload_info.format = config.format;
+                    status = mpClientInterface-&gt;openOutput(profile-&gt;getModuleHandle(),
+                                                           &amp;output,
+                                                           &amp;config,
+                                                           &amp;desc-&gt;mDevice,
+                                                           address,
+                                                           &amp;desc-&gt;mLatency,
+                                                           desc-&gt;mFlags);
+                    <span class="keyword">if</span> (status == NO_ERROR) {
+                        desc-&gt;mSamplingRate = config.sample_rate;
+                        desc-&gt;mChannelMask = config.channel_mask;
+                        desc-&gt;mFormat = config.format;
+                    } <span class="keyword">else</span> {
+                        output = AUDIO_IO_HANDLE_NONE;
+                    }
+                }
+                <span class="comment">// 打开成功</span>
+                <span class="keyword">if</span> (output != AUDIO_IO_HANDLE_NONE) {
+                    <span class="comment">// 添加到mOutputs中</span>
+                    addOutput(output, desc);
+                    <span class="comment">// 如果这个设备是带有地址的话，并且设备属于通过地址区分的，尝试去获取PolicyMix</span>
+                    <span class="comment">// 然后设置output</span>
+                    <span class="keyword">if</span> (device_distinguishes_on_address(device) &amp;&amp; address != <span class="string">"0"</span>) {
+                        sp&lt;AudioPolicyMix&gt; policyMix;
+                        <span class="keyword">if</span> (mPolicyMixes.getAudioPolicyMix(address, policyMix) != NO_ERROR) {
+                            ALOGE(<span class="string">"checkOutputsForDevice() cannot find policy for address %s"</span>,
+                                  address.string());
+                        }
+                        policyMix-&gt;setOutput(desc);
+                        desc-&gt;mPolicyMix = policyMix-&gt;getMix();
+                    <span class="comment">// 上面已经过滤过打开的output了，所以能到这边注定是一个新的profile。</span>
+                    <span class="comment">// 如果打开的是一个非direct的output并且存在primary output的话，会去尝试创建duplicate</span>
+                    } <span class="keyword">else</span> <span class="keyword">if</span> (((desc-&gt;mFlags &amp; AUDIO_OUTPUT_FLAG_DIRECT) == <span class="number">0</span>) &amp;&amp;
+                                    hasPrimaryOutput()) {
+                        <span class="comment">// no duplicated output for direct outputs and</span>
+                        <span class="comment">// outputs used by dynamic policy mixes</span>
+                        audio_io_handle_t duplicatedOutput = AUDIO_IO_HANDLE_NONE;
+
+                        <span class="comment">// set initial stream volume for device</span>
+                        applyStreamVolumes(desc, device, <span class="number">0</span>, <span class="keyword">true</span>);
+
+                        <span class="comment">//<span class="doctag">TODO:</span> configure audio effect output stage here</span>
+
+                        <span class="comment">// 打开一个duplicate output</span>
+                        duplicatedOutput =
+                                mpClientInterface-&gt;openDuplicateOutput(output,
+                                                                       mPrimaryOutput-&gt;mIoHandle);
+                        <span class="keyword">if</span> (duplicatedOutput != AUDIO_IO_HANDLE_NONE) {
+                            <span class="comment">// add duplicated output descriptor</span>
+                            sp&lt;SwAudioOutputDescriptor&gt; dupOutputDesc =
+                                    <span class="keyword">new</span> SwAudioOutputDescriptor(<span class="keyword">NULL</span>, mpClientInterface);
+                            dupOutputDesc-&gt;mOutput1 = mPrimaryOutput;
+                            dupOutputDesc-&gt;mOutput2 = desc;
+                            dupOutputDesc-&gt;mSamplingRate = desc-&gt;mSamplingRate;
+                            dupOutputDesc-&gt;mFormat = desc-&gt;mFormat;
+                            dupOutputDesc-&gt;mChannelMask = desc-&gt;mChannelMask;
+                            dupOutputDesc-&gt;mLatency = desc-&gt;mLatency;
+                            addOutput(duplicatedOutput, dupOutputDesc);
+                            applyStreamVolumes(dupOutputDesc, device, <span class="number">0</span>, <span class="keyword">true</span>);
+                        } <span class="keyword">else</span> {
+                            mpClientInterface-&gt;closeOutput(output);
+                            removeOutput(output);
+                            nextAudioPortGeneration();
+                            output = AUDIO_IO_HANDLE_NONE;
+                        }
+                    }
+                }
+            } <span class="keyword">else</span> {
+                output = AUDIO_IO_HANDLE_NONE;
+            }
+            <span class="keyword">if</span> (output == AUDIO_IO_HANDLE_NONE) {
+                profiles.removeAt(profile_index);
+                profile_index--;
+            } <span class="keyword">else</span> {
+                outputs.add(output);
+                <span class="comment">// Load digital format info only for digital devices</span>
+                <span class="keyword">if</span> (audio_device_is_digital(device)) {
+                    devDesc-&gt;importAudioPort(profile);
+                }
+                <span class="comment">// 通过address进行分辨的话，需要强制setOutputDevice，因为device的值是不变的。</span>
+                <span class="keyword">if</span> (device_distinguishes_on_address(device)) {
+                    setOutputDevice(desc, device, <span class="keyword">true</span><span class="comment">/*force*/</span>, <span class="number">0</span><span class="comment">/*delay*/</span>,
+                            <span class="keyword">NULL</span><span class="comment">/*patch handle*/</span>, address.string());
+                }
+            }
+        }
+
+        <span class="keyword">if</span> (profiles.isEmpty()) {
+            <span class="keyword">return</span> BAD_VALUE;
+        }
+    } <span class="keyword">else</span> { <span class="comment">// 断开情况</span>
+        <span class="comment">// 检测是否已经打开的output需要关闭的</span>
+        <span class="keyword">for</span> (size_t i = <span class="number">0</span>; i &lt; mOutputs.size(); i++) {
+            desc = mOutputs.valueAt(i);
+            <span class="comment">// 必须为非duplicate</span>
+            <span class="keyword">if</span> (!desc-&gt;isDuplicated()) {
+                <span class="comment">// exact match on device</span>
+                <span class="comment">// 可以看出如果是通过地址区分的话，那这个profile只支持一个设备</span>
+                <span class="comment">// 如果移除的这个device对应的profile所支持的device都已经从available list移除的话，则关闭该</span>
+                <span class="comment">// Output</span>
+                <span class="keyword">if</span> (device_distinguishes_on_address(device) &amp;&amp;
+                        (desc-&gt;supportedDevices() == device)) {
+                    findIoHandlesByAddress(desc, device, address, outputs);
+                } <span class="keyword">else</span> <span class="keyword">if</span> (!(desc-&gt;supportedDevices() &amp; mAvailableOutputDevices.types())) {
+                    outputs.add(mOutputs.keyAt(i));
+                }
+            }
+        }
+        <span class="comment">// Clear any profiles associated with the disconnected device.</span>
+        <span class="keyword">for</span> (size_t i = <span class="number">0</span>; i &lt; mHwModules.size(); i++)
+        {
+            <span class="keyword">if</span> (mHwModules[i]-&gt;mHandle == <span class="number">0</span>) {
+                <span class="keyword">continue</span>;
+            }
+            <span class="keyword">for</span> (size_t j = <span class="number">0</span>; j &lt; mHwModules[i]-&gt;mOutputProfiles.size(); j++)
+            {
+                sp&lt;IOProfile&gt; profile = mHwModules[i]-&gt;mOutputProfiles[j];
+                <span class="keyword">if</span> (profile-&gt;mSupportedDevices.types() &amp; device) {
+                    <span class="keyword">if</span> (profile-&gt;mSamplingRates[<span class="number">0</span>] == <span class="number">0</span>) {
+                        profile-&gt;mSamplingRates.clear();
+                        profile-&gt;mSamplingRates.add(<span class="number">0</span>);
+                    }
+                    <span class="keyword">if</span> (profile-&gt;mFormats[<span class="number">0</span>] == AUDIO_FORMAT_DEFAULT) {
+                        profile-&gt;mFormats.clear();
+                        profile-&gt;mFormats.add(AUDIO_FORMAT_DEFAULT);
+                    }
+                    <span class="keyword">if</span> (profile-&gt;mChannelMasks[<span class="number">0</span>] == <span class="number">0</span>) {
+                        profile-&gt;mChannelMasks.clear();
+                        profile-&gt;mChannelMasks.add(<span class="number">0</span>);
+                    }
+                }
+            }
+        }
+    }
+    <span class="keyword">return</span> NO_ERROR;
+}
+</code></pre><p>对于我们的场景，从上面我们已经知道打开了两个output。一个是mixer output，一个是duplicate output。<br>接着我们来看打开函数<code>checkOutputForAllStrategies</code>，这个函数是在找到outputs之后就执行了。</p>
+<pre><code><span class="keyword">void</span> AudioPolicyManager::checkOutputForAllStrategies()
+{
+    <span class="keyword">if</span> (mEngine-&gt;getForceUse(AUDIO_POLICY_FORCE_FOR_SYSTEM) == AUDIO_POLICY_FORCE_SYSTEM_ENFORCED)
+        checkOutputForStrategy(STRATEGY_ENFORCED_AUDIBLE);
+    checkOutputForStrategy(STRATEGY_PHONE);
+    <span class="keyword">if</span> (mEngine-&gt;getForceUse(AUDIO_POLICY_FORCE_FOR_SYSTEM) != AUDIO_POLICY_FORCE_SYSTEM_ENFORCED)
+        checkOutputForStrategy(STRATEGY_ENFORCED_AUDIBLE);
+    checkOutputForStrategy(STRATEGY_SONIFICATION);
+    checkOutputForStrategy(STRATEGY_SONIFICATION_RESPECTFUL);
+    checkOutputForStrategy(STRATEGY_ACCESSIBILITY);
+    checkOutputForStrategy(STRATEGY_MEDIA);
+    checkOutputForStrategy(STRATEGY_DTMF);
+    checkOutputForStrategy(STRATEGY_REROUTING);
+}
+
+<span class="keyword">void</span> AudioPolicyManager::checkOutputForStrategy(routing_strategy strategy)
+{
+    <span class="keyword">audio_devices_t</span> oldDevice = getDeviceForStrategy(strategy, <span class="literal">true</span> <span class="comment">/*fromCache*/</span>);
+    <span class="keyword">audio_devices_t</span> newDevice = getDeviceForStrategy(strategy, <span class="literal">false</span> <span class="comment">/*fromCache*/</span>);
+    SortedVector&lt;<span class="keyword">audio_io_handle_t</span>&gt; srcOutputs = getOutputsForDevice(oldDevice, mPreviousOutputs);
+    SortedVector&lt;<span class="keyword">audio_io_handle_t</span>&gt; dstOutputs = getOutputsForDevice(newDevice, mOutputs);
+
+    <span class="comment">// also take into account external policy-related changes: add all outputs which are</span>
+    <span class="comment">// associated with policies in the "before" and "after" output vectors</span>
+    <span class="comment">// 把external的policy的output也include到srcOutputs来。</span>
+    <span class="keyword">for</span> (<span class="keyword">size_t</span> i = <span class="number">0</span> ; i &lt; mPreviousOutputs.size() ; i++) {
+        <span class="keyword">const</span> sp&lt;SwAudioOutputDescriptor&gt; desc = mPreviousOutputs.valueAt(i);
+        <span class="keyword">if</span> (desc != <span class="number">0</span> &amp;&amp; desc-&gt;mPolicyMix != <span class="literal">NULL</span>) {
+            srcOutputs.add(desc-&gt;mIoHandle);
+        }
+    }
+    <span class="keyword">for</span> (<span class="keyword">size_t</span> i = <span class="number">0</span> ; i &lt; mOutputs.size() ; i++) {
+        <span class="keyword">const</span> sp&lt;SwAudioOutputDescriptor&gt; desc = mOutputs.valueAt(i);
+        <span class="keyword">if</span> (desc != <span class="number">0</span> &amp;&amp; desc-&gt;mPolicyMix != <span class="literal">NULL</span>) {
+            dstOutputs.add(desc-&gt;mIoHandle);
+        }
+    }
+    <span class="comment">// 只要两个向量数组的存在差异，就会执行下面逻辑</span>
+    <span class="keyword">if</span> (!vectorsEqual(srcOutputs,dstOutputs)) {
+        <span class="comment">// 将track进行output之间的搬迁，需要先mute然后再unmute</span>
+        <span class="keyword">for</span> (<span class="keyword">size_t</span> i = <span class="number">0</span>; i &lt; srcOutputs.size(); i++) {
+            sp&lt;SwAudioOutputDescriptor&gt; desc = mOutputs.valueFor(srcOutputs[i]);
+            <span class="keyword">if</span> (isStrategyActive(desc, strategy)) {
+                setStrategyMute(strategy, <span class="literal">true</span>, desc);
+                setStrategyMute(strategy, <span class="literal">false</span>, desc, MUTE_TIME_MS, newDevice);
+            }
+        }
+
+        <span class="comment">// Move effects associated to this strategy from previous output to new output</span>
+        <span class="comment">// 针对media策略的效果的搬迁</span>
+        <span class="keyword">if</span> (strategy == STRATEGY_MEDIA) {
+            <span class="comment">// 获取合适的output，优先级：offload&gt;deep&gt;first</span>
+            <span class="keyword">audio_io_handle_t</span> fxOutput = selectOutputForEffects(dstOutputs);
+            SortedVector&lt;<span class="keyword">audio_io_handle_t</span>&gt; moved;
+            <span class="keyword">for</span> (<span class="keyword">size_t</span> i = <span class="number">0</span>; i &lt; mEffects.size(); i++) {
+                sp&lt;EffectDescriptor&gt; effectDesc = mEffects.valueAt(i);
+                <span class="comment">// 效果必须是全局性的效果，并且output跟新选中的不一样，将触发效果搬迁操作。</span>
+                <span class="keyword">if</span> (effectDesc-&gt;mSession == AUDIO_SESSION_OUTPUT_MIX &amp;&amp;
+                        effectDesc-&gt;mIo != fxOutput) {
+                    <span class="keyword">if</span> (moved.indexOf(effectDesc-&gt;mIo) &lt; <span class="number">0</span>) {
+                        mpClientInterface-&gt;moveEffects(AUDIO_SESSION_OUTPUT_MIX, effectDesc-&gt;mIo,
+                                                       fxOutput);
+                        moved.add(effectDesc-&gt;mIo);
+                    }
+                    effectDesc-&gt;mIo = fxOutput;
+                }
+            }
+        }
+        <span class="comment">// 移动在这个策略下面的track从之前的output到新的output中，其实只要将track进行invalid就行，</span>
+        <span class="comment">// track那边会负责重新给track找output等一些操作。</span>
+        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; AUDIO_STREAM_CNT; i++) {
+            <span class="keyword">if</span> (i == AUDIO_STREAM_PATCH) {
+                <span class="keyword">continue</span>;
+            }
+            <span class="keyword">if</span> (getStrategy((<span class="keyword">audio_stream_type_t</span>)i) == strategy) {
+                mpClientInterface-&gt;invalidateStream((<span class="keyword">audio_stream_type_t</span>)i);
+            }
+        }
+    }
+}
+</code></pre><p>这个函数主要完成一下几点：</p>
+<ol>
+<li>可以实现将stream切换到新的output中，先对其进行mute，然后过2s之后在unmute</li>
+<li>对于是media策略的，效果搬迁到对应的output上</li>
+<li>对于当前激活的stream进行invalid，触发其restore audiotrack。</li>
+</ol>
+<p>这个是选择output的策略函数<code>selectOutputForEffects</code>.</p>
+<pre><code><span class="keyword">audio_io_handle_t</span> AudioPolicyManager::selectOutputForEffects(
+                                            <span class="keyword">const</span> SortedVector&lt;<span class="keyword">audio_io_handle_t</span>&gt;&amp; outputs)
+{
+    <span class="comment">// 1：offload output.如果效果不是offloadable，audioflinger将把该track设置为invalid，这个offload output将会被关闭，然后这个效果将会被移到PCM output</span>
+    <span class="comment">// 2： deep buffer output</span>
+    <span class="comment">// 3： output列表中的第一个。</span>
+
+    <span class="keyword">if</span> (outputs.size() == <span class="number">0</span>) {
+        <span class="keyword">return</span> <span class="number">0</span>;
+    }
+
+    <span class="keyword">audio_io_handle_t</span> outputOffloaded = <span class="number">0</span>;
+    <span class="keyword">audio_io_handle_t</span> outputDeepBuffer = <span class="number">0</span>;
+
+    <span class="keyword">for</span> (<span class="keyword">size_t</span> i = <span class="number">0</span>; i &lt; outputs.size(); i++) {
+        sp&lt;SwAudioOutputDescriptor&gt; desc = mOutputs.valueFor(outputs[i]);
+        <span class="keyword">if</span> ((desc-&gt;mFlags &amp; AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD) != <span class="number">0</span>) {
+            outputOffloaded = outputs[i];
+        }
+        <span class="keyword">if</span> ((desc-&gt;mFlags &amp; AUDIO_OUTPUT_FLAG_DEEP_BUFFER) != <span class="number">0</span>) {
+            outputDeepBuffer = outputs[i];
+        }
+    }
+    <span class="keyword">if</span> (outputOffloaded != <span class="number">0</span>) {
+        <span class="keyword">return</span> outputOffloaded;
+    }
+    <span class="keyword">if</span> (outputDeepBuffer != <span class="number">0</span>) {
+        <span class="keyword">return</span> outputDeepBuffer;
+    }
+
+    <span class="keyword">return</span> outputs[<span class="number">0</span>];
+}
+</code></pre><p>优先级为:offload&gt;deepbuffer&gt;output的第一个。</p>
+<p>接下来我们要看下更新通话路由的逻辑，函数为<code>updateCallRouting</code></p>
+<pre><code><span class="keyword">void</span> AudioPolicyManager::updateCallRouting(<span class="keyword">audio_devices_t</span> rxDevice, <span class="keyword">int</span> delayMs)
+{
+    <span class="keyword">bool</span> createTxPatch = <span class="literal">false</span>;
+    <span class="keyword">struct</span> audio_patch patch;
+    patch.num_sources = <span class="number">1</span>;
+    patch.num_sinks = <span class="number">1</span>;
+    <span class="keyword">status_t</span> status;
+    <span class="keyword">audio_patch_handle_t</span> afPatchHandle;
+    DeviceVector deviceList;
+
+    <span class="keyword">if</span>(!hasPrimaryOutput()) {
+        <span class="keyword">return</span>;
+    }
+    <span class="keyword">audio_devices_t</span> txDevice = getDeviceAndMixForInputSource(AUDIO_SOURCE_VOICE_COMMUNICATION);
+
+    <span class="comment">// release existing RX patch if any</span>
+    <span class="keyword">if</span> (mCallRxPatch != <span class="number">0</span>) {
+        mpClientInterface-&gt;releaseAudioPatch(mCallRxPatch-&gt;mAfPatchHandle, <span class="number">0</span>);
+        mCallRxPatch.clear();
+    }
+    <span class="comment">// release TX patch if any</span>
+    <span class="keyword">if</span> (mCallTxPatch != <span class="number">0</span>) {
+        mpClientInterface-&gt;releaseAudioPatch(mCallTxPatch-&gt;mAfPatchHandle, <span class="number">0</span>);
+        mCallTxPatch.clear();
+    }
+
+    <span class="comment">// 如果rx设备在primary的so中，那我们就使用原生的setOutputDevice，否则我们就通过audio patch来完成切换path</span>
+    <span class="keyword">if</span> (availablePrimaryOutputDevices() &amp; rxDevice) {
+        setOutputDevice(mPrimaryOutput, rxDevice, <span class="literal">true</span>, delayMs);
+        <span class="comment">// If the TX device is also on the primary HW module, setOutputDevice() will take care</span>
+        <span class="comment">// of it due to legacy implementation. If not, create a patch.</span>
+        <span class="keyword">if</span> ((availablePrimaryInputDevices() &amp; txDevice &amp; ~AUDIO_DEVICE_BIT_IN)
+                == AUDIO_DEVICE_NONE) {
+            createTxPatch = <span class="literal">true</span>;
+        }
+    } <span class="keyword">else</span> {
+        <span class="comment">// create RX path audio patch</span>
+        deviceList = mAvailableOutputDevices.getDevicesFromType(rxDevice);
+        ALOG_ASSERT(!deviceList.isEmpty(),
+                    <span class="string">"updateCallRouting() selected device not in output device list"</span>);
+        sp&lt;DeviceDescriptor&gt; rxSinkDeviceDesc = deviceList.itemAt(<span class="number">0</span>);
+        deviceList = mAvailableInputDevices.getDevicesFromType(AUDIO_DEVICE_IN_TELEPHONY_RX);
+        ALOG_ASSERT(!deviceList.isEmpty(),
+                    <span class="string">"updateCallRouting() no telephony RX device"</span>);
+        sp&lt;DeviceDescriptor&gt; rxSourceDeviceDesc = deviceList.itemAt(<span class="number">0</span>);
+
+        rxSourceDeviceDesc-&gt;toAudioPortConfig(&amp;patch.sources[<span class="number">0</span>]);
+        rxSinkDeviceDesc-&gt;toAudioPortConfig(&amp;patch.sinks[<span class="number">0</span>]);
+
+        <span class="comment">// request to reuse existing output stream if one is already opened to reach the RX device</span>
+        SortedVector&lt;<span class="keyword">audio_io_handle_t</span>&gt; outputs =
+                                getOutputsForDevice(rxDevice, mOutputs);
+        <span class="keyword">audio_io_handle_t</span> output = selectOutput(outputs,
+                                                AUDIO_OUTPUT_FLAG_NONE,
+                                                AUDIO_FORMAT_INVALID);
+        <span class="keyword">if</span> (output != AUDIO_IO_HANDLE_NONE) {
+            sp&lt;SwAudioOutputDescriptor&gt; outputDesc = mOutputs.valueFor(output);
+            ALOG_ASSERT(!outputDesc-&gt;isDuplicated(),
+                        <span class="string">"updateCallRouting() RX device output is duplicated"</span>);
+            outputDesc-&gt;toAudioPortConfig(&amp;patch.sources[<span class="number">1</span>]);
+            patch.sources[<span class="number">1</span>].ext.mix.usecase.stream = AUDIO_STREAM_PATCH;
+            patch.num_sources = <span class="number">2</span>;
+        }
+
+        afPatchHandle = AUDIO_PATCH_HANDLE_NONE;
+        status = mpClientInterface-&gt;createAudioPatch(&amp;patch, &amp;afPatchHandle, <span class="number">0</span>);
+        ALOGW_IF(status != NO_ERROR, <span class="string">"updateCallRouting() error %d creating RX audio patch"</span>,
+                                               status);
+        <span class="keyword">if</span> (status == NO_ERROR) {
+            mCallRxPatch = <span class="keyword">new</span> AudioPatch(&amp;patch, mUidCached);
+            mCallRxPatch-&gt;mAfPatchHandle = afPatchHandle;
+            mCallRxPatch-&gt;mUid = mUidCached;
+        }
+        createTxPatch = <span class="literal">true</span>;
+    }
+    <span class="keyword">if</span> (createTxPatch) {
+
+        <span class="keyword">struct</span> audio_patch patch;
+        patch.num_sources = <span class="number">1</span>;
+        patch.num_sinks = <span class="number">1</span>;
+        deviceList = mAvailableInputDevices.getDevicesFromType(txDevice);
+        ALOG_ASSERT(!deviceList.isEmpty(),
+                    <span class="string">"updateCallRouting() selected device not in input device list"</span>);
+        sp&lt;DeviceDescriptor&gt; txSourceDeviceDesc = deviceList.itemAt(<span class="number">0</span>);
+        txSourceDeviceDesc-&gt;toAudioPortConfig(&amp;patch.sources[<span class="number">0</span>]);
+        deviceList = mAvailableOutputDevices.getDevicesFromType(AUDIO_DEVICE_OUT_TELEPHONY_TX);
+        ALOG_ASSERT(!deviceList.isEmpty(),
+                    <span class="string">"updateCallRouting() no telephony TX device"</span>);
+        sp&lt;DeviceDescriptor&gt; txSinkDeviceDesc = deviceList.itemAt(<span class="number">0</span>);
+        txSinkDeviceDesc-&gt;toAudioPortConfig(&amp;patch.sinks[<span class="number">0</span>]);
+
+        SortedVector&lt;<span class="keyword">audio_io_handle_t</span>&gt; outputs =
+                                getOutputsForDevice(AUDIO_DEVICE_OUT_TELEPHONY_TX, mOutputs);
+        <span class="keyword">audio_io_handle_t</span> output = selectOutput(outputs,
+                                                AUDIO_OUTPUT_FLAG_NONE,
+                                                AUDIO_FORMAT_INVALID);
+        <span class="comment">// request to reuse existing output stream if one is already opened to reach the TX</span>
+        <span class="comment">// path output device</span>
+        <span class="keyword">if</span> (output != AUDIO_IO_HANDLE_NONE) {
+            sp&lt;AudioOutputDescriptor&gt; outputDesc = mOutputs.valueFor(output);
+            ALOG_ASSERT(!outputDesc-&gt;isDuplicated(),
+                        <span class="string">"updateCallRouting() RX device output is duplicated"</span>);
+            outputDesc-&gt;toAudioPortConfig(&amp;patch.sources[<span class="number">1</span>]);
+            patch.sources[<span class="number">1</span>].ext.mix.usecase.stream = AUDIO_STREAM_PATCH;
+            patch.num_sources = <span class="number">2</span>;
+        }
+
+        afPatchHandle = AUDIO_PATCH_HANDLE_NONE;
+        status = mpClientInterface-&gt;createAudioPatch(&amp;patch, &amp;afPatchHandle, <span class="number">0</span>);
+        ALOGW_IF(status != NO_ERROR, <span class="string">"setPhoneState() error %d creating TX audio patch"</span>,
+                                               status);
+        <span class="keyword">if</span> (status == NO_ERROR) {
+            mCallTxPatch = <span class="keyword">new</span> AudioPatch(&amp;patch, mUidCached);
+            mCallTxPatch-&gt;mAfPatchHandle = afPatchHandle;
+            mCallTxPatch-&gt;mUid = mUidCached;
+        }
+    }
+}
+</code></pre><p>该函数为了兼容通话声音输入输出通过非primary的场景，引入了audio patch的方案。并且只能存在我i恶意一个tx patch和rx patch。<br>如果是primary的设备的话，那就跟之前的处理方式是一致的，采用<code>setOutputDevice</code>的方式。</p>
+<p>上面我们基本上看的都是output的device，现在我们来看看input device中的函数<code>checkInputsForDevice</code></p>
+<pre><code><span class="keyword">status_t</span> AudioPolicyManager::checkInputsForDevice(<span class="keyword">const</span> sp&lt;DeviceDescriptor&gt; devDesc,
+                                                  <span class="keyword">audio_policy_dev_state_t</span> state,
+                                                  SortedVector&lt;<span class="keyword">audio_io_handle_t</span>&gt;&amp; inputs,
+                                                  <span class="keyword">const</span> String8 address)
+{
+    <span class="keyword">audio_devices_t</span> device = devDesc-&gt;type();
+    sp&lt;AudioInputDescriptor&gt; desc;
+
+    <span class="keyword">if</span> (audio_device_is_digital(device)) {
+        <span class="comment">// erase all current sample rates, formats and channel masks</span>
+        devDesc-&gt;clearCapabilities();
+    }
+
+    <span class="keyword">if</span> (state == AUDIO_POLICY_DEVICE_STATE_AVAILABLE) {
+        <span class="comment">// first list already open inputs that can be routed to this device</span>
+        <span class="keyword">for</span> (<span class="keyword">size_t</span> input_index = <span class="number">0</span>; input_index &lt; mInputs.size(); input_index++) {
+            desc = mInputs.valueAt(input_index);
+            <span class="keyword">if</span> (desc-&gt;mProfile-&gt;mSupportedDevices.types() &amp; (device &amp; ~AUDIO_DEVICE_BIT_IN)) {
+               inputs.add(mInputs.keyAt(input_index));
+            }
+        }
+
+        <span class="comment">// then look for input profiles that can be routed to this device</span>
+        SortedVector&lt; sp&lt;IOProfile&gt; &gt; profiles;
+        <span class="keyword">for</span> (<span class="keyword">size_t</span> module_idx = <span class="number">0</span>; module_idx &lt; mHwModules.size(); module_idx++)
+        {
+            <span class="keyword">if</span> (mHwModules[module_idx]-&gt;mHandle == <span class="number">0</span>) {
+                <span class="keyword">continue</span>;
+            }
+            <span class="keyword">for</span> (<span class="keyword">size_t</span> profile_index = <span class="number">0</span>;
+                 profile_index &lt; mHwModules[module_idx]-&gt;mInputProfiles.size();
+                 profile_index++)
+            {
+                sp&lt;IOProfile&gt; profile = mHwModules[module_idx]-&gt;mInputProfiles[profile_index];
+
+                <span class="keyword">if</span> (profile-&gt;mSupportedDevices.types() &amp; (device &amp; ~AUDIO_DEVICE_BIT_IN)) {
+                    <span class="keyword">if</span> (!device_distinguishes_on_address(device) ||
+                            address == profile-&gt;mSupportedDevices[<span class="number">0</span>]-&gt;mAddress) {
+                        profiles.add(profile);
+                        ALOGV(<span class="string">"checkInputsForDevice(): adding profile %zu from module %zu"</span>,
+                              profile_index, module_idx);
+                    }
+                }
+            }
+        }
+
+        <span class="keyword">if</span> (profiles.isEmpty() &amp;&amp; inputs.isEmpty()) {
+            ALOGW(<span class="string">"checkInputsForDevice(): No input available for device 0x%X"</span>, device);
+            <span class="keyword">return</span> BAD_VALUE;
+        }
+
+        <span class="comment">// open inputs for matching profiles if needed. Direct inputs are also opened to</span>
+        <span class="comment">// query for dynamic parameters and will be closed later by setDeviceConnectionState()</span>
+        <span class="keyword">for</span> (<span class="keyword">ssize_t</span> profile_index = <span class="number">0</span>; profile_index &lt; (<span class="keyword">ssize_t</span>)profiles.size(); profile_index++) {
+
+            sp&lt;IOProfile&gt; profile = profiles[profile_index];
+            <span class="comment">// nothing to do if one input is already opened for this profile</span>
+            <span class="keyword">size_t</span> input_index;
+            <span class="keyword">for</span> (input_index = <span class="number">0</span>; input_index &lt; mInputs.size(); input_index++) {
+                desc = mInputs.valueAt(input_index);
+                <span class="keyword">if</span> (desc-&gt;mProfile == profile) {
+                    <span class="keyword">if</span> (audio_device_is_digital(device)) {
+                        devDesc-&gt;importAudioPort(profile);
+                    }
+                    <span class="keyword">break</span>;
+                }
+            }
+            <span class="keyword">if</span> (input_index != mInputs.size()) {
+                <span class="keyword">continue</span>;
+            }
+
+            desc = <span class="keyword">new</span> AudioInputDescriptor(profile);
+            desc-&gt;mDevice = device;
+            <span class="keyword">audio_config_t</span> config = AUDIO_CONFIG_INITIALIZER;
+            config.sample_rate = desc-&gt;mSamplingRate;
+            config.channel_mask = desc-&gt;mChannelMask;
+            config.format = desc-&gt;mFormat;
+            <span class="keyword">audio_io_handle_t</span> input = AUDIO_IO_HANDLE_NONE;
+            <span class="keyword">status_t</span> status = mpClientInterface-&gt;openInput(profile-&gt;getModuleHandle(),
+                                                           &amp;input,
+                                                           &amp;config,
+                                                           &amp;desc-&gt;mDevice,
+                                                           address,
+                                                           AUDIO_SOURCE_MIC,
+                                                           AUDIO_INPUT_FLAG_NONE <span class="comment">/*FIXME*/</span>);
+
+            <span class="keyword">if</span> (status == NO_ERROR) {
+                desc-&gt;mSamplingRate = config.sample_rate;
+                desc-&gt;mChannelMask = config.channel_mask;
+                desc-&gt;mFormat = config.format;
+
+                <span class="keyword">if</span> (!address.isEmpty()) {
+                    <span class="keyword">char</span> *param = audio_device_address_to_parameter(device, address);
+                    mpClientInterface-&gt;setParameters(input, String8(param));
+                    <span class="built_in">free</span>(param);
+                }
+
+                <span class="comment">// Here is where we step through and resolve any "dynamic" fields</span>
+                String8 reply;
+                <span class="keyword">char</span> *value;
+                <span class="keyword">if</span> (profile-&gt;mSamplingRates[<span class="number">0</span>] == <span class="number">0</span>) {
+                    reply = mpClientInterface-&gt;getParameters(input,
+                                            String8(AUDIO_PARAMETER_STREAM_SUP_SAMPLING_RATES));
+                    value = <span class="built_in">strpbrk</span>((<span class="keyword">char</span> *)reply.<span class="built_in">string</span>(), <span class="string">"="</span>);
+                    <span class="keyword">if</span> (value != <span class="literal">NULL</span>) {
+                        profile-&gt;loadSamplingRates(value + <span class="number">1</span>);
+                    }
+                }
+                <span class="keyword">if</span> (profile-&gt;mFormats[<span class="number">0</span>] == AUDIO_FORMAT_DEFAULT) {
+                    reply = mpClientInterface-&gt;getParameters(input,
+                                                   String8(AUDIO_PARAMETER_STREAM_SUP_FORMATS));
+                    value = <span class="built_in">strpbrk</span>((<span class="keyword">char</span> *)reply.<span class="built_in">string</span>(), <span class="string">"="</span>);
+                    <span class="keyword">if</span> (value != <span class="literal">NULL</span>) {
+                        profile-&gt;loadFormats(value + <span class="number">1</span>);
+                    }
+                }
+                <span class="keyword">if</span> (profile-&gt;mChannelMasks[<span class="number">0</span>] == <span class="number">0</span>) {
+                    reply = mpClientInterface-&gt;getParameters(input,
+                                                  String8(AUDIO_PARAMETER_STREAM_SUP_CHANNELS));
+                    ALOGV(<span class="string">"checkInputsForDevice() direct input sup channel masks %s"</span>,
+                              reply.<span class="built_in">string</span>());
+                    value = <span class="built_in">strpbrk</span>((<span class="keyword">char</span> *)reply.<span class="built_in">string</span>(), <span class="string">"="</span>);
+                    <span class="keyword">if</span> (value != <span class="literal">NULL</span>) {
+                        profile-&gt;loadInChannels(value + <span class="number">1</span>);
+                    }
+                }
+                <span class="keyword">if</span> (((profile-&gt;mSamplingRates[<span class="number">0</span>] == <span class="number">0</span>) &amp;&amp; (profile-&gt;mSamplingRates.size() &lt; <span class="number">2</span>)) ||
+                     ((profile-&gt;mFormats[<span class="number">0</span>] == <span class="number">0</span>) &amp;&amp; (profile-&gt;mFormats.size() &lt; <span class="number">2</span>)) ||
+                     ((profile-&gt;mChannelMasks[<span class="number">0</span>] == <span class="number">0</span>) &amp;&amp; (profile-&gt;mChannelMasks.size() &lt; <span class="number">2</span>))) {
+                    mpClientInterface-&gt;closeInput(input);
+                    input = AUDIO_IO_HANDLE_NONE;
+                }
+
+                <span class="keyword">if</span> (input != <span class="number">0</span>) {
+                    addInput(input, desc);
+                }
+            } <span class="comment">// endif input != 0</span>
+
+            <span class="keyword">if</span> (input == AUDIO_IO_HANDLE_NONE) {
+                profiles.removeAt(profile_index);
+                profile_index--;
+            } <span class="keyword">else</span> {
+                inputs.add(input);
+                <span class="keyword">if</span> (audio_device_is_digital(device)) {
+                    devDesc-&gt;importAudioPort(profile);
+                }
+            }
+        } <span class="comment">// end scan profiles</span>
+
+        <span class="keyword">if</span> (profiles.isEmpty()) {
+            ALOGW(<span class="string">"checkInputsForDevice(): No input available for device 0x%X"</span>, device);
+            <span class="keyword">return</span> BAD_VALUE;
+        }
+    } <span class="keyword">else</span> {
+        <span class="comment">// Disconnect</span>
+        <span class="comment">// check if one opened input is not needed any more after disconnecting one device</span>
+        <span class="keyword">for</span> (<span class="keyword">size_t</span> input_index = <span class="number">0</span>; input_index &lt; mInputs.size(); input_index++) {
+            desc = mInputs.valueAt(input_index);
+            <span class="keyword">if</span> (!(desc-&gt;mProfile-&gt;mSupportedDevices.types() &amp; mAvailableInputDevices.types() &amp;
+                    ~AUDIO_DEVICE_BIT_IN)) {
+                inputs.add(mInputs.keyAt(input_index));
+            }
+        }
+        <span class="comment">// Clear any profiles associated with the disconnected device.</span>
+        <span class="keyword">for</span> (<span class="keyword">size_t</span> module_index = <span class="number">0</span>; module_index &lt; mHwModules.size(); module_index++) {
+            <span class="keyword">if</span> (mHwModules[module_index]-&gt;mHandle == <span class="number">0</span>) {
+                <span class="keyword">continue</span>;
+            }
+            <span class="keyword">for</span> (<span class="keyword">size_t</span> profile_index = <span class="number">0</span>;
+                 profile_index &lt; mHwModules[module_index]-&gt;mInputProfiles.size();
+                 profile_index++) {
+                sp&lt;IOProfile&gt; profile = mHwModules[module_index]-&gt;mInputProfiles[profile_index];
+                <span class="keyword">if</span> (profile-&gt;mSupportedDevices.types() &amp; (device &amp; ~AUDIO_DEVICE_BIT_IN)) {
+                    <span class="keyword">if</span> (profile-&gt;mSamplingRates[<span class="number">0</span>] == <span class="number">0</span>) {
+                        profile-&gt;mSamplingRates.clear();
+                        profile-&gt;mSamplingRates.add(<span class="number">0</span>);
+                    }
+                    <span class="keyword">if</span> (profile-&gt;mFormats[<span class="number">0</span>] == AUDIO_FORMAT_DEFAULT) {
+                        profile-&gt;mFormats.clear();
+                        profile-&gt;mFormats.add(AUDIO_FORMAT_DEFAULT);
+                    }
+                    <span class="keyword">if</span> (profile-&gt;mChannelMasks[<span class="number">0</span>] == <span class="number">0</span>) {
+                        profile-&gt;mChannelMasks.clear();
+                        profile-&gt;mChannelMasks.add(<span class="number">0</span>);
+                    }
+                }
+            }
+        }
+    } <span class="comment">// end disconnect</span>
+
+    <span class="keyword">return</span> NO_ERROR;
+}
+</code></pre><p>该函数的主要逻辑跟output中的基本上是一致的，主要的区别就在于output会更复杂一些，它会有duplicate output或者是policyMix的场景。</p>
+<p>duplicate需要是连入的设备属于不同hw so的才会触发。<br>policyMix目前还不确定。</p>
+<h3 id="duplicate的创建">duplicate的创建</h3><p>上面我们分析完了链接，但是我们没有仔细去看duplicate output的创建逻辑，我们先来看下如何实现这部分的创建。</p>
+<p>audioflinger.cpp</p>
+<pre><code>audio_io_handle_t AudioFlinger<span class="tag">::openDuplicateOutput</span>(audio_io_handle_t output1,
+        audio_io_handle_t output2)
+{
+    Mutex<span class="tag">::Autolock</span> _l(mLock);
+    MixerThread *thread1 = checkMixerThread_l(output1);
+    MixerThread *thread2 = checkMixerThread_l(output2);
+
+    <span class="keyword">if</span> (thread1 == <span class="built_in">NULL</span> <span class="subst">||</span> thread2 == <span class="built_in">NULL</span>) {
+        <span class="keyword">return</span> AUDIO_IO_HANDLE_NONE;
+    }
+
+    audio_io_handle_t id = nextUniqueId();
+    <span class="comment">// 创建duplicateThread,传入了一个线程对象，id等</span>
+    DuplicatingThread *<span class="keyword">thread</span> = <span class="literal">new</span> DuplicatingThread(this, thread1, id, mSystemReady);
+    <span class="comment">// 通过duplicate线程对象，再进行第二个线程对象的添加。</span>
+    <span class="keyword">thread</span><span class="subst">-&gt;</span>addOutputTrack(thread2);
+    mPlaybackThreads<span class="built_in">.</span>add(id, <span class="keyword">thread</span>);
+    <span class="comment">// 通知客户端新的output的打开</span>
+    <span class="keyword">thread</span><span class="subst">-&gt;</span>ioConfigChanged(AUDIO_OUTPUT_OPENED);
+    <span class="keyword">return</span> id;
+}
+</code></pre><p>上面函数实现了：</p>
+<ol>
+<li>创建duplicate线程，将第一个thread添加进来，thread1为新创建的output</li>
+<li>往duplicate线程添加第二个线程，thread2为primary output</li>
+<li>通知client有新的output被打开了。</li>
+</ol>
+<p>duplicate output的父类为mixer thread。</p>
+<p>看下构造函数：</p>
+<pre><code>AudioFlinger::DuplicatingThread::DuplicatingThread(<span class="keyword">const</span> sp&lt;AudioFlinger&gt;&amp; audioFlinger,
+        AudioFlinger::MixerThread* mainThread, audio_io_handle_t id, <span class="keyword">bool</span> systemReady)
+    :   MixerThread(audioFlinger, mainThread-&gt;getOutput(), id, mainThread-&gt;outDevice(),
+                    systemReady, DUPLICATING),
+        mWaitTimeMs(UINT_MAX)
+{
+    addOutputTrack(mainThread);
+}
+</code></pre><p>只是多调用了<code>addOutputTrack</code>函数：</p>
+<pre><code><span class="keyword">void</span> AudioFlinger::DuplicatingThread::addOutputTrack(MixerThread *thread)
+{
+    Mutex::Autolock _l(mLock);
+    <span class="comment">// The downstream MixerThread consumes thread-&gt;frameCount() amount of frames per mix pass.</span>
+    <span class="comment">// Adjust for thread-&gt;sampleRate() to determine minimum buffer frame count.</span>
+    <span class="comment">// 为什么采用三倍的缓冲区是因为线程并不是同步执行并且应该不会被clock给锁住了。</span>
+    <span class="keyword">const</span> <span class="keyword">size_t</span> frameCount =
+            <span class="number">3</span> * sourceFramesNeeded(mSampleRate, thread-&gt;frameCount(), thread-&gt;sampleRate());
+
+    <span class="comment">// 创建了一个outputtrack对象</span>
+    sp&lt;OutputTrack&gt; outputTrack = <span class="keyword">new</span> OutputTrack(thread,
+                                            <span class="keyword">this</span>,
+                                            mSampleRate,
+                                            mFormat,
+                                            mChannelMask,
+                                            frameCount,
+                                            IPCThreadState::self()-&gt;getCallingUid());
+    <span class="comment">// 如果创建成功的话，则设置AUDIO_STREAM_PATCH音量为1.0f，并且添加outputTrack到数组中</span>
+    <span class="keyword">if</span> (outputTrack-&gt;cblk() != <span class="literal">NULL</span>) {
+        thread-&gt;setStreamVolume(AUDIO_STREAM_PATCH, <span class="number">1.0f</span>);
+        mOutputTracks.add(outputTrack);
+        updateWaitTime_l();
+    }
+}
+
+AudioFlinger::PlaybackThread::OutputTrack::OutputTrack(
+            PlaybackThread *playbackThread,
+            DuplicatingThread *sourceThread,
+            <span class="keyword">uint32_t</span> sampleRate,
+            <span class="keyword">audio_format_t</span> format,
+            <span class="keyword">audio_channel_mask_t</span> channelMask,
+            <span class="keyword">size_t</span> frameCount,
+            <span class="keyword">int</span> uid)
+    :   Track(playbackThread, <span class="literal">NULL</span>, AUDIO_STREAM_PATCH,
+              sampleRate, format, channelMask, frameCount,
+              <span class="literal">NULL</span>, <span class="number">0</span>, <span class="number">0</span>, uid, IAudioFlinger::TRACK_DEFAULT, TYPE_OUTPUT),
+    mActive(<span class="literal">false</span>), mSourceThread(sourceThread), mClientProxy(<span class="literal">NULL</span>)
+{
+
+    <span class="keyword">if</span> (mCblk != <span class="literal">NULL</span>) {
+        mOutBuffer.frameCount = <span class="number">0</span>;
+        <span class="comment">// 将该track添加到对应的thread中。</span>
+        playbackThread-&gt;mTracks.add(<span class="keyword">this</span>);
+        <span class="comment">// 这边创建了一个clientproxy，track的构造函数中会创建server端。client端和server端在同一个进程，所以</span>
+        <span class="comment">// 虚拟地址是公用的。</span>
+        mClientProxy = <span class="keyword">new</span> AudioTrackClientProxy(mCblk, mBuffer, mFrameCount, mFrameSize,
+                <span class="literal">true</span> <span class="comment">/*clientInServer*/</span>);
+        mClientProxy-&gt;setVolumeLR(GAIN_MINIFLOAT_PACKED_UNITY);
+        mClientProxy-&gt;setSendLevel(<span class="number">0.0</span>);
+        mClientProxy-&gt;setSampleRate(sampleRate);
+    } <span class="keyword">else</span> {
+        ALOGW(<span class="string">"Error creating output track on thread %p"</span>, playbackThread);
+    }
+}
+</code></pre><p>总结下函数做了哪些事情:</p>
+<ol>
+<li>创建了个outputTrack，每个outputTrack有一个对应的clientProxy和一个serverProxy</li>
+<li>将outputTrack添加到duplicateoutput的mOutputTracks和对应output的mTracks中</li>
+</ol>
+<p>到此就完成了如下图的创建：<br><img src="http://thinks.me/image/outputtrack.jpg" alt=""></p>
+<h3 id="播放数据流">播放数据流</h3><p>播放的逻辑其实跟MixerThread基本上一致，主要就多实现了将mix完之后的数据分发给两个outputTrack，实现的方式：就是DuplicatingThread重写了<code>threadLoop_mix</code>、<code>threadLoop_sleepTime</code>、<code>threadLoop_write</code>、<code>threadLoop_standby</code>，这些重写的意义，主要是因为DuplicatingThread需要去维护自己的mOutputTracks。</p>
+<p>这样的写就会牵扯到三个线程在跑，duplicatingThread获取到数据之后，分发给两个MixerThread，MixerThread按照之间的逻辑继续运行。相比较之前的实现，就多了DuplicatingThread的操作了。</p>
+<p>我们主要看下<code>threadLoop_write</code>：</p>
+<pre><code><span class="keyword">ssize_t</span> AudioFlinger::DuplicatingThread::threadLoop_write()
+{
+    <span class="keyword">for</span> (<span class="keyword">size_t</span> i = <span class="number">0</span>; i &lt; outputTracks.size(); i++) {
+        outputTracks[i]-&gt;write(mSinkBuffer, writeFrames);
+    }
+    mStandby = <span class="literal">false</span>;
+    <span class="keyword">return</span> (<span class="keyword">ssize_t</span>)mSinkBufferSize;
+}
+</code></pre><p>此时我们可以把outputTrack当成是一个client端的audiotrack来看待，它也实现了自己的<code>write</code>、<code>start</code>、<code>stop</code>，<code>obtainBuffer</code>等操作。</p>
+<p>这部分写的逻辑跟audiotrack中写的逻辑基本上一致，不打算细看了。</p>
+
+      
+    </div>
+
+    <div>
+      
+        
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Android/" rel="tag">#Android</a>
+          
+            <a href="/tags/AudioTrack/" rel="tag">#AudioTrack</a>
+          
+            <a href="/tags/a2dp/" rel="tag">#a2dp</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/03/24/audiotrack_static_loop/" rel="next" title="audiotrack流程和setLoop学习(mode_static)">
+                <i class="fa fa-chevron-left"></i> audiotrack流程和setLoop学习(mode_static)
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2016/04/18/audio_soundpool/" rel="prev" title="soundpool代码分析">
+                soundpool代码分析 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div class="ds-thread" data-thread-key="2016/04/07/audio_a2dp/"
+           data-title="a2dp场景分析" data-url="http://thinks.me/2016/04/07/audio_a2dp/">
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.png"
+               alt="LexiMee" />
+          <p class="site-author-name" itemprop="name">LexiMee</p>
+          <p class="site-description motion-element" itemprop="description">leave me alone</p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">15</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">2</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">11</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        <div class="links-of-blogroll motion-element">
+          
+        </div>
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator">
+            <i class="fa fa-angle-double-up"></i>
+          </div>
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#简述"><span class="nav-number">1.</span> <span class="nav-text">简述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#正文"><span class="nav-number">2.</span> <span class="nav-text">正文</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#链接蓝牙"><span class="nav-number">2.1.</span> <span class="nav-text">链接蓝牙</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#duplicate的创建"><span class="nav-number">2.2.</span> <span class="nav-text">duplicate的创建</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#播放数据流"><span class="nav-number">2.3.</span> <span class="nav-text">播放数据流</span></a></li></ol></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator">
+            <i class="fa fa-angle-double-down"></i>
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2015 - 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">LexiMee</span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="http://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Pisces
+  </a>
+</div>
+
+
+
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+
+  
+
+
+
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=0.5.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=0.5.0"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=0.5.0"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=0.5.0"></script>
+
+
+
+  
+  
+<script type="text/javascript" src="/js/src/scrollspy.js?v=0.5.0"></script>
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 1 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = NexT.utils.escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    NexT.motion.middleWares.sidebar = function () {
+      var $tocContent = $('.post-toc-content');
+
+      if (CONFIG.scheme !== 'Pisces' && (CONFIG.sidebar.display === 'post' || CONFIG.sidebar.display === 'always')) {
+        if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+          NexT.utils.displaySidebar();
+        }
+      }
+    };
+  });
+</script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=0.5.0"></script>
+
+
+
+  
+
+  
+    
+  
+
+  <script type="text/javascript">
+    var duoshuoQuery = {short_name:"thinks"};
+    (function() {
+      var ds = document.createElement('script');
+      ds.type = 'text/javascript';ds.async = true;
+      ds.id = 'duoshuo-script';
+      ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+      ds.charset = 'UTF-8';
+      (document.getElementsByTagName('head')[0]
+      || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+  </script>
+
+  
+    
+  
+
+
+
+
+
+  
+  
+  
+
+  
+
+
+</body>
+</html>
