@@ -66,7 +66,7 @@
 <meta property="og:site_name" content="Thinking">
 <meta property="og:description" content="简述这次，我们来看下a2dp下面的播放场景吧。a2dp是蓝牙用来播放音乐的协议，正常情况下，播放音乐只从蓝牙耳机端输出，但是如果是来个通知类的声音，那策略的选择会同时从蓝牙耳机和speaker同时输出，由于speaker和蓝牙是采用的不同硬件设备输出，所以它在hal层应该是对应两个so的。所以，谷歌针对这种场景，继承PlaybackThread，实现了DuplicatingThread，这样就需要">
 <meta property="og:image" content="http://thinks.me/image/outputtrack.jpg">
-<meta property="og:updated_time" content="2016-04-07T09:13:37.000Z">
+<meta property="og:updated_time" content="2016-04-27T03:05:34.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="a2dp场景分析">
 <meta name="twitter:description" content="简述这次，我们来看下a2dp下面的播放场景吧。a2dp是蓝牙用来播放音乐的协议，正常情况下，播放音乐只从蓝牙耳机端输出，但是如果是来个通知类的声音，那策略的选择会同时从蓝牙耳机和speaker同时输出，由于speaker和蓝牙是采用的不同硬件设备输出，所以它在hal层应该是对应两个so的。所以，谷歌针对这种场景，继承PlaybackThread，实现了DuplicatingThread，这样就需要">
@@ -292,9 +292,8 @@
       
 
       
-        <h2 id="简述">简述</h2><p>这次，我们来看下a2dp下面的播放场景吧。a2dp是蓝牙用来播放音乐的协议，正常情况下，播放音乐只从蓝牙耳机端输出，但是如果是来个通知类的声音，那策略的选择会同时从蓝牙耳机和speaker同时输出，由于speaker和蓝牙是采用的不同硬件设备输出，所以它在hal层应该是对应两个so的。所以，谷歌针对这种场景，继承PlaybackThread，实现了DuplicatingThread，这样就需要在audioflinger这边实现将数据拷贝到两个缓冲区的操作了。</p>
+        <h2 id="简述">简述</h2><p>这次，我们来看下a2dp下面的播放场景吧。a2dp是蓝牙用来播放音乐的协议，正常情况下，播放音乐只从蓝牙耳机端输出，但是如果是来个通知类的声音，那策略的选择会同时从蓝牙耳机和speaker同时输出，由于speaker和蓝牙是采用的不同硬件设备输出，所以它在hal层应该是对应两个so的。所以，谷歌针对这种场景，继承PlaybackThread，实现了DuplicatingThread，这样就需要在audioflinger这边实现将数据拷贝到两个缓冲区的操作了。<br><a id="more"></a></p>
 <h2 id="正文">正文</h2><p>在android下，对于链接蓝牙的音乐播放的话，按照我们的认知，肯定得从蓝牙出来，这是毋庸置疑的，也合乎常理，这个和一般的音乐播放一样，只是需要单纯的选择到对应的设备通过一个output即可完成播放。但是有一些特殊的场景，需要声音即从蓝牙耳机输出，又从设备的speaker输出，这个时候对于单个output的播放方式就无法满足这种场景了，于是谷歌引入duplicate播放该种类型声音的方案，接下来我们将一起来分析这部分的代码。</p>
-<a id="more"></a>
 <h3 id="链接蓝牙">链接蓝牙</h3><p>这部分的代码在AudioPolicyManager.cpp中</p>
 <p>从蓝牙链接上来，到链接完成，总共会执行3次的<code>setDeviceConnectionStateInt</code>,分别对应SCO、A2DP、IN_SCO。<br>A2DP的场景会触发打开两个output，一个是mixer output，另外一个是duplicate output，关联新建的output和primary output。<br>IN_SCO会触发创建一个input，紧接着会被关闭，所以目的更确切的说，应该是更新设备的desc。<br>对于input的关闭是针对所有的input的，所以这个时候如果正巧有录音线程在跑的话，会触发audiorecord的重新restore的操作。</p>
 <pre><code>status_t AudioPolicyManagerCustom::setDeviceConnectionStateInt(audio_devices_t device,
