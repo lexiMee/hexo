@@ -1,0 +1,1139 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css"/>
+
+
+
+
+  <link href="//fonts.googleapis.com/css?family=Lato:300,400,700,400italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=0.5.0" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="Android,Audio,Offload," />
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="Thinking" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=0.5.0" />
+
+
+
+
+
+
+<meta name="description" content="简述   offload在音频系统里面，就是将对于音频文件的解码操作过载到DSP中去做，比如说mp3的解码操作不是在mediaserver中来做，而是直接将数据传递到dsp中，由DSP去解码和播放，就是所谓的硬解。硬解的优势是省功耗，除了DSP自身在处理音频格式的时候功耗相对较低，整个数据在安卓的音频系统中传递也会相对低些，前面那个好理解，后面这个我们结合代码来分析。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="高通audio offload学习">
+<meta property="og:url" content="http://thinks.me/2016/09/13/audio_qcom_offload/index.html">
+<meta property="og:site_name" content="Thinking">
+<meta property="og:description" content="简述   offload在音频系统里面，就是将对于音频文件的解码操作过载到DSP中去做，比如说mp3的解码操作不是在mediaserver中来做，而是直接将数据传递到dsp中，由DSP去解码和播放，就是所谓的硬解。硬解的优势是省功耗，除了DSP自身在处理音频格式的时候功耗相对较低，整个数据在安卓的音频系统中传递也会相对低些，前面那个好理解，后面这个我们结合代码来分析。">
+<meta property="og:image" content="http://thinks.me/image/offload_read_write_buffer.bmp">
+<meta property="og:image" content="http://thinks.me/image/offload_write.bmp">
+<meta property="og:image" content="http://thinks.me/image/offload_android_diagram.bmp">
+<meta property="og:image" content="http://thinks.me/image/offload_initial.bmp">
+<meta property="og:image" content="http://thinks.me/image/offload_playback.bmp">
+<meta property="og:image" content="http://thinks.me/image/offload_seek.bmp">
+<meta property="og:updated_time" content="2016-09-13T01:33:10.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="高通audio offload学习">
+<meta name="twitter:description" content="简述   offload在音频系统里面，就是将对于音频文件的解码操作过载到DSP中去做，比如说mp3的解码操作不是在mediaserver中来做，而是直接将数据传递到dsp中，由DSP去解码和播放，就是所谓的硬解。硬解的优势是省功耗，除了DSP自身在处理音频格式的时候功耗相对较低，整个数据在安卓的音频系统中传递也会相对低些，前面那个好理解，后面这个我们结合代码来分析。">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Pisces',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: 0,
+      author: '博主'
+    }
+  };
+</script>
+
+  <title> 高通audio offload学习 | Thinking </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?1a17ff812788f97b5ec90bee6eba907f";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">Thinking</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle"></p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-home fa-fw"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-th fa-fw"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-archive fa-fw"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-tags fa-fw"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                高通audio offload学习
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2016-09-13T09:33:08+08:00" content="2016-09-13">
+              2016-09-13
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/android开发/" itemprop="url" rel="index">
+                    <span itemprop="name">android开发</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2016/09/13/audio_qcom_offload/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/09/13/audio_qcom_offload/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="简述">简述</h2><p>   offload在音频系统里面，就是将对于音频文件的解码操作过载到DSP中去做，比如说mp3的解码操作不是在mediaserver中来做，而是直接将数据传递到dsp中，由DSP去解码和播放，就是所谓的硬解。硬解的优势是省功耗，除了DSP自身在处理音频格式的时候功耗相对较低，整个数据在安卓的音频系统中传递也会相对低些，前面那个好理解，后面这个我们结合代码来分析。</p>
+<a id="more"></a>
+<h2 id="正文">正文</h2><p>   这次的场景，就是在高通平台通过mediaplayer进行播放mp3.其中audiotrack中采用到了callback的方式。</p>
+<h3 id="audiotrack部分">audiotrack部分</h3><p>我们从代码的角度一步步分析。<br>摘取一些audiotrack中<code>set</code>中的代码：</p>
+<pre><code><span class="keyword">if</span> (cbf != <span class="literal">NULL</span>) {
+    mAudioTrackThread = <span class="keyword">new</span> AudioTrackThread(*<span class="keyword">this</span>, threadCanCallJava);
+    mAudioTrackThread-&gt;run(<span class="string">"AudioTrack"</span>, ANDROID_PRIORITY_AUDIO, <span class="number">0</span> <span class="comment">/*stack*/</span>);
+    <span class="comment">// thread begins in paused state, and will not reference us until start()</span>
+}
+</code></pre><p>这部分创建了AudioTrackThread，并且让它跑起来了。来看下线程的逻辑处理函数：</p>
+<pre><code><span class="keyword">bool</span> AudioTrack::AudioTrackThread::threadLoop()
+{
+    {
+        AutoMutex _l(mMyLock);
+        <span class="comment">// mPaused 外部触发的pause，将会在这边进行block</span>
+        <span class="keyword">if</span> (mPaused) {
+            mMyCond.wait(mMyLock);
+            <span class="comment">// caller will check for exitPending()</span>
+            <span class="keyword">return</span> <span class="literal">true</span>;
+        }
+        <span class="comment">// 如果忽略下一次的内部pause， 下面的内部pause将会被跳过</span>
+        <span class="keyword">if</span> (mIgnoreNextPausedInt) {
+            mIgnoreNextPausedInt = <span class="literal">false</span>;
+            mPausedInt = <span class="literal">false</span>;
+        }
+        <span class="comment">// 内部pause，如果有内部pause的需求，将在这边进行等待。</span>
+        <span class="keyword">if</span> (mPausedInt) {
+            <span class="keyword">if</span> (mPausedNs &gt; <span class="number">0</span>) {
+                (<span class="keyword">void</span>) mMyCond.waitRelative(mMyLock, mPausedNs);
+            } <span class="keyword">else</span> {
+                mMyCond.wait(mMyLock);
+            }
+            mPausedInt = <span class="literal">false</span>;
+            <span class="keyword">return</span> <span class="literal">true</span>;
+        }
+    }
+    <span class="comment">// 如果线程结束，则返回false，停止循环</span>
+    <span class="keyword">if</span> (exitPending()) {
+        <span class="keyword">return</span> <span class="literal">false</span>;
+    }
+    <span class="comment">// 这边将进行获取数据，处理数据的操作，返回的ns决定将内部block多久，跟开头的那边对应</span>
+    <span class="keyword">nsecs_t</span> ns = mReceiver.processAudioBuffer();
+    <span class="keyword">switch</span> (ns) {
+    <span class="keyword">case</span> <span class="number">0</span>:
+        <span class="keyword">return</span> <span class="literal">true</span>;
+    <span class="keyword">case</span> NS_INACTIVE:
+        pauseInternal();
+        <span class="keyword">return</span> <span class="literal">true</span>;
+    <span class="keyword">case</span> NS_NEVER:
+        <span class="keyword">return</span> <span class="literal">false</span>;
+    <span class="keyword">case</span> NS_WHENEVER:
+        <span class="comment">// Event driven: call wake() when callback notifications conditions change.</span>
+        ns = INT64_MAX;
+        <span class="comment">// fall through</span>
+    <span class="keyword">default</span>:
+        LOG_ALWAYS_FATAL_IF(ns &lt; <span class="number">0</span>, <span class="string">"processAudioBuffer() returned %"</span> PRId64, ns);
+        pauseInternal(ns);
+        <span class="keyword">return</span> <span class="literal">true</span>;
+    }
+}
+</code></pre><p>上面函数大部分都在描述如何控制暂停，对于数据的处理在函数<code>processAudioBuffer</code>中，我们可以回头来看下这个函数的实现：</p>
+<pre><code><span class="keyword">nsecs_t</span> AudioTrack::processAudioBuffer()
+{
+
+    mLock.lock();
+    <span class="comment">// 申请线程成实时线程，这边进行循环检测，是否申请成功，每次休眠的时间成指数增长，最多循环5次</span>
+    <span class="keyword">if</span> (mAwaitBoost) {
+        mAwaitBoost = <span class="literal">false</span>;
+        mLock.unlock();
+        <span class="keyword">static</span> <span class="keyword">const</span> <span class="keyword">int32_t</span> kMaxTries = <span class="number">5</span>;
+        <span class="keyword">int32_t</span> tryCounter = kMaxTries;
+        <span class="keyword">uint32_t</span> pollUs = <span class="number">10000</span>;
+        <span class="keyword">do</span> {
+            <span class="keyword">int</span> policy = sched_getscheduler(<span class="number">0</span>);
+            <span class="keyword">if</span> (policy == SCHED_FIFO || policy == SCHED_RR) {
+                <span class="keyword">break</span>;
+            }
+            usleep(pollUs);
+            pollUs &lt;&lt;= <span class="number">1</span>;
+        } <span class="keyword">while</span> (tryCounter-- &gt; <span class="number">0</span>);
+        <span class="keyword">if</span> (tryCounter &lt; <span class="number">0</span>) {
+            ALOGE(<span class="string">"did not receive expected priority boost on time"</span>);
+        }
+        <span class="comment">// Run again immediately</span>
+        <span class="keyword">return</span> <span class="number">0</span>;
+    }
+
+    <span class="comment">// Can only reference mCblk while locked</span>
+    <span class="keyword">int32_t</span> flags = android_atomic_and(
+        ~(CBLK_UNDERRUN | CBLK_LOOP_CYCLE | CBLK_LOOP_FINAL | CBLK_BUFFER_END), &amp;mCblk-&gt;mFlags);
+
+    <span class="comment">// Check for track invalidation</span>
+    <span class="keyword">if</span> (flags &amp; CBLK_INVALID) {
+        <span class="comment">// 对于offload tracks的restoreTrack_l将只会更新sequence和清空AudioSystem缓存。</span>
+        <span class="comment">// 我们不会在这边直接退出，但是后面会调用callback来让上层recreate该track</span>
+        <span class="comment">// 对于其他类型的track，将在这边进行restore的操作，并且不会让他在这边退出，因为flag中还要处理</span>
+        <span class="keyword">if</span> (!isOffloadedOrDirect_l() || (mSequence == mObservedSequence)) {
+            <span class="keyword">status_t</span> status __unused = restoreTrack_l(<span class="string">"processAudioBuffer"</span>);
+        }
+    }
+    <span class="comment">// 如果当前正在stopping状态的话，则设置waitStreamEnd为true</span>
+    <span class="keyword">bool</span> waitStreamEnd = mState == STATE_STOPPING;
+    <span class="comment">// 判断当前该track的状态是否正在播放</span>
+    <span class="keyword">bool</span> active = mState == STATE_ACTIVE;
+
+    <span class="comment">// Manage underrun callback, must be done under lock to avoid race with releaseBuffer()</span>
+    <span class="keyword">bool</span> newUnderrun = <span class="literal">false</span>;
+    <span class="keyword">if</span> (flags &amp; CBLK_UNDERRUN) {
+        <span class="keyword">if</span> (!mInUnderrun) {
+            mInUnderrun = <span class="literal">true</span>;
+            newUnderrun = <span class="literal">true</span>;
+        }
+    }
+
+    <span class="comment">// Get current position of server 更新server的position</span>
+    <span class="keyword">size_t</span> position = updateAndGetPosition_l();
+
+    <span class="comment">// Cache other fields that will be needed soon</span>
+    <span class="keyword">uint32_t</span> sampleRate = mSampleRate;
+    <span class="keyword">float</span> speed = mPlaybackRate.mSpeed;
+    <span class="keyword">const</span> <span class="keyword">uint32_t</span> notificationFrames = mNotificationFramesAct;
+    <span class="comment">// 如果需要更新remaing则将notificationFrames更新到mRemainingFrames，一般在开始或者flush之后。</span>
+    <span class="keyword">if</span> (mRefreshRemaining) {
+        mRefreshRemaining = <span class="literal">false</span>;
+        mRemainingFrames = notificationFrames;
+        mRetryOnPartialBuffer = <span class="literal">false</span>;
+    }
+    <span class="keyword">size_t</span> misalignment = mProxy-&gt;getMisalignment();
+    <span class="keyword">uint32_t</span> sequence = mSequence;
+    sp&lt;AudioTrackClientProxy&gt; proxy = mProxy;
+
+    mLock.unlock();
+
+    <span class="comment">// get anchor time to account for callbacks.</span>
+    <span class="keyword">const</span> <span class="keyword">nsecs_t</span> timeBeforeCallbacks = systemTime();
+    <span class="comment">// 处理留马上结束的逻辑</span>
+    <span class="keyword">if</span> (waitStreamEnd) {
+        <span class="keyword">struct</span> timespec timeout;
+        <span class="comment">// 120s</span>
+        timeout.tv_sec = WAIT_STREAM_END_TIMEOUT_SEC;
+        timeout.tv_nsec = <span class="number">0</span>;
+        <span class="comment">// 这边正常情况下会进入休眠，等待最长时间为2分钟</span>
+        <span class="keyword">status_t</span> status = proxy-&gt;waitStreamEndDone(&amp;timeout);
+        <span class="keyword">switch</span> (status) {
+        <span class="keyword">case</span> NO_ERROR:
+        <span class="keyword">case</span> DEAD_OBJECT:
+        <span class="keyword">case</span> TIMED_OUT:
+            <span class="comment">// 告诉上层stream end的事件</span>
+            mCbf(EVENT_STREAM_END, mUserData, <span class="literal">NULL</span>);
+            {
+                <span class="function">AutoMutex <span class="title">lock</span><span class="params">(mLock)</span></span>;
+                <span class="comment">// 更新确认下是否还处在waitStreamEnd状态。如果是的话，切换state到stoped状态</span>
+                waitStreamEnd = mState == STATE_STOPPING;
+                <span class="keyword">if</span> (waitStreamEnd) {
+                    mState = STATE_STOPPED;
+                    mReleased = <span class="number">0</span>;
+                }
+            }
+            <span class="comment">// 如果这个track没有出现什么异常，并且已经stream end了，就进入休眠了</span>
+            <span class="keyword">if</span> (waitStreamEnd &amp;&amp; status != DEAD_OBJECT) {
+               <span class="keyword">return</span> NS_INACTIVE;
+            }
+            <span class="comment">// 如果不是，则直接跳出返回0，这样该函数再被调用一次。</span>
+            <span class="keyword">break</span>;
+        }
+        <span class="keyword">return</span> <span class="number">0</span>;
+    }
+
+    <span class="keyword">if</span> (flags &amp; CBLK_BUFFER_END) {
+        mCbf(EVENT_BUFFER_END, mUserData, <span class="literal">NULL</span>);
+    }
+
+    <span class="comment">// 如果当前处在非激活状态，则进入休眠等待到该track被重启</span>
+    <span class="keyword">if</span> (!active) {
+        <span class="keyword">return</span> NS_INACTIVE;
+    }
+
+
+    <span class="comment">// If &gt; 0, poll periodically to recover from a stuck server.  A good value is 2.</span>
+    <span class="keyword">static</span> <span class="keyword">const</span> <span class="keyword">uint32_t</span> kPoll = <span class="number">0</span>;
+    <span class="keyword">if</span> (kPoll &gt; <span class="number">0</span> &amp;&amp; mTransfer == TRANSFER_CALLBACK &amp;&amp; kPoll * notificationFrames &lt; minFrames) {
+        minFrames = kPoll * notificationFrames;
+    }
+
+    <span class="comment">// This "fudge factor" avoids soaking CPU, and compensates for late progress by server</span>
+    <span class="keyword">static</span> <span class="keyword">const</span> <span class="keyword">nsecs_t</span> kWaitPeriodNs = WAIT_PERIOD_MS * <span class="number">1000000L</span>L;
+    <span class="keyword">const</span> <span class="keyword">nsecs_t</span> timeAfterCallbacks = systemTime();
+
+    <span class="comment">// Convert frame units to time units</span>
+    <span class="keyword">nsecs_t</span> ns = NS_WHENEVER;
+
+    <span class="comment">// If not supplying data by EVENT_MORE_DATA, then we're done</span>
+    <span class="keyword">if</span> (mTransfer != TRANSFER_CALLBACK) {
+        <span class="keyword">return</span> ns;
+    }
+    <span class="comment">// 阻塞时间的换算</span>
+    <span class="keyword">struct</span> timespec timeout;
+    <span class="keyword">const</span> <span class="keyword">struct</span> timespec *requested = &amp;ClientProxy::kForever;
+    <span class="keyword">if</span> (ns != NS_WHENEVER) {
+        timeout.tv_sec = ns / <span class="number">1000000000L</span>L;
+        timeout.tv_nsec = ns % <span class="number">1000000000L</span>L;
+        requested = &amp;timeout;
+    }
+    <span class="comment">// 开始进入获取buffer，填充buffer，release buffer的逻辑</span>
+    <span class="keyword">while</span> (mRemainingFrames &gt; <span class="number">0</span>) {
+
+        Buffer audioBuffer;
+        audioBuffer.frameCount = mRemainingFrames;
+        <span class="keyword">size_t</span> nonContig;
+        <span class="comment">// 第一次进入该循环，obtain是个阻塞操作，后面就变成非阻塞操作。这个主要跟buffer的设计思路有关。</span>
+        <span class="comment">// avail buffer有可能包含两部分，一部分在前面，一部分在后面。而一开始我们只能获取后面部分的。</span>
+        <span class="comment">// 在循环一次将触发获取前面部分的数据。</span>
+        <span class="keyword">status_t</span> err = obtainBuffer(&amp;audioBuffer, requested, <span class="literal">NULL</span>, &amp;nonContig);
+        <span class="comment">// 修改获取策略为nonBlocking</span>
+        requested = &amp;ClientProxy::kNonBlocking;
+        <span class="comment">// 计算上次获取到的总的空间大小，此次只能填充audioBuffer.frameCount</span>
+        <span class="keyword">size_t</span> avail = audioBuffer.frameCount + nonContig;
+
+        <span class="keyword">size_t</span> reqSize = audioBuffer.size;
+        <span class="comment">// 问app要数据</span>
+        mCbf(EVENT_MORE_DATA, mUserData, &amp;audioBuffer);
+        <span class="keyword">size_t</span> writtenSize = audioBuffer.size;
+        <span class="comment">// 如果写入的数据为0，则返回给休眠的时间，省得多做无用功</span>
+        <span class="keyword">if</span> (writtenSize == <span class="number">0</span>) {
+            <span class="keyword">nsecs_t</span> myns;
+            <span class="keyword">if</span> (audio_is_linear_pcm(mFormat)) {
+            } <span class="keyword">else</span> {
+                myns = kWaitPeriodNs;
+            }
+            <span class="keyword">if</span> (ns &gt; <span class="number">0</span>) { <span class="comment">// account for obtain and callback time</span>
+                <span class="keyword">const</span> <span class="keyword">nsecs_t</span> timeNow = systemTime();
+                ns = max((<span class="keyword">nsecs_t</span>)<span class="number">0</span>, ns - (timeNow - timeAfterCallbacks));
+            }
+            <span class="keyword">if</span> (ns &lt; <span class="number">0</span> <span class="comment">/* NS_WHENEVER */</span> || myns &lt; ns) {
+                ns = myns;
+            }
+            <span class="keyword">return</span> ns;
+        }
+
+        <span class="keyword">size_t</span> releasedFrames = writtenSize / mFrameSize;
+        audioBuffer.frameCount = releasedFrames;
+        mRemainingFrames -= releasedFrames;
+        <span class="keyword">if</span> (misalignment &gt;= releasedFrames) {
+            misalignment -= releasedFrames;
+        } <span class="keyword">else</span> {
+            misalignment = <span class="number">0</span>;
+        }
+        <span class="comment">// 释放缓冲区，其实就是更新了下cblk的里面的参数</span>
+        releaseBuffer(&amp;audioBuffer);
+        <span class="comment">// 写的数据小宇reqSize则循环再获取，填充等操作。</span>
+        <span class="keyword">if</span> (writtenSize &lt; reqSize) {
+            <span class="keyword">continue</span>;
+        }
+        <span class="comment">// 如果buffer的前部分大于等于剩余的需要获取的数据量，则继续问app要来填充buffer</span>
+        <span class="keyword">if</span> (mRemainingFrames &lt;= nonContig) {
+            <span class="keyword">continue</span>;
+        }
+    }
+    <span class="comment">// 更新mRemainingFrames为整个buffer大小。notificationFrames这个值在offload的场景下为buffer大小</span>
+    mRemainingFrames = notificationFrames;
+    mRetryOnPartialBuffer = <span class="literal">true</span>;
+    <span class="keyword">return</span> <span class="number">0</span>;
+}
+</code></pre><p>上面基本上就完成了怎么问上层要数据的逻辑了。下面代码说明mNotificationFramesAct值来自何处</p>
+<p>   下面摘取<code>createTrack_l</code>中的部分代码：</p>
+<pre><code><span class="comment">// mNotificationFramesAct 等于buffer的大小</span>
+<span class="keyword">if</span> (!audio_is_linear_pcm(mFormat)) {
+
+    <span class="keyword">if</span> (mSharedBuffer != <span class="number">0</span>) {
+        <span class="comment">// Same comment as below about ignoring frameCount parameter for set()</span>
+        <span class="variable">frameCount</span> = mSharedBuffer-&gt;<span class="built_in">size</span>();
+    } <span class="keyword">else</span> <span class="keyword">if</span> (<span class="variable">frameCount</span> == <span class="number">0</span>) {
+        <span class="variable">frameCount</span> = mAfFrameCount;
+    }
+    <span class="keyword">if</span> (mNotificationFramesAct != <span class="variable">frameCount</span>) {
+        mNotificationFramesAct = <span class="variable">frameCount</span>;
+    }
+} ...
+</code></pre><p><code>mNotificationFramesAct</code>这个值我们之前有谈过了，这个值是用来确定该什么时候唤醒生产者往buffer里面填充数据，但是这个值如果大于<code>mFrameCount</code>的一半的话，那通知的大小将会采用<code>mFrameCount</code>的一半。</p>
+<p>到这边，我们就先完成offload的audiotrack部分通过线程获取数据的逻辑了。<code>obtainBuffer</code>和<code>releaseBuffer</code>可以去参考下<a href="http://thinks.me/2016/03/18/audiotrack_write/" title="audiotrack的write流程">http://thinks.me/2016/03/18/audiotrack_write/</a>这篇文章，里面有谈到这两个函数的实现。<br>上面讲了那么多，其实无非就是检查下buffer有没有空间，如果有就去填充数据，如此反复。。只是实现起来没那么容易才有这么大片大片的代码。当然上面并没有包括控制流，全是数据流相关。跟audioflinger部分的交互，可以参考下图片。</p>
+<p><img src="http://thinks.me/image/offload_read_write_buffer.bmp" alt=""></p>
+<h3 id="audioflinger部分">audioflinger部分</h3><p>这部分就是生产者与消费者模式中的消费者了，我们将从线程创建开始分析，再看AsyncCallbackThread的逻辑，不过我们只看跟普通线程的区别的部分。但是其实消费者的主要的逻辑确实在<code>threadloop</code>函数中，这个我们将只用图来描述，因为逻辑较为简单。</p>
+<h4 id="offloadThread创建">offloadThread创建</h4><p>offloadThread线程的创建，其实依赖于audio_policy.conf中是否有配置，如果有配置，则才会有创建该线程的逻辑。<br>offload跟mixer线程的区别，其实主要是基本上没有mixer的处理，直接绕过audioflinger的采样率、format、采样精度、通道数等的转变，所以其实offload的逻辑是更简单的。</p>
+<p>不过我们这篇重点在讲offload的callback的实现逻辑，直接引用<code>PlaybackThread::readOutputParameters_l</code>中的部分代码，这边有创建callback的线程</p>
+<pre><code><span class="keyword">if</span> ((mOutput<span class="subst">-&gt;</span>flags <span class="subst">&amp;</span> AUDIO_OUTPUT_FLAG_NON_BLOCKING) <span class="subst">&amp;&amp;</span>
+        (mOutput<span class="subst">-&gt;</span>stream<span class="subst">-&gt;</span>set_callback != <span class="built_in">NULL</span>)) {
+    <span class="keyword">if</span> (mOutput<span class="subst">-&gt;</span>stream<span class="subst">-&gt;</span>set_callback(mOutput<span class="subst">-&gt;</span>stream,
+                                  AudioFlinger<span class="tag">::PlaybackThread</span><span class="tag">::asyncCallback</span>, this) == <span class="number">0</span>) {
+        mUseAsyncWrite = <span class="literal">true</span>;
+        mCallbackThread = <span class="literal">new</span> AudioFlinger<span class="tag">::AsyncCallbackThread</span>(this);
+    }
+}
+</code></pre><p>从上面的函数中，可以看到判断依据是audio_policy.conf中compressoffload的节点中的flag是否带有non_blocking，如果有还需要确认底层是否支持callback的场景，如果支持的话，则告诉hal层，我们这边的回调函数是哪个，并且创造callback的线程来。这个线程在这个场景中至关重要，它会等到底层有空间的时候来唤醒offload线程去通知app来填充数据。</p>
+<h4 id="AsyncCallbackThread逻辑">AsyncCallbackThread逻辑</h4><p>我们直接来看它的实现代码吧。</p>
+<p>下面这个代码来自<code>PlaybackThread::threadLoop_write</code></p>
+<pre><code><span class="keyword">if</span> (mUseAsyncWrite) {
+    <span class="comment">// 将该值+2 | 1 保证末位为1</span>
+    mWriteAckSequence += <span class="number">2</span>;
+    mWriteAckSequence |= <span class="number">1</span>;
+    <span class="comment">// 将该值同步到callback线程中。在该函数中，这个sequence将会被左移1位。</span>
+    mCallbackThread-&gt;setWriteBlocked(mWriteAckSequence);
+}
+
+bytesWritten = mOutput-&gt;write((<span class="keyword">char</span> *)mSinkBuffer + offset, mBytesRemaining);
+<span class="comment">// 写完出来判断下写入的数据是否等于打算写入的值，如果不想等话，说明底层没有空间了。相等的话，则不需要进行block状态，可以再进行写操作。</span>
+<span class="keyword">if</span> (mUseAsyncWrite &amp;&amp;
+        ((bytesWritten &lt; <span class="number">0</span>) || (bytesWritten == (<span class="keyword">ssize_t</span>)mBytesRemaining))) {
+    <span class="comment">// 清除末尾为1</span>
+    mWriteAckSequence &amp;= ~<span class="number">1</span>;
+
+    mCallbackThread-&gt;setWriteBlocked(mWriteAckSequence);
+}
+</code></pre><p>这个是setWriteBlocked的操作，这个函数在<code>threadloop_write</code>往hal层写数据的时候会被调用一次，退出<code>write</code>操作之后，如果打算写到底层的数据量跟真实写入的值相等的话，还会再调用一次这个函数。</p>
+<pre><code><span class="keyword">void</span> AudioFlinger::AsyncCallbackThread::setWriteBlocked(<span class="keyword">uint32_t</span> sequence)
+{
+    Mutex::Autolock _l(mLock);
+    mWriteAckSequence = sequence &lt;&lt; <span class="number">1</span>;
+}
+</code></pre><p>这个是线程的逻辑：</p>
+<pre><code><span class="keyword">bool</span> AudioFlinger::AsyncCallbackThread::threadLoop()
+{
+    <span class="keyword">while</span> (!exitPending()) {
+        <span class="keyword">uint32_t</span> writeAckSequence;
+        <span class="keyword">uint32_t</span> drainSequence;
+
+        {
+            Mutex::Autolock _l(mLock);
+            <span class="comment">// 如果mWriteAckSequence末位为1 或者 mDrainSequence为1 并且已经被唤醒</span>
+            <span class="comment">// 当底层有空间的时候，这个线程就会被触发唤醒，继续走下面的逻辑</span>
+            <span class="keyword">while</span> (!((mWriteAckSequence &amp; <span class="number">1</span>) ||
+                     (mDrainSequence &amp; <span class="number">1</span>) ||
+                     exitPending())) {
+                mWaitWorkCV.wait(mLock);
+            }
+            <span class="comment">// mWriteAckSequence、mDrainSequence 将末位进行清0，因为在threadloop_write的时候会将其+2 | 1 并且左移1位， 被唤醒之后，该值又被 |1 。</span>
+            writeAckSequence = mWriteAckSequence;
+            <span class="comment">// 对callback线程中的mWriteAckSequence、mDrainSequence进行末尾清零操作</span>
+            mWriteAckSequence &amp;= ~<span class="number">1</span>;
+            drainSequence = mDrainSequence;
+            mDrainSequence &amp;= ~<span class="number">1</span>;
+        }
+        {
+            sp&lt;AudioFlinger::PlaybackThread&gt; playbackThread = mPlaybackThread.promote();
+            <span class="keyword">if</span> (playbackThread != <span class="number">0</span>) {
+                <span class="comment">// 如果之前block住了，那就进行resetWriteBlocked，这个将会触发offloadThread线程从wait进入到wake up的状态。</span>
+                <span class="keyword">if</span> (writeAckSequence &amp; <span class="number">1</span>) {
+                    <span class="comment">// 右移才是offloadThread中mWriteAckSequence的值</span>
+                    playbackThread-&gt;resetWriteBlocked(writeAckSequence &gt;&gt; <span class="number">1</span>);
+                }
+                <span class="keyword">if</span> (drainSequence &amp; <span class="number">1</span>) {
+                    playbackThread-&gt;resetDraining(drainSequence &gt;&gt; <span class="number">1</span>);
+                }
+            }
+        }
+    }
+    <span class="keyword">return</span> <span class="literal">false</span>;
+}
+</code></pre><p>看下<code>resetWriteBlocked</code>的实现</p>
+<pre><code><span class="keyword">void</span> AudioFlinger::PlaybackThread::resetWriteBlocked(<span class="keyword">uint32_t</span> sequence)
+{
+    Mutex::Autolock _l(mLock);
+    <span class="comment">// sequence这个值必须跟offloadThread中的mWriteAckSequence相等，才会触发唤醒操作。</span>
+    <span class="keyword">if</span> ((mWriteAckSequence &amp; <span class="number">1</span>) &amp;&amp; (sequence == mWriteAckSequence)) {
+        <span class="comment">// 末尾清零，唤醒offloadThread线程</span>
+        mWriteAckSequence &amp;= ~<span class="number">1</span>;
+        mWaitWorkCV.signal();
+    }
+}
+</code></pre><p>上面的sequence巧妙的利用二进制来实现开关的操作，表示进入和退出的效果，并且保证sequence的值一直处在递增可以排重。</p>
+<p>下图描述了offloadThread跟asynccallbackThread之间的调用逻辑：</p>
+<p><img src="http://thinks.me/image/offload_write.bmp" alt="offload write"></p>
+<p>下面在贴几张高通的文档中比较粗泛的图视：</p>
+<p>framework、hal、kernel的框图：<br><img src="http://thinks.me/image/offload_android_diagram.bmp" alt="offload write"><br>offload的初始化：<br><img src="http://thinks.me/image/offload_initial.bmp" alt="offload write"></p>
+<p>offload的playback：<br><img src="http://thinks.me/image/offload_playback.bmp" alt="offload write"><br>offload的seek：<br><img src="http://thinks.me/image/offload_seek.bmp" alt="offload write"></p>
+
+      
+    </div>
+
+    <div>
+      
+        
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Android/" rel="tag">#Android</a>
+          
+            <a href="/tags/Audio/" rel="tag">#Audio</a>
+          
+            <a href="/tags/Offload/" rel="tag">#Offload</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2016/04/18/audio_soundpool/" rel="next" title="soundpool代码分析">
+                <i class="fa fa-chevron-left"></i> soundpool代码分析
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div class="ds-thread" data-thread-key="2016/09/13/audio_qcom_offload/"
+           data-title="高通audio offload学习" data-url="http://thinks.me/2016/09/13/audio_qcom_offload/">
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.png"
+               alt="LexiMee" />
+          <p class="site-author-name" itemprop="name">LexiMee</p>
+          <p class="site-description motion-element" itemprop="description">leave me alone</p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">16</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">2</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">13</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        <div class="links-of-blogroll motion-element">
+          
+        </div>
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc-indicator-top post-toc-indicator">
+            <i class="fa fa-angle-double-up"></i>
+          </div>
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#简述"><span class="nav-number">1.</span> <span class="nav-text">简述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#正文"><span class="nav-number">2.</span> <span class="nav-text">正文</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#audiotrack部分"><span class="nav-number">2.1.</span> <span class="nav-text">audiotrack部分</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#audioflinger部分"><span class="nav-number">2.2.</span> <span class="nav-text">audioflinger部分</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#offloadThread创建"><span class="nav-number">2.2.1.</span> <span class="nav-text">offloadThread创建</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#AsyncCallbackThread逻辑"><span class="nav-number">2.2.2.</span> <span class="nav-text">AsyncCallbackThread逻辑</span></a></li></ol></li></ol></li></ol></div>
+            
+          </div>
+          <div class="post-toc-indicator-bottom post-toc-indicator">
+            <i class="fa fa-angle-double-down"></i>
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2015 - 
+  <span itemprop="copyrightYear">2016</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">LexiMee</span>
+</div>
+
+<div class="powered-by">
+  由 <a class="theme-link" href="http://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Pisces
+  </a>
+</div>
+
+
+
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+
+  
+
+
+
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js"></script>
+
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=0.5.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=0.5.0"></script>
+
+
+
+  
+  
+
+
+  <script type="text/javascript" src="/js/src/affix.js?v=0.5.0"></script>
+
+  <script type="text/javascript" src="/js/src/schemes/pisces.js?v=0.5.0"></script>
+
+
+
+  
+  
+<script type="text/javascript" src="/js/src/scrollspy.js?v=0.5.0"></script>
+
+<script type="text/javascript" id="sidebar.toc.highlight">
+  $(document).ready(function () {
+    var tocSelector = '.post-toc';
+    var $tocSelector = $(tocSelector);
+    var activeCurrentSelector = '.active-current';
+
+    $tocSelector
+      .on('activate.bs.scrollspy', function () {
+        var $currentActiveElement = $(tocSelector + ' .active').last();
+
+        removeCurrentActiveClass();
+        $currentActiveElement.addClass('active-current');
+
+        $tocSelector[0].scrollTop = $currentActiveElement.position().top;
+      })
+      .on('clear.bs.scrollspy', function () {
+        removeCurrentActiveClass();
+      });
+
+    function removeCurrentActiveClass () {
+      $(tocSelector + ' ' + activeCurrentSelector)
+        .removeClass(activeCurrentSelector.substring(1));
+    }
+
+    function processTOC () {
+      getTOCMaxHeight();
+      toggleTOCOverflowIndicators();
+    }
+
+    function getTOCMaxHeight () {
+      var height = $('.sidebar').height() -
+                   $tocSelector.position().top -
+                   $('.post-toc-indicator-bottom').height();
+
+      $tocSelector.css('height', height);
+
+      return height;
+    }
+
+    function toggleTOCOverflowIndicators () {
+      tocOverflowIndicator(
+        '.post-toc-indicator-top',
+        $tocSelector.scrollTop() > 0 ? 'show' : 'hide'
+      );
+
+      tocOverflowIndicator(
+        '.post-toc-indicator-bottom',
+        $tocSelector.scrollTop() >= $tocSelector.find('ol').height() - $tocSelector.height() ? 'hide' : 'show'
+      )
+    }
+
+    $(document).on('sidebar.motion.complete', function () {
+      processTOC();
+    });
+
+    $('body').scrollspy({ target: tocSelector });
+    $(window).on('resize', function () {
+      if ( $('.sidebar').hasClass('sidebar-active') ) {
+        processTOC();
+      }
+    });
+
+    onScroll($tocSelector);
+
+    function onScroll (element) {
+      element.on('mousewheel DOMMouseScroll', function (event) {
+          var oe = event.originalEvent;
+          var delta = oe.wheelDelta || -oe.detail;
+
+          this.scrollTop += ( delta < 0 ? 1 : -1 ) * 30;
+          event.preventDefault();
+
+          toggleTOCOverflowIndicators();
+      });
+    }
+
+    function tocOverflowIndicator (indicator, action) {
+      var $indicator = $(indicator);
+      var opacity = action === 'show' ? 1 : 0;
+      $indicator.velocity ?
+        $indicator.velocity('stop').velocity({
+          opacity: opacity
+        }, { duration: 100 }) :
+        $indicator.stop().animate({
+          opacity: opacity
+        }, 100);
+    }
+
+  });
+</script>
+
+<script type="text/javascript" id="sidebar.nav">
+  $(document).ready(function () {
+    var html = $('html');
+    var TAB_ANIMATE_DURATION = 200;
+    var hasVelocity = $.isFunction(html.velocity);
+
+    $('.sidebar-nav li').on('click', function () {
+      var item = $(this);
+      var activeTabClassName = 'sidebar-nav-active';
+      var activePanelClassName = 'sidebar-panel-active';
+      if (item.hasClass(activeTabClassName)) {
+        return;
+      }
+
+      var currentTarget = $('.' + activePanelClassName);
+      var target = $('.' + item.data('target'));
+
+      hasVelocity ?
+        currentTarget.velocity('transition.slideUpOut', TAB_ANIMATE_DURATION, function () {
+          target
+            .velocity('stop')
+            .velocity('transition.slideDownIn', TAB_ANIMATE_DURATION)
+            .addClass(activePanelClassName);
+        }) :
+        currentTarget.animate({ opacity: 0 }, TAB_ANIMATE_DURATION, function () {
+          currentTarget.hide();
+          target
+            .stop()
+            .css({'opacity': 0, 'display': 'block'})
+            .animate({ opacity: 1 }, TAB_ANIMATE_DURATION, function () {
+              currentTarget.removeClass(activePanelClassName);
+              target.addClass(activePanelClassName);
+            });
+        });
+
+      item.siblings().removeClass(activeTabClassName);
+      item.addClass(activeTabClassName);
+    });
+
+    $('.post-toc a').on('click', function (e) {
+      e.preventDefault();
+      var targetSelector = NexT.utils.escapeSelector(this.getAttribute('href'));
+      var offset = $(targetSelector).offset().top;
+      hasVelocity ?
+        html.velocity('stop').velocity('scroll', {
+          offset: offset  + 'px',
+          mobileHA: false
+        }) :
+        $('html, body').stop().animate({
+          scrollTop: offset
+        }, 500);
+    });
+
+    // Expand sidebar on post detail page by default, when post has a toc.
+    NexT.motion.middleWares.sidebar = function () {
+      var $tocContent = $('.post-toc-content');
+
+      if (CONFIG.scheme !== 'Pisces' && (CONFIG.sidebar.display === 'post' || CONFIG.sidebar.display === 'always')) {
+        if ($tocContent.length > 0 && $tocContent.html().trim().length > 0) {
+          NexT.utils.displaySidebar();
+        }
+      }
+    };
+  });
+</script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=0.5.0"></script>
+
+
+
+  
+
+  
+    
+  
+
+  <script type="text/javascript">
+    var duoshuoQuery = {short_name:"thinks"};
+    (function() {
+      var ds = document.createElement('script');
+      ds.type = 'text/javascript';ds.async = true;
+      ds.id = 'duoshuo-script';
+      ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+      ds.charset = 'UTF-8';
+      (document.getElementsByTagName('head')[0]
+      || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+  </script>
+
+  
+    
+  
+
+
+
+
+
+  
+  
+  
+
+  
+
+
+</body>
+</html>
